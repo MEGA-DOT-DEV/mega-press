@@ -1,3 +1,4 @@
+/// <reference lib="dom" />
 import { buildPlate } from "./plate.js";
 import { mount } from "./render.js";
 import { compileSpec } from "./spec.js";
