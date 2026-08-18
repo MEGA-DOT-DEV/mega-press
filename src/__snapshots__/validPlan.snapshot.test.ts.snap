@@ -1,0 +1,107 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`valid-plan snapshots > bars compile stays stable 1`] = `
+{
+  "body": {
+    "items": [
+      {
+        "label": "Sense",
+        "value": 35,
+      },
+      {
+        "label": "Act",
+        "value": 40,
+      },
+      {
+        "label": "Observe",
+        "value": 25,
+      },
+    ],
+    "type": "bars",
+    "unit": "share of loop time",
+  },
+  "footnote": "SPECIMEN",
+  "frame": "landscape",
+  "id": "loop-share",
+  "title": "Most of an agent loop is sensing and acting, not polishing text.",
+}
+`;
+
+exports[`valid-plan snapshots > railSteps compile stays stable 1`] = `
+{
+  "body": {
+    "items": [
+      {
+        "detail": "Read the world state that decides the next move.",
+        "name": "Sense",
+      },
+      {
+        "detail": "Pick one bounded action that advances the goal.",
+        "name": "Think",
+      },
+      {
+        "detail": "Call exactly one allowed tool with checked inputs.",
+        "name": "Act",
+      },
+      {
+        "detail": "Compare the tool result against the stop condition.",
+        "name": "Observe",
+      },
+    ],
+    "type": "railSteps",
+  },
+  "footnote": "SPECIMEN",
+  "frame": "landscape",
+  "id": "loop",
+  "title": "The loop is sense, act, observe, stop.",
+}
+`;
+
+exports[`valid-plan snapshots > table compile stays stable 1`] = `
+{
+  "body": {
+    "columns": [
+      {
+        "grow": true,
+        "key": "c0",
+        "label": "TRIGGER",
+        "type": "text",
+      },
+      {
+        "grow": false,
+        "key": "c1",
+        "label": "RULE",
+        "type": "text",
+      },
+      {
+        "grow": false,
+        "key": "c2",
+        "label": "NEXT",
+        "type": "text",
+      },
+    ],
+    "rows": [
+      {
+        "c0": "Acceptance evidence",
+        "c1": "End after checks pass",
+        "c2": "Return result",
+      },
+      {
+        "c0": "Budget exhausted",
+        "c1": "End when any budget hits zero",
+        "c2": "Report partial state",
+      },
+      {
+        "c0": "Same failure twice",
+        "c1": "End the retry loop",
+        "c2": "Ask for missing input",
+      },
+    ],
+    "type": "table",
+  },
+  "footnote": "SPECIMEN",
+  "frame": "landscape",
+  "id": "stops",
+  "title": "Every stop has a trigger and a next action.",
+}
+`;

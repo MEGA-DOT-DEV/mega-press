@@ -1,0 +1,11 @@
+{
+	"kind": "bars",
+	"id": "loop-share",
+	"title": "Most of an agent loop is sensing and acting, not polishing text.",
+	"barUnit": "share of loop time",
+	"bars": [
+		{ "label": "Sense", "value": 35 },
+		{ "label": "Act", "value": 40 },
+		{ "label": "Observe", "value": 25 }
+	]
+}

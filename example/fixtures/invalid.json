@@ -1,0 +1,5 @@
+{
+	"kind": "railSteps",
+	"id": "empty-rail",
+	"title": "A rail with no steps must refuse, not invent a figure."
+}

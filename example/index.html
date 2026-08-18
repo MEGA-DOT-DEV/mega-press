@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>@mega/press example</title>
+		<style>
+			:root {
+				color-scheme: dark;
+			}
+			body {
+				margin: 0;
+				font: 16px/1.4 system-ui, sans-serif;
+				background: #0b0b0b;
+				color: #e8e8e8;
+			}
+			main {
+				max-width: 840px;
+				margin: 0 auto;
+				padding: 32px 20px 64px;
+			}
+			h1 {
+				font-size: 1.25rem;
+				font-weight: 600;
+			}
+			section {
+				margin: 28px 0;
+			}
+			.plate {
+				width: 100%;
+				min-height: 200px;
+				background: #000;
+			}
+			.error {
+				border: 1px solid #7a2e2e;
+				background: #1a0d0d;
+				padding: 12px 14px;
+				font-family: ui-monospace, monospace;
+				font-size: 13px;
+			}
+		</style>
+	</head>
+	<body>
+		<main>
+			<h1>@mega/press example</h1>
+			<p>parseArtifact → buildArtifact → mountArtifact. No mega-experience imports.</p>
+			<section>
+				<h2>rail</h2>
+				<div id="rail" class="plate"></div>
+			</section>
+			<section>
+				<h2>table</h2>
+				<div id="table" class="plate"></div>
+			</section>
+			<section>
+				<h2>bars</h2>
+				<div id="bars" class="plate"></div>
+			</section>
+			<section>
+				<h2>invalid</h2>
+				<div id="invalid" class="plate"></div>
+			</section>
+		</main>
+		<script type="module" src="./main.ts"></script>
+	</body>
+</html>

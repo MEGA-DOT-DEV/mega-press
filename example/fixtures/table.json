@@ -1,0 +1,15 @@
+{
+	"kind": "table",
+	"id": "stops",
+	"title": "Every stop has a trigger and a next action.",
+	"columns": [
+		{ "key": "c0", "label": "TRIGGER" },
+		{ "key": "c1", "label": "RULE" },
+		{ "key": "c2", "label": "NEXT" }
+	],
+	"rows": [
+		{ "c0": "Acceptance evidence", "c1": "End after checks pass", "c2": "Return result" },
+		{ "c0": "Budget exhausted", "c1": "End when any budget hits zero", "c2": "Report partial state" },
+		{ "c0": "Same failure twice", "c1": "End the retry loop", "c2": "Ask for missing input" }
+	]
+}

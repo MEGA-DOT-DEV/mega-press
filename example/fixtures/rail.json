@@ -1,0 +1,11 @@
+{
+	"kind": "railSteps",
+	"id": "loop",
+	"title": "The loop is sense, act, observe, stop.",
+	"steps": [
+		{ "name": "Sense", "detail": "Read the world state that decides the next move." },
+		{ "name": "Think", "detail": "Pick one bounded action that advances the goal." },
+		{ "name": "Act", "detail": "Call exactly one allowed tool with checked inputs." },
+		{ "name": "Observe", "detail": "Compare the tool result against the stop condition." }
+	]
+}
