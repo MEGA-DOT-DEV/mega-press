@@ -48,6 +48,77 @@ const walkStrings = (value: unknown, path: string, hit: (p: string, s: string) =
 	}
 };
 
+/**
+ * One transcript item's structural checks: date + title, chips rules, and the
+ * per-event code block. timeline/timelineVertical items and compareFlows side
+ * items all pass through here, so the item contract exists exactly once.
+ * `blocks: false` is the horizontal timeline, which has no room for chips or a
+ * code block and refuses them by name instead of dropping them.
+ */
+const validateTranscriptItem = (
+	item: unknown,
+	itemPath: string,
+	errors: PressError[],
+	{ who, blocks }: { readonly who: string; readonly blocks: boolean },
+): void => {
+	if (!isRecord(item) || !String(item.date ?? "").trim() || !String(item.title ?? "").trim()) {
+		errors.push({
+			code: "STOP_INCOMPLETE",
+			message: `${itemPath}: ${who} stops need date + title`,
+		});
+		return;
+	}
+	if (item.chips !== undefined) {
+		if (!blocks) {
+			errors.push({
+				code: "STOP_CHIPS_UNSUPPORTED",
+				message: `${itemPath}: a horizontal timeline stop has no room for chips; use timelineVertical`,
+			});
+		} else if (!Array.isArray(item.chips)) {
+			errors.push({
+				code: "CHIPS_NOT_A_LIST",
+				message: `${itemPath}: chips must be an array of { text, accent? }`,
+			});
+		} else {
+			if (item.chips.length > 6) {
+				errors.push({
+					code: "CHIPS_TOO_MANY",
+					message: `${itemPath}: ${item.chips.length} chips; 6 is the cap`,
+				});
+			}
+			item.chips.forEach((chip, j) => {
+				const text = isRecord(chip) ? String(chip.text ?? "").trim() : "";
+				if (!text) {
+					errors.push({
+						code: "CHIP_TEXT_MISSING",
+						message: `${itemPath}.chips[${j}]: every chip needs non-empty text`,
+					});
+				} else if (text.length > 32) {
+					errors.push({
+						code: "CHIP_TOO_LONG",
+						message: `${itemPath}.chips[${j}]: "${text.slice(0, 40)}" is ${text.length} characters; a chip is one short mono label, 32 max`,
+					});
+				}
+			});
+		}
+	}
+	if (item.code === undefined) return;
+	if (!blocks) {
+		errors.push({
+			code: "STOP_CODE_UNSUPPORTED",
+			message: `${itemPath}: a horizontal timeline has no room for a code block; use timelineVertical`,
+		});
+		return;
+	}
+	const lines = String(item.code).split("\n");
+	if (lines.filter((l) => l.trim()).length < 2 || lines.length > 8) {
+		errors.push({
+			code: "EVENT_CODE_LINES",
+			message: `${itemPath}: an event's code block needs 2 to 8 verbatim lines`,
+		});
+	}
+};
+
 const validateNode = (node: unknown, path: string, errors: PressError[], depth: number): void => {
 	if (depth > 6) {
 		errors.push({ code: "NODE_TOO_DEEP", message: `${path}: nested too deep` });
@@ -148,63 +219,42 @@ const validateNode = (node: unknown, path: string, errors: PressError[], depth: 
 	if (type === "timeline" || type === "timelineVertical") {
 		const items = Array.isArray(node.items) ? node.items : [];
 		items.forEach((item, i) => {
-			if (!isRecord(item) || !String(item.date ?? "").trim() || !String(item.title ?? "").trim()) {
-				errors.push({
-					code: "STOP_INCOMPLETE",
-					message: `${path}.items[${i}]: ${type} stops need date + title`,
-				});
-				return;
-			}
-			if (item.chips !== undefined) {
-				if (type === "timeline") {
-					errors.push({
-						code: "STOP_CHIPS_UNSUPPORTED",
-						message: `${path}.items[${i}]: a horizontal timeline stop has no room for chips; use timelineVertical`,
-					});
-				} else if (!Array.isArray(item.chips)) {
-					errors.push({
-						code: "CHIPS_NOT_A_LIST",
-						message: `${path}.items[${i}]: chips must be an array of { text, accent? }`,
-					});
-				} else {
-					if (item.chips.length > 6) {
-						errors.push({
-							code: "CHIPS_TOO_MANY",
-							message: `${path}.items[${i}]: ${item.chips.length} chips; 6 is the cap`,
-						});
-					}
-					item.chips.forEach((chip, j) => {
-						const text = isRecord(chip) ? String(chip.text ?? "").trim() : "";
-						if (!text) {
-							errors.push({
-								code: "CHIP_TEXT_MISSING",
-								message: `${path}.items[${i}].chips[${j}]: every chip needs non-empty text`,
-							});
-						} else if (text.length > 32) {
-							errors.push({
-								code: "CHIP_TOO_LONG",
-								message: `${path}.items[${i}].chips[${j}]: "${text.slice(0, 40)}" is ${text.length} characters; a chip is one short mono label, 32 max`,
-							});
-						}
-					});
-				}
-			}
-			if (item.code === undefined) return;
-			if (type === "timeline") {
-				errors.push({
-					code: "STOP_CODE_UNSUPPORTED",
-					message: `${path}.items[${i}]: a horizontal timeline has no room for a code block; use timelineVertical`,
-				});
-				return;
-			}
-			const lines = String(item.code).split("\n");
-			if (lines.filter((l) => l.trim()).length < 2 || lines.length > 8) {
-				errors.push({
-					code: "EVENT_CODE_LINES",
-					message: `${path}.items[${i}]: an event's code block needs 2 to 8 verbatim lines`,
-				});
-			}
+			validateTranscriptItem(item, `${path}.items[${i}]`, errors, {
+				who: type,
+				blocks: type === "timelineVertical",
+			});
 		});
+	}
+
+	if (type === "compareFlows") {
+		for (const key of ["left", "right"] as const) {
+			const side = node[key];
+			if (!isRecord(side) || !String(side.label ?? "").trim()) {
+				errors.push({
+					code: "COMPAREFLOWS_SIDE_MISSING",
+					message: `${path}: compareFlows needs a ${key} side with a non-empty label`,
+				});
+				continue;
+			}
+			const items = Array.isArray(side.items) ? side.items : [];
+			if (items.length < 2) {
+				errors.push({
+					code: "COMPAREFLOWS_TOO_FEW",
+					message: `${path}.${key}: a flow needs at least 2 events (got ${items.length})`,
+				});
+			} else if (items.length > 6) {
+				errors.push({
+					code: "COMPAREFLOWS_TOO_MANY",
+					message: `${path}.${key}: ${items.length} events; 6 is the cap per side`,
+				});
+			}
+			items.forEach((item, i) => {
+				validateTranscriptItem(item, `${path}.${key}.items[${i}]`, errors, {
+					who: "compareFlows",
+					blocks: true,
+				});
+			});
+		}
 	}
 
 	if (type === "graph") {

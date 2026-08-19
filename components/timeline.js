@@ -571,18 +571,38 @@ export function schedule({ items, markerSize = space(2), accent = COLOR.red } = 
  * qualities), each `{ text, accent? }` with the accented chip the one chosen.
  * ------------------------------------------------------------------------ */
 
-export function timelineVertical({
+/**
+ * The per-event rows a transcript is made of: the date column, the marker, and
+ * the stack of title, detail, code and chips. `timelineVertical` builds on this
+ * directly, and `compareFlows` (components/flows.js) builds each of its two
+ * columns from it, so a transcript event is one shape wherever it appears
+ * rather than two implementations that drift apart.
+ *
+ * The date column width derives from the items handed in, so a narrow column
+ * measures against its own widest label instead of a sibling's.
+ *
+ * `unitPerRow` is the caller's claim about information density, the same claim
+ * timeline() takes as `unitPerStop`. A single transcript is read event by
+ * event, so each row is one unit. Two labelled columns side by side are ONE
+ * claim about a contrast between two flows; counting every event would charge
+ * the reader's budget twice for a figure they take in as two strokes, so
+ * compareFlows passes unitPerRow: false and marks each whole column as one
+ * unit instead.
+ *
+ * Returns { rows, markers }: the caller stacks the rows and derives its own
+ * rail from the markers, so every column carries its own rail.
+ */
+export function transcriptEvents(
 	items,
-	markerSize = space(2),
-	gap = 4,
-	activeTo = -1,
-	accent = COLOR.red,
-	quiet = COLOR.black2,
-} = {}) {
-	if (!items || items.length < 2) {
-		throw new Error("timelineVertical needs at least two stops.");
-	}
-
+	{
+		markerSize = space(2),
+		accent = COLOR.red,
+		quiet = COLOR.black2,
+		activeTo = -1,
+		unitPerRow = true,
+		who = "timelineVertical",
+	} = {},
+) {
 	const dateWidth = snap(Math.max(...items.map((i) => measure(i.date, "utility"))) + space(3));
 	const markers = [];
 
@@ -599,12 +619,12 @@ export function timelineVertical({
 		/* Chips ride under the detail and the code, inside the event's stack, so
 		   they belong to the row and never count as extra units: the row already
 		   is the unit, and a badge on it is annotation, not new information. */
-		const chips = chipsRow(item.chips, `timelineVertical event "${item.date}"`);
+		const chips = chipsRow(item.chips, `${who} event "${item.date}"`);
 
 		return row({
 			gap: 3,
 			align: "baseline",
-			unit: true,
+			unit: unitPerRow,
 			children: [
 				text(item.date, "utility", {
 					color: active ? accent : COLOR.quiet,
@@ -628,6 +648,23 @@ export function timelineVertical({
 			],
 		});
 	});
+
+	return { rows, markers };
+}
+
+export function timelineVertical({
+	items,
+	markerSize = space(2),
+	gap = 4,
+	activeTo = -1,
+	accent = COLOR.red,
+	quiet = COLOR.black2,
+} = {}) {
+	if (!items || items.length < 2) {
+		throw new Error("timelineVertical needs at least two stops.");
+	}
+
+	const { rows, markers } = transcriptEvents(items, { markerSize, accent, quiet, activeTo });
 
 	const node = stack({ gap, children: rows });
 

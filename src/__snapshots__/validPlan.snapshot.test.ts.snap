@@ -46,6 +46,71 @@ exports[`valid-plan snapshots > code compile stays stable 1`] = `
 }
 `;
 
+exports[`valid-plan snapshots > compareFlows compile stays stable 1`] = `
+{
+  "body": {
+    "left": {
+      "intro": "A schedule that persists: the same prompt fired on a cron, every run independent.",
+      "items": [
+        {
+          "date": "DEFINE",
+          "detail": "Every Monday at 07:00, build the report.",
+          "title": "Names a prompt and a cron",
+        },
+        {
+          "date": "WAKE",
+          "detail": "A fresh run with no memory of the last one.",
+          "title": "The scheduler fires the prompt",
+        },
+        {
+          "date": "REPEAT",
+          "detail": "Failures do not carry over between runs.",
+          "title": "Runs again next Monday",
+        },
+      ],
+      "label": "JOB",
+    },
+    "right": {
+      "intro": "One durable execution: a single run that survives restarts until it completes.",
+      "items": [
+        {
+          "code": "workflow.start({
+  "name": "weekly-report",
+  "input": { "week": 34 }
+})",
+          "date": "REQUEST",
+          "title": "Starts one durable run",
+        },
+        {
+          "date": "STEP",
+          "detail": "A crash resumes from the last completed step.",
+          "title": "Each step checkpoints its result",
+        },
+        {
+          "accent": true,
+          "chips": [
+            {
+              "accent": true,
+              "text": "durable",
+            },
+            {
+              "text": "resumable",
+            },
+          ],
+          "date": "DONE",
+          "title": "Completes exactly once",
+        },
+      ],
+      "label": "WORKFLOW",
+    },
+    "type": "compareFlows",
+  },
+  "frame": "square",
+  "id": "job-vs-workflow",
+  "title": "A Job persists a schedule; a Workflow persists one run.",
+}
+`;
+
 exports[`valid-plan snapshots > derivation compile stays stable 1`] = `
 {
   "body": {

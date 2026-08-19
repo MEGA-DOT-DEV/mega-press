@@ -35,6 +35,8 @@ export const STRING_CAPS = {
 	/** A chip is one short mono label; this cap is the drawn contract, not a garbage guard. */
 	chip: { max: 32, code: "CHIP_TOO_LONG", description: "One short mono label, 32 characters max." },
 	trackLabel: { max: 40, code: "TRACK_LABEL_TOO_LONG", description: sanity(40) },
+	/** The caps mono label naming one column of a compareFlows contrast; same measure as trackLabel. */
+	flowLabel: { max: 40, code: "FLOW_LABEL_TOO_LONG", description: sanity(40) },
 } as const satisfies Record<string, StringCap>;
 
 export const ITEM_BOUNDS = {
@@ -168,6 +170,24 @@ export const ITEM_BOUNDS = {
 			label: "events",
 		},
 		/** Chips on one event: short mono pills, never extra information units. */
+		chips: {
+			min: 1,
+			max: 6,
+			tooFew: "CHIPS_TOO_FEW",
+			tooMany: "CHIPS_TOO_MANY",
+			label: "chips per event",
+		},
+	},
+	compareFlows: {
+		/** Events inside one column of the two-flow contrast. */
+		events: {
+			min: 2,
+			max: 6,
+			tooFew: "COMPAREFLOWS_TOO_FEW",
+			tooMany: "COMPAREFLOWS_TOO_MANY",
+			label: "events per side",
+		},
+		/** Chips on one event: the same drawn contract timelineVertical carries. */
 		chips: {
 			min: 1,
 			max: 6,

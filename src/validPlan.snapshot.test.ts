@@ -91,6 +91,40 @@ const chippedTranscript: ArtifactPlan = {
 	],
 };
 
+const contrastedFlows: ArtifactPlan = {
+	kind: "compareFlows",
+	id: "job-vs-workflow",
+	frame: "square",
+	title: "A Job persists a schedule; a Workflow persists one run.",
+	left: {
+		label: "JOB",
+		intro: "A schedule that persists: the same prompt fired on a cron, every run independent.",
+		events: [
+			{ at: "DEFINE", title: "Names a prompt and a cron", detail: "Every Monday at 07:00, build the report." },
+			{ at: "WAKE", title: "The scheduler fires the prompt", detail: "A fresh run with no memory of the last one." },
+			{ at: "REPEAT", title: "Runs again next Monday", detail: "Failures do not carry over between runs." },
+		],
+	},
+	right: {
+		label: "WORKFLOW",
+		intro: "One durable execution: a single run that survives restarts until it completes.",
+		events: [
+			{
+				at: "REQUEST",
+				title: "Starts one durable run",
+				code: 'workflow.start({\n  "name": "weekly-report",\n  "input": { "week": 34 }\n})',
+			},
+			{ at: "STEP", title: "Each step checkpoints its result", detail: "A crash resumes from the last completed step." },
+			{
+				at: "DONE",
+				title: "Completes exactly once",
+				accent: true,
+				chips: [{ text: "durable", accent: true }, { text: "resumable" }],
+			},
+		],
+	},
+};
+
 const graphPlan: ArtifactPlan = {
 	kind: "graph",
 	id: "mcp-capability-layer",
@@ -166,6 +200,13 @@ describe("valid-plan snapshots", () => {
 
 	it("timelineVertical with chips compile stays stable", () => {
 		const result = buildArtifact(chippedTranscript);
+		expect(result.ok).toBe(true);
+		if (!result.ok) throw new Error("expected ok");
+		expect(result.spec).toMatchSnapshot();
+	});
+
+	it("compareFlows compile stays stable", () => {
+		const result = buildArtifact(contrastedFlows);
 		expect(result.ok).toBe(true);
 		if (!result.ok) throw new Error("expected ok");
 		expect(result.spec).toMatchSnapshot();

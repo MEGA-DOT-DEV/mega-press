@@ -9,6 +9,7 @@ import { ITEM_BOUNDS, STRING_CAPS } from "./slotContract.js";
 export type ArtifactModuleId =
 	| "railSteps"
 	| "compare"
+	| "compareFlows"
 	| "metrics"
 	| "cards"
 	| "checklist"
@@ -138,6 +139,133 @@ const MODULES: readonly ArtifactModuleSchema[] = [
 			"AFTER AGENT: Stop conditions make the loop inspectable.",
 		],
 		bans: ["One-sided compares", "Identical items on both sides"],
+	},
+	{
+		id: "compareFlows",
+		title: "Contrasted flows",
+		use: "Two labelled columns side by side, each column its own vertical transcript.",
+		pickWhen:
+			"The lesson is a contrast between two flows read top to bottom (job vs workflow, remember vs recall, dedicated integration vs agent-built).",
+		units: "2 sides × 2–6 events; each column counts as one unit",
+		slots: {
+			type: "object",
+			required: ["left", "right"],
+			properties: {
+				left: {
+					type: "object",
+					required: ["label", "events"],
+					properties: {
+						label: {
+							type: "string",
+							maxLength: STRING_CAPS.flowLabel.max,
+							description: "Small caps mono label naming the flow (JOB, REMEMBER, EARLIER)",
+						},
+						intro: {
+							type: "string",
+							maxLength: STRING_CAPS.detail.max,
+							description: "Optional one or two sentences under the label framing the flow",
+						},
+						events: {
+							type: "array",
+							minItems: ITEM_BOUNDS.compareFlows.events.min,
+							maxItems: ITEM_BOUNDS.compareFlows.events.max,
+							items: {
+								type: "object",
+								required: ["at", "title"],
+								properties: {
+									at: {
+										type: "string",
+										maxLength: 16,
+										description: "Actor or stage label for the column (USER, STEP 2, WAKE)",
+									},
+									title: { type: "string" },
+									detail: { type: "string", minLength: 16 },
+									code: {
+										type: "string",
+										maxLength: 600,
+										description:
+											"Optional verbatim block under the event; \\n line breaks, 2 to 8 lines, never wrapped",
+									},
+									accent: { type: "boolean", description: "true on the one event the claim is about" },
+									chips: {
+										type: "array",
+										minItems: ITEM_BOUNDS.compareFlows.chips.min,
+										maxItems: ITEM_BOUNDS.compareFlows.chips.max,
+										description: "Optional short mono pills under the event (≤32 chars each)",
+										items: {
+											type: "object",
+											required: ["text"],
+											properties: {
+												text: { type: "string", maxLength: STRING_CAPS.chip.max },
+												accent: { type: "boolean" },
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				right: {
+					type: "object",
+					required: ["label", "events"],
+					properties: {
+						label: { type: "string", maxLength: STRING_CAPS.flowLabel.max },
+						intro: { type: "string", maxLength: STRING_CAPS.detail.max },
+						events: {
+							type: "array",
+							minItems: ITEM_BOUNDS.compareFlows.events.min,
+							maxItems: ITEM_BOUNDS.compareFlows.events.max,
+							items: {
+								type: "object",
+								required: ["at", "title"],
+								properties: {
+									at: { type: "string", maxLength: 16 },
+									title: { type: "string" },
+									detail: { type: "string", minLength: 16 },
+									code: { type: "string", maxLength: 600 },
+									accent: { type: "boolean" },
+									chips: {
+										type: "array",
+										minItems: ITEM_BOUNDS.compareFlows.chips.min,
+										maxItems: ITEM_BOUNDS.compareFlows.chips.max,
+										items: {
+											type: "object",
+											required: ["text"],
+											properties: {
+												text: { type: "string", maxLength: STRING_CAPS.chip.max },
+												accent: { type: "boolean" },
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		density: [
+			"2–6 events per side, roughly balanced",
+			"each side has a caps label; an intro sentence when the flows need framing",
+			"detail clauses, a verbatim code block, or chips on most events",
+			"at most one accented event per side",
+		],
+		outlineHint:
+			"Tag lines LEFT: or RIGHT:; the first tagged line names the flow, then AT | Title | detail per event.",
+		exampleOutline: [
+			"LEFT: JOB, a schedule that persists",
+			"LEFT: DEFINE | Names a prompt and a cron | Every Monday at 07:00.",
+			"LEFT: WAKE | The scheduler fires the prompt | A fresh run, no memory of the last.",
+			"RIGHT: WORKFLOW, one durable execution",
+			"RIGHT: REQUEST | Starts one durable run | Input validated before step one.",
+			"RIGHT: DONE | Completes exactly once | Chips: durable, resumable.",
+		],
+		bans: [
+			"One-sided flows (use timelineVertical)",
+			"Sides with fewer than two events",
+			"The same events on both sides",
+		],
 	},
 	{
 		id: "metrics",

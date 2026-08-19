@@ -21,6 +21,7 @@ export const PLATE_PLAN_KINDS = [
 	"quote",
 	"timeline",
 	"timelineVertical",
+	"compareFlows",
 	"railFlow",
 	"graph",
 	"derivation",
@@ -119,6 +120,31 @@ export type PlatePlan = {
 		/** Short mono pills under the event; a plain string is shorthand for a quiet chip. */
 		readonly chips?: readonly (string | { readonly text: string; readonly accent?: boolean })[];
 	}[];
+	/** compareFlows — two labelled columns, each its own vertical transcript */
+	readonly left?: {
+		readonly label: string;
+		readonly intro?: string;
+		readonly events: readonly {
+			readonly at: string;
+			readonly title: string;
+			readonly detail?: string;
+			readonly code?: string;
+			readonly accent?: boolean;
+			readonly chips?: readonly (string | { readonly text: string; readonly accent?: boolean })[];
+		}[];
+	};
+	readonly right?: {
+		readonly label: string;
+		readonly intro?: string;
+		readonly events: readonly {
+			readonly at: string;
+			readonly title: string;
+			readonly detail?: string;
+			readonly code?: string;
+			readonly accent?: boolean;
+			readonly chips?: readonly (string | { readonly text: string; readonly accent?: boolean })[];
+		}[];
+	};
 	/** graph */
 	readonly dir?: "x" | "y";
 	readonly nodes?: readonly {
@@ -348,6 +374,96 @@ export const PLATE_PLAN_JSON_SCHEMA: Record<string, unknown> = {
 									},
 								},
 							],
+						},
+					},
+				},
+			},
+		},
+		left: {
+			type: "object",
+			additionalProperties: false,
+			required: ["label", "events"],
+			properties: {
+				label: { type: "string", maxLength: 40 },
+				intro: { type: "string", maxLength: 250 },
+				events: {
+					type: "array",
+					minItems: 2,
+					maxItems: 6,
+					items: {
+						type: "object",
+						additionalProperties: false,
+						required: ["at", "title"],
+						properties: {
+							at: { type: "string", maxLength: 16 },
+							title: { type: "string" },
+							detail: { type: "string" },
+							code: { type: "string", maxLength: 600 },
+							accent: { type: "boolean" },
+							chips: {
+								type: "array",
+								minItems: 1,
+								maxItems: 6,
+								items: {
+									anyOf: [
+										{ type: "string", maxLength: 32 },
+										{
+											type: "object",
+											additionalProperties: false,
+											required: ["text"],
+											properties: {
+												text: { type: "string", maxLength: 32 },
+												accent: { type: "boolean" },
+											},
+										},
+									],
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		right: {
+			type: "object",
+			additionalProperties: false,
+			required: ["label", "events"],
+			properties: {
+				label: { type: "string", maxLength: 40 },
+				intro: { type: "string", maxLength: 250 },
+				events: {
+					type: "array",
+					minItems: 2,
+					maxItems: 6,
+					items: {
+						type: "object",
+						additionalProperties: false,
+						required: ["at", "title"],
+						properties: {
+							at: { type: "string", maxLength: 16 },
+							title: { type: "string" },
+							detail: { type: "string" },
+							code: { type: "string", maxLength: 600 },
+							accent: { type: "boolean" },
+							chips: {
+								type: "array",
+								minItems: 1,
+								maxItems: 6,
+								items: {
+									anyOf: [
+										{ type: "string", maxLength: 32 },
+										{
+											type: "object",
+											additionalProperties: false,
+											required: ["text"],
+											properties: {
+												text: { type: "string", maxLength: 32 },
+												accent: { type: "boolean" },
+											},
+										},
+									],
+								},
+							},
 						},
 					},
 				},

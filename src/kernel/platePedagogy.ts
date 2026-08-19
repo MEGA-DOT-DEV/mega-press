@@ -268,6 +268,33 @@ export const assessPlatePedagogy = (spec: Record<string, unknown>): readonly Ped
 		}
 	}
 
+	if (type === "compareFlows") {
+		for (const key of ["left", "right"] as const) {
+			const side = isRecord(body[key]) ? (body[key] as Record<string, unknown>) : null;
+			const items = side && Array.isArray(side.items) ? side.items : [];
+			if (items.length < 2) {
+				errors.push({
+					code: "PLATE_THIN",
+					message: `compareFlows needs at least two events on the ${key} side; one event is not a flow.`,
+				});
+				continue;
+			}
+			const detailed = items.filter(
+				(it) =>
+					isRecord(it) &&
+					(String(it.detail ?? "").trim().length >= 16 ||
+						String(it.code ?? "").trim().length > 0 ||
+						(Array.isArray(it.chips) && it.chips.length > 0)),
+			);
+			if (detailed.length < 2) {
+				errors.push({
+					code: "PLATE_THIN",
+					message: `compareFlows needs detail clauses (or a verbatim block, or chips) on most ${key} events, not bare titles.`,
+				});
+			}
+		}
+	}
+
 	if (type === "railFlow") {
 		const items = Array.isArray(body.items) ? body.items : [];
 		if (items.length < 3) {

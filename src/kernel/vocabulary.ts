@@ -16,6 +16,7 @@ export const ALLOWED_COMPONENTS = [
 	"hero",
 	"railSteps",
 	"compare",
+	"compareFlows",
 	"layers",
 	"checklist",
 	"quote",
@@ -82,6 +83,39 @@ export const COMPONENT_GUIDE: Record<string, { readonly use: string; readonly ex
 						"Each turn can change what is known.",
 						"Tool results become evidence.",
 						"Stop conditions make the loop inspectable.",
+					],
+				},
+			},
+		},
+		compareFlows: {
+			use: "two flows contrasted side by side, each column a labelled vertical transcript with its own rail: job vs workflow, remember vs recall, dedicated integration vs agent-built; each side = {label, intro?, items[]} with items shaped like timelineVertical events ({date, title, detail?, code?, accent?, chips?}), 2 to 6 per side",
+			example: {
+				type: "compareFlows",
+				left: {
+					label: "JOB",
+					intro: "A schedule that persists: the same prompt fired on a cron, every run independent.",
+					items: [
+						{ date: "DEFINE", title: "Names a prompt and a cron", detail: "Every Monday at 07:00, build the weekly report." },
+						{ date: "WAKE", title: "The scheduler fires the prompt", detail: "A fresh run with no memory of the last one." },
+						{ date: "REPEAT", title: "Runs again next Monday", detail: "Failures do not carry over; each run stands alone." },
+					],
+				},
+				right: {
+					label: "WORKFLOW",
+					intro: "One durable execution: a single run that survives restarts until it completes.",
+					items: [
+						{
+							date: "REQUEST",
+							title: "Starts one durable run",
+							code: 'workflow.start({\n  "name": "onboard-customer",\n  "input": { "plan": "pro" }\n})',
+						},
+						{ date: "STEP", title: "Each step checkpoints its result", detail: "A crash resumes from the last completed step, not from zero." },
+						{
+							date: "DONE",
+							title: "Completes exactly once",
+							accent: true,
+							chips: [{ text: "durable", accent: true }, { text: "resumable" }, { text: "auditable" }],
+						},
 					],
 				},
 			},
@@ -390,11 +424,12 @@ Compose two nodes with {"type":"stack","gap":3,"children":[...]} when one claim 
 4. No components: ${WITHHELD_COMPONENTS.join(", ")}.
 5. Only these body types: ${ALLOWED_COMPONENTS.join(", ")}.
 6. Never invent types (callout, infobox, alert). Use note with content.
-7. note = {type, content}. compare = before/after {label, title, items[]}. railSteps/railFlow items = {name, detail}. checklist items = {text, ok}. timeline/timelineVertical items = {date, title, detail?, accent?} (date is the short label column: an actor, stage, or date; accent: true marks the one stop the claim is about). A timeline node may add label (small caps mono above the rail naming the run); stack two labelled timelines to contrast two runs. A timelineVertical item may add code (a verbatim block, 2 to 8 lines with \\n breaks) and chips (1 to 6 short mono pills {text, accent?}, 32 chars max, drawn under the detail or code). graph = nodes {key, title, detail?} + edges {from, to}. derivation steps = {expr, note} (note required after the first step). code = {code, label?, accentLines?} (code is one string with \\n line breaks, 2 to 14 lines, drawn verbatim; a line too wide for the frame refuses instead of wrapping).
+7. note = {type, content}. compare = before/after {label, title, items[]}. compareFlows = left/right {label, intro?, items[]} (each side a labelled vertical transcript; items shaped like timelineVertical items, 2 to 6 per side). railSteps/railFlow items = {name, detail}. checklist items = {text, ok}. timeline/timelineVertical items = {date, title, detail?, accent?} (date is the short label column: an actor, stage, or date; accent: true marks the one stop the claim is about). A timeline node may add label (small caps mono above the rail naming the run); stack two labelled timelines to contrast two runs. A timelineVertical item may add code (a verbatim block, 2 to 8 lines with \\n breaks) and chips (1 to 6 short mono pills {text, accent?}, 32 chars max, drawn under the detail or code). graph = nodes {key, title, detail?} + edges {from, to}. derivation steps = {expr, note} (note required after the first step). code = {code, label?, accentLines?} (code is one string with \\n line breaks, 2 to 14 lines, drawn verbatim; a line too wide for the frame refuses instead of wrapping).
 
 ## Choose the component by what the content is
   process / method / loop          railSteps
   before and after                 compare
+  two flows contrasted side by side   compareFlows
   exact quantities                 metrics or table
   quantities compared              bars
   parts of one whole               segments
@@ -413,6 +448,7 @@ Compose two nodes with {"type":"stack","gap":3,"children":[...]} when one claim 
 
 ## Density examples (match this richness, not stub cards)
 - compare: each side has a title AND 2–4 concrete items
+- compareFlows: each side has a caps label, usually an intro sentence, and 2–4 events with detail clauses, a code block, or chips
 - railSteps: 4–5 named steps with a detail clause each
 - metrics: 3–5 rows, each with label, value, unit
 - cards: 3–4 cards, each body a full explanatory sentence

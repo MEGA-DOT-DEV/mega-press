@@ -15,6 +15,7 @@ describe("fail-closed kinds", () => {
 	it.each([
 		["railSteps", "STEPS_MISSING"],
 		["compare", "COMPARE_SIDES_MISSING"],
+		["compareFlows", "COMPAREFLOWS_SIDE_MISSING"],
 		["metrics", "METRICS_TOO_FEW"],
 		["cards", "CARDS_TOO_FEW"],
 		["checklist", "CHECKS_TOO_FEW"],

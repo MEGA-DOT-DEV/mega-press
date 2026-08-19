@@ -34,6 +34,7 @@ describe("press cli", () => {
 		expect(ids).toEqual([
 			"railSteps",
 			"compare",
+			"compareFlows",
 			"metrics",
 			"cards",
 			"checklist",

@@ -501,113 +501,208 @@ const timeline: KindModule = {
 	},
 };
 
+/**
+ * One transcript event as the model plans it. timelineVertical events and
+ * compareFlows side events are this same shape, normalized by the same
+ * function below, so the two kinds can never drift apart.
+ */
+type TranscriptPlanEvent = {
+	readonly at?: string;
+	readonly title?: string;
+	readonly detail?: string;
+	readonly code?: string;
+	readonly accent?: boolean;
+	readonly chips?: readonly (string | { readonly text?: string; readonly accent?: boolean })[];
+};
+
+type TranscriptItem = NonNullable<ReturnType<typeof stopToItem>> & {
+	code?: string;
+	chips?: { text: string; accent?: boolean }[];
+};
+
+const transcriptEventToItem = (e: TranscriptPlanEvent): TranscriptItem | null => {
+	const base = stopToItem(e);
+	if (!base) return null;
+	const source = typeof e.code === "string" ? e.code.replace(/\t/g, "  ") : "";
+	const codeLines = source
+		.split("\n")
+		.filter((l, i, all) => l.trim().length > 0 || (i > 0 && i < all.length - 1));
+	// A plain string chip is shorthand for a quiet one; empties are dropped
+	// so a trailing comma in a hand-written plan never refuses the plate.
+	const chips = (Array.isArray(e.chips) ? e.chips : [])
+		.map((c) => (typeof c === "string" ? { text: c } : c))
+		.map((c) =>
+			c != null && typeof c === "object"
+				? { text: String(c.text ?? "").trim(), accent: Boolean(c.accent) }
+				: { text: "", accent: false },
+		)
+		.filter((c) => c.text.length > 0);
+	return {
+		...base,
+		...(codeLines.filter((l) => l.trim()).length >= 2 ? { code: codeLines.join("\n") } : {}),
+		...(chips.length > 0
+			? {
+					chips: chips.map((c) => ({
+						text: c.text,
+						...(c.accent ? { accent: true } : {}),
+					})),
+				}
+			: {}),
+	};
+};
+
+/** Per-event code and chip refusals shared by timelineVertical and compareFlows. */
+const refuseTranscriptItems = (
+	kind: "timelineVertical" | "compareFlows",
+	items: readonly TranscriptItem[],
+): CompileFail | null => {
+	const bloated = items.find((i) => i.code && i.code.split("\n").length > 8);
+	if (bloated) {
+		return fail(
+			"EVENT_CODE_TOO_LONG",
+			`event "${bloated.date}" carries ${bloated.code?.split("\n").length} code lines; 8 is the cap inside a transcript. Use the code kind for a standalone block.`,
+		);
+	}
+	for (const item of items) {
+		if (!item.chips) continue;
+		const chipCount = countFail(kind, "chips", item.chips.length);
+		if (chipCount) return chipCount;
+		const long = item.chips.find((c) => c.text.length > STRING_CAPS.chip.max);
+		if (long) {
+			return fail(
+				STRING_CAPS.chip.code,
+				`chip "${long.text.slice(0, 40)}" on event "${item.date}" is ${long.text.length} characters; a chip is one short mono label, ${STRING_CAPS.chip.max} characters max`,
+			);
+		}
+	}
+	return null;
+};
+
+const transcriptEventSchema = {
+	type: "object",
+	required: ["at", "title"],
+	properties: {
+		at: { type: "string" },
+		title: { type: "string" },
+		detail: {
+			type: "string",
+			maxLength: STRING_CAPS.detail.max,
+			description: STRING_CAPS.detail.description,
+		},
+		code: {
+			type: "string",
+			maxLength: STRING_CAPS.snippet.max,
+			description:
+				"Optional verbatim block under the event: the call shape, payload, or result the event is about; \\n line breaks, 2 to 8 lines, never wrapped",
+		},
+		accent: {
+			type: "boolean",
+			description: "true on the one event the claim is about",
+		},
+		chips: {
+			type: "array",
+			minItems: ITEM_BOUNDS.timelineVertical.chips.min,
+			maxItems: ITEM_BOUNDS.timelineVertical.chips.max,
+			description:
+				"Optional short mono pills under the event's detail or code: badges, a capability shortlist, result qualities; accent: true on the one chosen chip",
+			items: {
+				type: "object",
+				required: ["text"],
+				properties: {
+					text: {
+						type: "string",
+						maxLength: STRING_CAPS.chip.max,
+						description: STRING_CAPS.chip.description,
+					},
+					accent: { type: "boolean" },
+				},
+			},
+		},
+	},
+} as const;
+
 const timelineVertical: KindModule = {
 	id: "timelineVertical",
 	slotsSchema: {
 		type: "object",
 		required: ["events"],
 		properties: {
-			events: arraySchema(ITEM_BOUNDS.timelineVertical.events, {
-				type: "object",
-				required: ["at", "title"],
-				properties: {
-					at: { type: "string" },
-					title: { type: "string" },
-					detail: {
-						type: "string",
-						maxLength: STRING_CAPS.detail.max,
-						description: STRING_CAPS.detail.description,
-					},
-					code: {
-						type: "string",
-						maxLength: STRING_CAPS.snippet.max,
-						description:
-							"Optional verbatim block under the event: the call shape, payload, or result the event is about; \\n line breaks, 2 to 8 lines, never wrapped",
-					},
-					accent: {
-						type: "boolean",
-						description: "true on the one event the claim is about",
-					},
-					chips: {
-						type: "array",
-						minItems: ITEM_BOUNDS.timelineVertical.chips.min,
-						maxItems: ITEM_BOUNDS.timelineVertical.chips.max,
-						description:
-							"Optional short mono pills under the event's detail or code: badges, a capability shortlist, result qualities; accent: true on the one chosen chip",
-						items: {
-							type: "object",
-							required: ["text"],
-							properties: {
-								text: {
-									type: "string",
-									maxLength: STRING_CAPS.chip.max,
-									description: STRING_CAPS.chip.description,
-								},
-								accent: { type: "boolean" },
-							},
-						},
-					},
-				},
-			}),
+			events: arraySchema(ITEM_BOUNDS.timelineVertical.events, transcriptEventSchema),
 		},
 	},
 	compile(plan) {
 		const items = (plan.events ?? [])
-			.map((e) => {
-				const base = stopToItem(e);
-				if (!base) return null;
-				const source = typeof e.code === "string" ? e.code.replace(/\t/g, "  ") : "";
-				const codeLines = source
-					.split("\n")
-					.filter((l, i, all) => l.trim().length > 0 || (i > 0 && i < all.length - 1));
-				// A plain string chip is shorthand for a quiet one; empties are dropped
-				// so a trailing comma in a hand-written plan never refuses the plate.
-				const chips = (Array.isArray(e.chips) ? e.chips : [])
-					.map((c) => (typeof c === "string" ? { text: c } : c))
-					.map((c) =>
-						c != null && typeof c === "object"
-							? { text: String(c.text ?? "").trim(), accent: Boolean(c.accent) }
-							: { text: "", accent: false },
-					)
-					.filter((c) => c.text.length > 0);
-				return {
-					...base,
-					...(codeLines.filter((l) => l.trim()).length >= 2
-						? { code: codeLines.join("\n") }
-						: {}),
-					...(chips.length > 0
-						? {
-								chips: chips.map((c) => ({
-									text: c.text,
-									...(c.accent ? { accent: true } : {}),
-								})),
-							}
-						: {}),
-				};
-			})
-			.filter((s): s is NonNullable<typeof s> => s != null);
+			.map(transcriptEventToItem)
+			.filter((s): s is TranscriptItem => s != null);
 		const counted = countFail("timelineVertical", "events", items.length);
 		if (counted) return counted;
-		const bloated = items.find((i) => i.code && i.code.split("\n").length > 8);
-		if (bloated) {
-			return fail(
-				"EVENT_CODE_TOO_LONG",
-				`event "${bloated.date}" carries ${bloated.code?.split("\n").length} code lines; 8 is the cap inside a transcript. Use the code kind for a standalone block.`,
-			);
-		}
-		for (const item of items) {
-			if (!item.chips) continue;
-			const chipCount = countFail("timelineVertical", "chips", item.chips.length);
-			if (chipCount) return chipCount;
-			const long = item.chips.find((c) => c.text.length > STRING_CAPS.chip.max);
-			if (long) {
+		const refused = refuseTranscriptItems("timelineVertical", items);
+		if (refused) return refused;
+		return finish(plan, { type: "timelineVertical", items });
+	},
+};
+
+const flowSideSchema = {
+	type: "object",
+	required: ["label", "events"],
+	properties: {
+		label: {
+			type: "string",
+			maxLength: STRING_CAPS.flowLabel.max,
+			description: "Small caps mono label above the column naming the flow (uppercased)",
+		},
+		intro: {
+			type: "string",
+			maxLength: STRING_CAPS.detail.max,
+			description: "Optional one or two body sentences under the label framing the flow",
+		},
+		events: arraySchema(ITEM_BOUNDS.compareFlows.events, transcriptEventSchema),
+	},
+} as const;
+
+const compareFlows: KindModule = {
+	id: "compareFlows",
+	slotsSchema: {
+		type: "object",
+		required: ["left", "right"],
+		properties: {
+			left: flowSideSchema,
+			right: flowSideSchema,
+		},
+	},
+	compile(plan) {
+		const sides = [
+			["left", plan.left],
+			["right", plan.right],
+		] as const;
+		const compiled: Record<string, unknown>[] = [];
+		for (const [name, side] of sides) {
+			const label = String(side?.label ?? "")
+				.trim()
+				.toUpperCase();
+			if (!side || !label) {
 				return fail(
-					STRING_CAPS.chip.code,
-					`chip "${long.text.slice(0, 40)}" on event "${item.date}" is ${long.text.length} characters; a chip is one short mono label, ${STRING_CAPS.chip.max} characters max`,
+					"COMPAREFLOWS_SIDE_MISSING",
+					`compareFlows needs a ${name} side with a label naming its flow`,
 				);
 			}
+			if (label.length > STRING_CAPS.flowLabel.max) {
+				return fail(
+					STRING_CAPS.flowLabel.code,
+					`the ${name} label is ${label.length} characters; ${STRING_CAPS.flowLabel.max} is the cap`,
+				);
+			}
+			const items = (side.events ?? [])
+				.map(transcriptEventToItem)
+				.filter((s): s is TranscriptItem => s != null);
+			const counted = countFail("compareFlows", "events", items.length);
+			if (counted) return counted;
+			const refused = refuseTranscriptItems("compareFlows", items);
+			if (refused) return refused;
+			const intro = String(side.intro ?? "").trim();
+			compiled.push({ label, ...(intro ? { intro } : {}), items });
 		}
-		return finish(plan, { type: "timelineVertical", items });
+		return finish(plan, { type: "compareFlows", left: compiled[0], right: compiled[1] });
 	},
 };
 
@@ -854,6 +949,7 @@ export const KIND_MODULES: readonly KindModule[] = [
 	note,
 	timeline,
 	timelineVertical,
+	compareFlows,
 	railFlow,
 	graph,
 	derivation,

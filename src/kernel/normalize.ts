@@ -37,6 +37,9 @@ const TYPE_ALIASES: Record<string, string> = {
 	transcript: "timelineVertical",
 	log: "timelineVertical",
 	events: "timelineVertical",
+	flows: "compareFlows",
+	dualflow: "compareFlows",
+	sidebyside: "compareFlows",
 	roadmap: "timeline",
 	diagram: "graph",
 	flowchart: "graph",
@@ -88,6 +91,39 @@ const sideToCompareColumn = (
 	if (items.length === 0) items = [title];
 	return { label, title, items };
 };
+
+/**
+ * Coerce a list of transcript items toward the drawn {date, title, detail?,
+ * code?, accent?, chips?} shape. timeline/timelineVertical items and each
+ * compareFlows side run through this same function so the shapes cannot drift.
+ */
+function normalizeTranscriptItems(items: unknown[]): unknown[] {
+	return items.map((item, i) => {
+		if (!isRecord(item)) return { date: `STEP ${i + 1}`, title: String(item) };
+		const row = { ...item };
+		if (row.date == null) row.date = row.at ?? row.label ?? row.actor ?? row.when ?? `STEP ${i + 1}`;
+		if (row.title == null) row.title = row.name ?? row.text ?? "";
+		if (row.detail == null) {
+			const d = row.body ?? row.description;
+			if (d != null) row.detail = d;
+		}
+		if (row.code == null && row.snippet != null) row.code = row.snippet;
+		// A chip written as a plain string is shorthand for a quiet chip.
+		// Objects (and anything else) pass through for the lock to judge.
+		if (Array.isArray(row.chips)) {
+			row.chips = row.chips.map((c) => (typeof c === "string" ? { text: c } : c));
+		}
+		delete row.at;
+		delete row.label;
+		delete row.actor;
+		delete row.when;
+		delete row.name;
+		delete row.body;
+		delete row.description;
+		delete row.snippet;
+		return row;
+	});
+}
 
 function normalizeNode(node: unknown): unknown {
 	if (!isRecord(node)) return node;
@@ -175,31 +211,39 @@ function normalizeNode(node: unknown): unknown {
 	}
 
 	if ((type === "timeline" || type === "timelineVertical") && Array.isArray(out.items)) {
-		out.items = out.items.map((item, i) => {
-			if (!isRecord(item)) return { date: `STEP ${i + 1}`, title: String(item) };
-			const row = { ...item };
-			if (row.date == null) row.date = row.at ?? row.label ?? row.actor ?? row.when ?? `STEP ${i + 1}`;
-			if (row.title == null) row.title = row.name ?? row.text ?? "";
-			if (row.detail == null) {
-				const d = row.body ?? row.description;
-				if (d != null) row.detail = d;
+		out.items = normalizeTranscriptItems(out.items);
+	}
+
+	if (type === "compareFlows") {
+		for (const key of ["left", "right"] as const) {
+			const side = out[key];
+			if (!isRecord(side)) continue;
+			const s: Record<string, unknown> = { ...side };
+			if (s.label == null) {
+				const l = s.title ?? s.name;
+				if (l != null) s.label = String(l);
 			}
-			if (row.code == null && row.snippet != null) row.code = row.snippet;
-			// A chip written as a plain string is shorthand for a quiet chip.
-			// Objects (and anything else) pass through for the lock to judge.
-			if (Array.isArray(row.chips)) {
-				row.chips = row.chips.map((c) => (typeof c === "string" ? { text: c } : c));
+			if (typeof s.label === "string") s.label = s.label.toUpperCase();
+			if (s.intro == null) {
+				const i = s.lead ?? s.description ?? s.body;
+				if (i != null) s.intro = i;
 			}
-			delete row.at;
-			delete row.label;
-			delete row.actor;
-			delete row.when;
-			delete row.name;
-			delete row.body;
-			delete row.description;
-			delete row.snippet;
-			return row;
-		});
+			if (s.items == null) {
+				const alt = s.events ?? s.stops;
+				if (Array.isArray(alt)) s.items = alt;
+			}
+			// The side's events are transcript items, so they take the exact same
+			// coercions a timelineVertical item does: one shape, one normalizer.
+			if (Array.isArray(s.items)) s.items = normalizeTranscriptItems(s.items);
+			delete s.title;
+			delete s.name;
+			delete s.lead;
+			delete s.description;
+			delete s.body;
+			delete s.events;
+			delete s.stops;
+			out[key] = s;
+		}
 	}
 
 	if (type === "graph") {

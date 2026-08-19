@@ -23,6 +23,7 @@ import { image, placeholder } from "../components/media.js";
 import { railFlow, railSteps } from "../components/rail.js";
 import { code } from "../components/code.js";
 import { derivation } from "../components/reasoning.js";
+import { compareFlows } from "../components/flows.js";
 import { checklist, compare, layers, quote } from "../components/structure.js";
 import { table } from "../components/table.js";
 import { schedule, swimlanes, timeline, timelineVertical } from "../components/timeline.js";
@@ -374,6 +375,47 @@ const STRUCTURE = [
 			type: "compare",
 			before: { label: "BEFORE", title: "Page by page", items: ["Cloned from the export."] },
 			after: { label: "AFTER", title: "Components", items: ["One change, every page."] },
+		},
+	}),
+
+	def("compareFlows", {
+		fn: compareFlows,
+		summary: "Two labelled columns side by side, each its own vertical transcript.",
+		use: "contrasting two flows read top to bottom: job vs workflow, remember vs recall, dedicated integration vs agent-built",
+		params: {
+			left: {
+				type: "{label, intro?, items[]}",
+				required: true,
+				of: {
+					label: "string (required), small caps mono name of the flow",
+					intro: "string, one or two body sentences under the label",
+					items: "2 to 6 timelineVertical-shaped events: {date, title, detail?, code?, accent?, chips?}",
+				},
+			},
+			right: { type: "{label, intro?, items[]}", required: true },
+			gap: { type: GAP, default: 5 },
+		},
+		notes: [
+			"Each column is built from the same event rows timelineVertical draws, and derives its own rail from its own markers.",
+			"A column's date column width derives from that column's own widest label, so the two sides never borrow each other's measure.",
+			"The whole figure is one claim about a contrast, so each column counts as one unit rather than each event.",
+		],
+		example: {
+			type: "compareFlows",
+			left: {
+				label: "REMEMBER",
+				items: [
+					{ date: "USER", title: "States a fact worth keeping" },
+					{ date: "AGENT", title: "Writes it under a stable name" },
+				],
+			},
+			right: {
+				label: "RECALL",
+				items: [
+					{ date: "USER", title: "Asks weeks later" },
+					{ date: "AGENT", title: "Reads the same name back" },
+				],
+			},
 		},
 	}),
 
