@@ -15,5 +15,6 @@ const el = document.getElementById("plate");
 if (!el) throw new Error("missing #plate");
 el.style.width = `${frame.w}px`;
 el.style.height = `${frame.h}px`;
-mountArtifact(el, spec);
-document.documentElement.dataset.pressReady = "1";
+void mountArtifact(el, spec).ready.then(() => {
+	document.documentElement.dataset.pressReady = "1";
+});

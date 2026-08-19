@@ -19,8 +19,8 @@ export { parseArtifact } from "./parse.js";
 export type { BuildResult } from "./build.js";
 export { buildArtifact } from "./build.js";
 
-export type { MountArtifactOpts } from "./mount.js";
-export { mountArtifact } from "./mount.js";
+export type { MountArtifactOpts, MountedArtifact } from "./mount.js";
+export { ensurePressFonts, mountArtifact } from "./mount.js";
 
 export { outlineToPlatePlan as outlineToArtifact, outlineToPlatePlan } from "./kernel/outlineToPlan.js";
 

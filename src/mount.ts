@@ -2,10 +2,20 @@
 import { buildPlate } from "./plate.js";
 import { mount } from "./render.js";
 import { compileSpec } from "./spec.js";
+import { resetMetrics } from "./text.js";
 import type { PressChrome, PressChromePreset, PressColorTheme, PressFontTheme } from "./theme.js";
 import { withPressTheme } from "./theme.js";
 
 const FONT_STYLE_ID = "mega-press-fonts";
+
+/** Faces the solver measures. Wrong widths until these have loaded. */
+const MEASURE_FACES = [
+	'400 72px "Argent Pixel"',
+	'400 40px "Argent Pixel"',
+	'400 32px "Geist Pixel"',
+	'400 26px "Geist Pixel"',
+	'400 26px "Geist Sans"',
+] as const;
 
 const injectFontsOnce = (doc: Document): void => {
 	if (doc.getElementById(FONT_STYLE_ID)) return;
@@ -17,6 +27,16 @@ const injectFontsOnce = (doc: Document): void => {
 	doc.head.appendChild(link);
 };
 
+/** Inject faces and wait until canvas measureText will see them. */
+export async function ensurePressFonts(doc: Document = document): Promise<void> {
+	injectFontsOnce(doc);
+	const fonts = doc.fonts;
+	if (!fonts) return;
+	await Promise.all(MEASURE_FACES.map((face) => fonts.load(face).catch(() => undefined)));
+	await fonts.ready;
+	resetMetrics();
+}
+
 export type MountArtifactOpts = {
 	readonly dpr?: number;
 	readonly pixelSize?: number;
@@ -26,16 +46,17 @@ export type MountArtifactOpts = {
 	readonly fonts?: PressFontTheme;
 };
 
-/**
- * Build + mount a locked press spec into `el`. Injects fonts/CSS once.
- * Scales the artboard to the host element's content box.
- */
-export function mountArtifact(
+export type MountedArtifact = {
+	unmount(): void;
+	readonly ready: Promise<void>;
+};
+
+const paintPlate = (
 	el: HTMLElement,
 	spec: Record<string, unknown>,
-	opts?: MountArtifactOpts,
-): { unmount(): void } {
-	return withPressTheme(
+	opts: MountArtifactOpts | undefined,
+): { unmount(): void } =>
+	withPressTheme(
 		opts?.chrome !== undefined || opts?.color !== undefined || opts?.fonts !== undefined
 			? {
 					...(opts.chrome !== undefined ? { chrome: opts.chrome } : {}),
@@ -45,8 +66,6 @@ export function mountArtifact(
 			: null,
 		() => {
 			const doc = el.ownerDocument;
-			injectFontsOnce(doc);
-
 			const plate = buildPlate(compileSpec(spec), { validateNow: true });
 			const hostW = Math.max(1, el.clientWidth || el.getBoundingClientRect().width || 780);
 			const hostH = Math.max(
@@ -83,4 +102,30 @@ export function mountArtifact(
 			};
 		},
 	);
+
+/**
+ * Build + mount a locked press spec into `el`.
+ * Waits for press faces before measuring — otherwise display titles overflow.
+ */
+export function mountArtifact(
+	el: HTMLElement,
+	spec: Record<string, unknown>,
+	opts?: MountArtifactOpts,
+): MountedArtifact {
+	const doc = el.ownerDocument;
+	let cancelled = false;
+	let inner: { unmount(): void } | null = null;
+
+	const ready = ensurePressFonts(doc).then(() => {
+		if (cancelled) return;
+		inner = paintPlate(el, spec, opts);
+	});
+
+	return {
+		ready,
+		unmount() {
+			cancelled = true;
+			inner?.unmount();
+		},
+	};
 }
