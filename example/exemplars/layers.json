@@ -1,0 +1,11 @@
+{
+	"kind": "layers",
+	"id": "exemplar-layers",
+	"frame": "square",
+	"title": "Policy sits above tools; tools sit above the model.",
+	"layers": [
+		{ "title": "Policy", "detail": "What the agent may never do alone, written first." },
+		{ "title": "Tools", "detail": "Schemas, permissions, and honest errors the loop can trust." },
+		{ "title": "Model", "detail": "Chooses the next step under the policy, never around it." }
+	]
+}

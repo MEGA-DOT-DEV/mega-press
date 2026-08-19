@@ -1,0 +1,12 @@
+{
+	"kind": "railFlow",
+	"id": "exemplar-railFlow",
+	"frame": "landscape",
+	"title": "Two tools route every request from ask to answer.",
+	"steps": [
+		{ "name": "Ask", "detail": "The user asks in plain language." },
+		{ "name": "search", "detail": "Finds the one capability that matches the ask." },
+		{ "name": "execute", "detail": "Runs it with schema-checked arguments." },
+		{ "name": "Answer", "detail": "Returns checked numbers, not guesses." }
+	]
+}

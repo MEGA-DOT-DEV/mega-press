@@ -1,0 +1,14 @@
+{
+	"kind": "quadrant",
+	"id": "exemplar-quadrant",
+	"frame": "square",
+	"title": "Autonomy is earned per cell, not per agent.",
+	"xLabel": "LOW TO HIGH AUTOMATION",
+	"yLabel": "LOW TO HIGH BLAST RADIUS",
+	"quadrants": [
+		{ "title": "Human required", "detail": "Low automation, high blast: a person approves each write." },
+		{ "title": "Forbidden", "detail": "High automation, high blast: never without dual control." },
+		{ "title": "Manual is fine", "detail": "Low automation, low blast: log the path and move on." },
+		{ "title": "Safe to loop", "detail": "High automation, low blast: run with a step budget." }
+	]
+}

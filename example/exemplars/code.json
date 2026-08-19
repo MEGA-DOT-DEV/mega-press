@@ -1,0 +1,9 @@
+{
+	"kind": "code",
+	"id": "exemplar-code",
+	"frame": "landscape",
+	"title": "The protocol is a shared call shape.",
+	"codeLabel": "get_campaign_stats",
+	"code": "{\n  \"name\": \"get_campaign_stats\",\n  \"arguments\": {\n    \"range\": \"last_week\"\n  }\n}",
+	"accentLines": [4]
+}

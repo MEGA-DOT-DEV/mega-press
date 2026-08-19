@@ -1,0 +1,41 @@
+{
+	"kind": "timelineVertical",
+	"id": "exemplar-timelineVertical",
+	"frame": "square",
+	"title": "Each unchecked guess compounds until the fourth step is a coin flip.",
+	"events": [
+		{
+			"at": "STEP 1",
+			"title": "Guesses the endpoint from prose",
+			"detail": "No schema to check the guess against.",
+			"chips": [{ "text": "~15% error chance" }]
+		},
+		{
+			"at": "STEP 2",
+			"title": "Picks from the published shortlist",
+			"chips": [
+				{ "text": "email_message_search", "accent": true },
+				{ "text": "integrations" },
+				{ "text": "jobs" },
+				{ "text": "values" }
+			]
+		},
+		{
+			"at": "STEP 3",
+			"title": "Calls the chosen capability",
+			"accent": true,
+			"code": "{\n  \"capability\": \"email_message_search\",\n  \"arguments\": { \"query\": \"campaign\" }\n}"
+		},
+		{
+			"at": "STEP 4",
+			"title": "Returns a checked result",
+			"detail": "The schema validated every hop before the call left.",
+			"chips": [
+				{ "text": "predictable" },
+				{ "text": "reliable" },
+				{ "text": "fast" },
+				{ "text": "cheap" }
+			]
+		}
+	]
+}

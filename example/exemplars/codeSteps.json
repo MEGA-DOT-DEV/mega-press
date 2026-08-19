@@ -1,0 +1,18 @@
+{
+	"kind": "codeSteps",
+	"id": "exemplar-codeSteps",
+	"frame": "square",
+	"title": "A value stored under a name is read back by the same name.",
+	"blocks": [
+		{
+			"label": "value_set",
+			"caption": "stored earlier by the user, agent, or app",
+			"code": "value_set({\n  \"name\": \"reportTimezone\",\n  \"value\": \"Europe/Warsaw\",\n  \"scope\": \"user\"\n})"
+		},
+		{
+			"label": "value_get",
+			"caption": "the package reads it at runtime, with a fallback",
+			"code": "const stored = value_get({ \"name\": \"reportTimezone\" })\nconst timezone = stored?.value ?? \"UTC\"\nformatReport({ timezone })"
+		}
+	]
+}

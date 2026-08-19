@@ -1,0 +1,12 @@
+{
+	"kind": "cards",
+	"id": "exemplar-cards",
+	"frame": "square",
+	"title": "Four things the agent must always know.",
+	"cards": [
+		{ "title": "Goal", "body": "Outcome plus observable completion checks, not a vague wish." },
+		{ "title": "Evidence", "body": "Facts with sources: tool output, records, prior approvals." },
+		{ "title": "Budget", "body": "Remaining turns, time, and which writes still need a human." },
+		{ "title": "Recovery", "body": "Missing info, bad args, denied permission, or external fault." }
+	]
+}

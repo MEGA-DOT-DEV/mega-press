@@ -1,0 +1,26 @@
+{
+	"kind": "compare",
+	"id": "exemplar-compare",
+	"frame": "landscape",
+	"title": "A missing connection is a task, not a wall.",
+	"before": {
+		"label": "DEDICATED",
+		"title": "Built in advance",
+		"items": [
+			"I don't have a Linear integration.",
+			"The agent can only use what was built for it.",
+			"The user leaves to find a plugin or wait for the vendor.",
+			"Task blocked: the capability is someone else's job."
+		]
+	},
+	"after": {
+		"label": "AGENT-BUILT",
+		"title": "Created on demand",
+		"items": [
+			"The agent figures out how Linear connects and sends a secure link.",
+			"The user logs in outside the chat; the agent never sees the key.",
+			"Connection verified, the stale issues get closed.",
+			"The proven workflow is saved as the linear-cleanup package."
+		]
+	}
+}

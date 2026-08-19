@@ -1,0 +1,18 @@
+{
+	"kind": "derivation",
+	"id": "exemplar-derivation",
+	"frame": "landscape",
+	"title": "A value stored once is read by name forever.",
+	"exprs": [
+		{ "expr": "value_set({ name: 'reportTimezone', value: 'Europe/Warsaw' })" },
+		{
+			"expr": "stored = value_get({ name: 'reportTimezone' })",
+			"note": "The package reads the same name at runtime instead of asking again."
+		},
+		{
+			"expr": "timezone = stored?.value ?? 'UTC'",
+			"note": "A fallback keeps the report running before the value exists.",
+			"accent": true
+		}
+	]
+}

@@ -1,0 +1,13 @@
+{
+	"kind": "segments",
+	"id": "exemplar-segments",
+	"frame": "landscape",
+	"title": "Most of the permission surface is read-only.",
+	"segmentUnit": "permission surface",
+	"segmentTotal": 100,
+	"segments": [
+		{ "label": "Read", "value": 55 },
+		{ "label": "Draft", "value": 30 },
+		{ "label": "Write gated", "value": 15 }
+	]
+}

@@ -1,0 +1,35 @@
+{
+	"kind": "compareFlows",
+	"id": "exemplar-compareFlows",
+	"frame": "square",
+	"title": "A Job persists a schedule; a Workflow persists one run.",
+	"left": {
+		"label": "JOB",
+		"intro": "A schedule that persists: the same prompt fired on a cron, every run independent.",
+		"events": [
+			{ "at": "DEFINE", "title": "Names a prompt and a cron", "detail": "Every Monday at 07:00, build the weekly report." },
+			{ "at": "SAVE", "title": "The schedule is stored", "detail": "It outlives the chat that created it." },
+			{ "at": "WAKE", "title": "The scheduler fires the prompt", "detail": "A fresh run with no memory of the last one." },
+			{ "at": "REPEAT", "title": "Runs again next Monday", "detail": "Failures do not carry over between runs." }
+		]
+	},
+	"right": {
+		"label": "WORKFLOW",
+		"intro": "One durable execution: a single run that survives restarts until it completes.",
+		"events": [
+			{ "at": "REQUEST", "title": "Starts one durable run", "detail": "The input is validated before step one." },
+			{ "at": "VALIDATE", "title": "Arguments checked up front", "detail": "A bad input refuses here, not at step four." },
+			{
+				"at": "RUN",
+				"title": "Each step checkpoints its result",
+				"code": "workflow.start({\n  \"name\": \"weekly-report\",\n  \"input\": { \"week\": 34 }\n})"
+			},
+			{
+				"at": "DONE",
+				"title": "Completes exactly once",
+				"accent": true,
+				"chips": [{ "text": "durable", "accent": true }, { "text": "resumable" }]
+			}
+		]
+	}
+}

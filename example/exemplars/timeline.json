@@ -1,0 +1,26 @@
+{
+	"kind": "timeline",
+	"id": "exemplar-timeline",
+	"frame": "square",
+	"title": "The schema turns four blind calls into one hinted path.",
+	"tracks": [
+		{
+			"label": "DIRECT API CALL, NO HINT",
+			"stops": [
+				{ "at": "CALL 1", "title": "send_email", "detail": "Fails: missing audience_id." },
+				{ "at": "CALL 2", "title": "send_email", "detail": "Retries the same failing call." },
+				{ "at": "CALL 3", "title": "guess id", "detail": "Invents an audience id from prose." },
+				{ "at": "CALL 4", "title": "send_email", "detail": "Delivered to the wrong list." }
+			]
+		},
+		{
+			"label": "THROUGH RESEND MCP",
+			"stops": [
+				{ "at": "CALL 1", "title": "send_email", "detail": "Error names the next step." },
+				{ "at": "CALL 2", "title": "list_audiences", "detail": "Returns the missing id." },
+				{ "at": "CALL 3", "title": "send_email", "detail": "Delivered to the right list." },
+				{ "at": "CALL 4", "title": "confirmed", "detail": "Delivery verified by id.", "accent": true }
+			]
+		}
+	]
+}

@@ -1,0 +1,20 @@
+{
+	"id": "exemplar-composed-callouts",
+	"frame": "landscape",
+	"title": "Note and quote ride inside a composition, never alone.",
+	"body": {
+		"type": "stack",
+		"gap": 3,
+		"children": [
+			{
+				"type": "note",
+				"content": "Every plate passes parse, lock, pedagogy, and geometry before a single pixel is drawn. A spec that cannot fit its frame is refused by name, never squeezed, truncated, or silently reflowed."
+			},
+			{
+				"type": "quote",
+				"text": "An agent that cannot stop is not autonomous, it is unattended.",
+				"attribution": "MEGA FIELD NOTES"
+			}
+		]
+	}
+}

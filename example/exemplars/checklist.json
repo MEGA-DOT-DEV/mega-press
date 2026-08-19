@@ -1,0 +1,13 @@
+{
+	"kind": "checklist",
+	"id": "exemplar-checklist",
+	"frame": "landscape",
+	"title": "Guard the loop before you tune the prompt.",
+	"checks": [
+		{ "text": "Write the stop condition before the system prompt.", "ok": true },
+		{ "text": "Log every tool call with arguments and result.", "ok": true },
+		{ "text": "Default-deny irreversible tools.", "ok": true },
+		{ "text": "Add personality to fix a broken loop.", "ok": false },
+		{ "text": "Widen permissions because the happy path worked once.", "ok": false }
+	]
+}

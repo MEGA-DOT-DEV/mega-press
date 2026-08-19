@@ -6,6 +6,7 @@
  *   press schema [kind]
  *   press check <spec|->
  *   press render <spec|-> --format html|png|json [--out <path>]
+ *   press gallery [--out <path>]
  *
  * --json          machine-readable output
  * Exit: 0 lock, 1 refuse, 2 tool-broke
@@ -38,6 +39,9 @@ press  @mega/press, from the command line
   press check <spec|->             validate a spec, write nothing
   press render <spec|-> --format html|png|json [--out <path>]
                                    lock, then write the asked format
+  press gallery [--out <path>]     one self-contained page mounting every
+                                   kind's canonical exemplar (default
+                                   ./press-gallery.html)
 
   --json          machine readable output
   --format <fmt>  json (default) · html · png
@@ -93,6 +97,7 @@ async function kernel() {
 		listArtifactModules: catalog.listArtifactModules,
 		getArtifactModuleSchema: catalog.getArtifactModuleSchema,
 		frameSize: lock.frameSize,
+		lockPlate: lock.lockPlate,
 	};
 }
 
@@ -179,7 +184,7 @@ function defaultOut(spec, format) {
 	return resolve(process.cwd(), `${id}.${format === "png" ? "png" : format === "html" ? "html" : "json"}`);
 }
 
-function inlineBuiltHtml(dir, spec) {
+function inlineBuiltHtml(dir, globalName, payload) {
 	const htmlName = readdirSync(dir).find((f) => f.endsWith(".html"));
 	if (!htmlName) die("vite wrote no html");
 	let html = readFileSync(join(dir, htmlName), "utf8");
@@ -198,13 +203,16 @@ function inlineBuiltHtml(dir, spec) {
 			}
 		}
 	}
-	const inject = `<script>globalThis.__PRESS_SPEC__=${JSON.stringify(spec)}</script>`;
+	// Escaping "<" as a unicode sequence keeps payload strings from ever
+	// ending the inline script tag early.
+	const json = JSON.stringify(payload).replace(/</g, "\\u003c");
+	const inject = `<script>globalThis.${globalName}=${json}</script>`;
 	if (html.includes("<head>")) html = html.replace("<head>", `<head>${inject}`);
 	else html = inject + html;
 	return html;
 }
 
-async function writeHtml(spec, dest) {
+async function buildInlinedHtml(input, globalName, payload) {
 	const { build } = await import("vite");
 	const dir = mkdtempSync(join(tmpdir(), "mega-press-html-"));
 	try {
@@ -218,17 +226,21 @@ async function writeHtml(spec, dest) {
 				assetsInlineLimit: 10_000_000,
 				cssCodeSplit: false,
 				rollupOptions: {
-					input: join(ROOT, "cli/host.html"),
+					input: join(ROOT, input),
 					output: { inlineDynamicImports: true },
 				},
 			},
 		});
-		const html = inlineBuiltHtml(dir, spec);
-		mkdirSync(dirname(dest), { recursive: true });
-		writeFileSync(dest, html);
+		return inlineBuiltHtml(dir, globalName, payload);
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
 	}
+}
+
+async function writeHtml(spec, dest) {
+	const html = await buildInlinedHtml("cli/host.html", "__PRESS_SPEC__", spec);
+	mkdirSync(dirname(dest), { recursive: true });
+	writeFileSync(dest, html);
 }
 
 function serveHtml(html) {
@@ -427,6 +439,120 @@ async function writePng(api, spec, dest) {
 	if (toolBroke) die(toolBroke, 2);
 }
 
+/** Kinds outside the composer catalog still need a one-line `use` label. */
+const GALLERY_USE_FALLBACK = {
+	hero: "One focal number with a caption saying what it counts.",
+};
+
+const COMPOSED_CALLOUTS = {
+	kind: "note + quote",
+	use: "Callouts compose inside a plate; standalone they refuse by design.",
+	file: "_composed-callouts.json",
+};
+
+function readExemplar(file) {
+	const path = join(ROOT, "example/exemplars", file);
+	if (!existsSync(path)) {
+		return { ok: false, errors: [{ code: "EXEMPLAR_MISSING", message: `${path} does not exist` }] };
+	}
+	try {
+		return { ok: true, json: JSON.parse(readFileSync(path, "utf8")) };
+	} catch (err) {
+		return {
+			ok: false,
+			errors: [{ code: "EXEMPLAR_BAD_JSON", message: `${path}: ${err.message}` }],
+		};
+	}
+}
+
+/**
+ * press gallery — mount one canonical exemplar of every kind on one page.
+ * Fail-closed: any refused exemplar refuses the whole gallery by name.
+ */
+async function cmdGallery(api) {
+	const { KIND_MODULES } = await import(join(ROOT, "dist/kinds.js"));
+	const dest = resolve(process.cwd(), opt("out", "./press-gallery.html"));
+	const useById = new Map(api.listArtifactModules().map((k) => [k.id, k.use]));
+	const entries = [];
+	const failures = [];
+
+	for (const module of KIND_MODULES) {
+		const kind = module.id;
+		// note and quote are pedagogy-refused standalone by design; both ride in
+		// one composed wrapper spec placed here, after quote's catalog position.
+		if (kind === "note") continue;
+		if (kind === "quote") {
+			const read = readExemplar(COMPOSED_CALLOUTS.file);
+			if (!read.ok) {
+				failures.push({ kind: COMPOSED_CALLOUTS.kind, errors: read.errors });
+				continue;
+			}
+			const locked = api.lockPlate(read.json);
+			if (!locked.ok) {
+				failures.push({ kind: COMPOSED_CALLOUTS.kind, errors: locked.errors });
+				continue;
+			}
+			const proved = api.proveArtifact(locked.spec);
+			if (!proved.ok) {
+				failures.push({ kind: COMPOSED_CALLOUTS.kind, errors: proved.errors });
+				continue;
+			}
+			entries.push({
+				kind: COMPOSED_CALLOUTS.kind,
+				use: COMPOSED_CALLOUTS.use,
+				frame: String(proved.spec.frame ?? "landscape"),
+				spec: proved.spec,
+			});
+			continue;
+		}
+		const read = readExemplar(`${kind}.json`);
+		if (!read.ok) {
+			failures.push({ kind, errors: read.errors });
+			continue;
+		}
+		const result = lockPlan(api, read.json);
+		if (!result.ok) {
+			failures.push({ kind, errors: result.errors });
+			continue;
+		}
+		const use = useById.get(kind) ?? GALLERY_USE_FALLBACK[kind];
+		if (!use) {
+			failures.push({
+				kind,
+				errors: [{ code: "USE_MISSING", message: `no catalog use line for "${kind}"` }],
+			});
+			continue;
+		}
+		entries.push({
+			kind,
+			use,
+			frame: String(result.spec.frame ?? "landscape"),
+			spec: result.spec,
+		});
+	}
+
+	if (failures.length > 0) {
+		const names = failures.map((f) => f.kind).join(", ");
+		const errors = [
+			{
+				code: "GALLERY_EXEMPLAR_REFUSED",
+				message: `no partial gallery: ${failures.length} exemplar(s) refused (${names})`,
+			},
+			...failures.flatMap((f) =>
+				f.errors.map((e) => ({ code: e.code, message: `${f.kind}: ${e.message}` })),
+			),
+		];
+		if (JSON_OUT) out(null, { ok: false, errors });
+		else console.error(`\n  ${printErrors(errors)}\n`);
+		process.exit(1);
+	}
+
+	const html = await buildInlinedHtml("cli/gallery.html", "__PRESS_GALLERY__", entries);
+	mkdirSync(dirname(dest), { recursive: true });
+	writeFileSync(dest, html);
+	out(dest, { ok: true, file: dest, kinds: entries.length });
+}
+
 async function cmdRender(api) {
 	const format = opt("format", "json");
 	if (!["json", "html", "png"].includes(format)) {
@@ -478,6 +604,7 @@ async function main() {
 	if (command === "schema") return cmdSchema(api);
 	if (command === "check") return cmdCheck(api);
 	if (command === "render") return cmdRender(api);
+	if (command === "gallery") return cmdGallery(api);
 	die(`unknown command "${command}". Try press help.`);
 }
 

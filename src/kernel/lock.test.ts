@@ -112,6 +112,38 @@ describe("lockPlate", () => {
 		}
 	});
 
+	it("locks a hero with a caption and no unit (the kind compiler's shape)", () => {
+		const result = lockPlate({
+			id: "hero-caption",
+			title: "Most tasks end long before the budget does.",
+			body: { type: "hero", value: "3", caption: "TOOL ROUNDS BEFORE STOP" },
+		});
+		expect(result.ok).toBe(true);
+	});
+
+	it("locks a hero with a unit and no caption (normalize backfills caption)", () => {
+		const result = lockPlate({
+			id: "hero-unit",
+			title: "Most tasks end long before the budget does.",
+			body: { type: "hero", value: "3", unit: "TOOL ROUNDS BEFORE STOP" },
+		});
+		expect(result.ok).toBe(true);
+		if (result.ok) {
+			expect((result.spec.body as { caption?: string }).caption).toBe("TOOL ROUNDS BEFORE STOP");
+		}
+	});
+
+	it("refuses a hero with neither caption nor unit", () => {
+		const result = lockPlate({
+			id: "hero-bare",
+			body: { type: "hero", value: "3" },
+		});
+		expect(result.ok).toBe(false);
+		if (!result.ok) {
+			expect(result.errors.some((e) => e.code === "HERO_UNIT")).toBe(true);
+		}
+	});
+
 	it("coerces stack children that are not objects", () => {
 		const result = lockPlate({
 			id: "stacky",

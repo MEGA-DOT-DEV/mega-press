@@ -184,8 +184,15 @@ const validateNode = (node: unknown, path: string, errors: PressError[], depth: 
 		if (node.value === undefined || String(node.value).trim() === "") {
 			errors.push({ code: "HERO_VALUE", message: `${path}: hero needs value` });
 		}
-		if (!node.unit || String(node.unit).trim() === "") {
-			errors.push({ code: "HERO_UNIT", message: `${path}: hero needs unit` });
+		// The kind compiler and renderer speak `caption`; older specs say `unit`.
+		// Either satisfies the law that a prominent number says what it counts.
+		const caption = String(node.caption ?? "").trim();
+		const unit = String(node.unit ?? "").trim();
+		if (!caption && !unit) {
+			errors.push({
+				code: "HERO_UNIT",
+				message: `${path}: hero needs a caption or unit saying what is counted`,
+			});
 		}
 	}
 

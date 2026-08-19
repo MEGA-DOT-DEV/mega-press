@@ -1,0 +1,12 @@
+{
+	"kind": "metrics",
+	"id": "exemplar-metrics",
+	"frame": "landscape",
+	"title": "Every loop runs inside explicit budgets.",
+	"metrics": [
+		{ "label": "Step budget", "value": "8", "unit": "tool calls" },
+		{ "label": "Time box", "value": "60", "unit": "seconds" },
+		{ "label": "Write tools", "value": "0", "unit": "until approval" },
+		{ "label": "Human gates", "value": "1", "unit": "irreversible acts" }
+	]
+}

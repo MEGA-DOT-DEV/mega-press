@@ -1,0 +1,18 @@
+{
+	"kind": "tree",
+	"id": "exemplar-tree",
+	"frame": "landscape",
+	"title": "One server, six rows: everything kody-mcp can hold, run, and reach.",
+	"root": { "name": "kody-mcp" },
+	"branches": [
+		{ "name": "tools", "items": ["search", "execute"] },
+		{
+			"name": "capabilities",
+			"children": [
+				{ "name": "holds", "items": ["memory", "storage", "values", "secrets"] },
+				{ "name": "runs", "items": ["packages", "jobs"] },
+				{ "name": "reaches", "items": ["integrations", "email"] }
+			]
+		}
+	]
+}

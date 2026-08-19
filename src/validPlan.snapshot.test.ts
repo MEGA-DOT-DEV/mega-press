@@ -31,6 +31,14 @@ const table: ArtifactPlan = {
 	],
 };
 
+const heroPlan: ArtifactPlan = {
+	kind: "hero",
+	id: "tool-rounds",
+	title: "Most tasks end long before the budget does.",
+	heroValue: "3",
+	heroCaption: "TOOL ROUNDS BEFORE STOP",
+};
+
 const bars: ArtifactPlan = {
 	kind: "bars",
 	id: "loop-share",
@@ -215,6 +223,13 @@ describe("valid-plan snapshots", () => {
 
 	it("table compile stays stable", () => {
 		const result = buildArtifact(table);
+		expect(result.ok).toBe(true);
+		if (!result.ok) throw new Error("expected ok");
+		expect(result.spec).toMatchSnapshot();
+	});
+
+	it("hero compile stays stable (caption satisfies the lock without a unit)", () => {
+		const result = buildArtifact(heroPlan);
 		expect(result.ok).toBe(true);
 		if (!result.ok) throw new Error("expected ok");
 		expect(result.spec).toMatchSnapshot();

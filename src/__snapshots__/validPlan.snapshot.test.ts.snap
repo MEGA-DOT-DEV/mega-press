@@ -216,6 +216,19 @@ exports[`valid-plan snapshots > graph compile stays stable 1`] = `
 }
 `;
 
+exports[`valid-plan snapshots > hero compile stays stable (caption satisfies the lock without a unit) 1`] = `
+{
+  "body": {
+    "caption": "TOOL ROUNDS BEFORE STOP",
+    "type": "hero",
+    "value": "3",
+  },
+  "frame": "landscape",
+  "id": "tool-rounds",
+  "title": "Most tasks end long before the budget does.",
+}
+`;
+
 exports[`valid-plan snapshots > railSteps compile stays stable 1`] = `
 {
   "body": {

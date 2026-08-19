@@ -148,6 +148,22 @@ describe("press cli", () => {
 		expect(html).toContain("railSteps");
 	}, 60_000);
 
+	it("gallery writes one self-contained page mounting every kind's exemplar", () => {
+		const dir = mkdtempSync(join(tmpdir(), "mega-press-cli-"));
+		const dest = join(dir, "gallery.html");
+		const r = run(["gallery", "--out", dest, "--json"]);
+		expect(r.status).toBe(0);
+		expect(existsSync(dest)).toBe(true);
+		const body = JSON.parse(r.stdout);
+		expect(body.ok).toBe(true);
+		expect(body.kinds).toBe(21);
+		const html = readFileSync(dest, "utf8");
+		expect(html).toContain("__PRESS_GALLERY__");
+		expect(html).toContain("compareFlows");
+		expect(html).toContain("codeSteps");
+		expect(html).toContain("pressReady");
+	}, 90_000);
+
 	it("render --format png writes a png when chrome exists", () => {
 		const chrome = [
 			process.env.CHROME,

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>press gallery</title>
+		<style>
+			html,
+			body {
+				margin: 0;
+				background: #000;
+				color: #fff;
+			}
+			#gallery {
+				max-width: 1200px;
+				margin: 0 auto;
+				padding: 48px 16px 96px;
+				display: flex;
+				flex-direction: column;
+				gap: 64px;
+			}
+			#gallery > header h1 {
+				margin: 0;
+				font: 400 14px/1.4 ui-monospace, "SF Mono", Menlo, monospace;
+				letter-spacing: 0.08em;
+				text-transform: uppercase;
+			}
+			#gallery > header p {
+				margin: 8px 0 0;
+				font: 400 12px/1.5 ui-monospace, "SF Mono", Menlo, monospace;
+				color: #777;
+			}
+			section.entry .head {
+				display: flex;
+				align-items: baseline;
+				gap: 16px;
+				margin-bottom: 12px;
+			}
+			section.entry .kind {
+				font: 400 13px/1.4 ui-monospace, "SF Mono", Menlo, monospace;
+				letter-spacing: 0.06em;
+			}
+			section.entry .use {
+				font: 400 12px/1.4 ui-monospace, "SF Mono", Menlo, monospace;
+				color: #777;
+			}
+			section.entry .plate {
+				width: 100%;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="gallery"></div>
+		<script type="module" src="./gallery-host.ts"></script>
+	</body>
+</html>

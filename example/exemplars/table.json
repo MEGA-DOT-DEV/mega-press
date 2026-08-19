@@ -1,0 +1,15 @@
+{
+	"kind": "table",
+	"id": "exemplar-table",
+	"frame": "landscape",
+	"title": "Every failure mode has a named guard.",
+	"columns": [
+		{ "key": "mode", "label": "FAILURE" },
+		{ "key": "fix", "label": "GUARD" }
+	],
+	"rows": [
+		{ "mode": "Retry same call", "fix": "Step limit plus already-tried memory" },
+		{ "mode": "Silent wrong answer", "fix": "Require evidence tools" },
+		{ "mode": "Overreach write", "fix": "Human gate on irreversible tools" }
+	]
+}

@@ -1,0 +1,26 @@
+{
+	"kind": "graph",
+	"id": "exemplar-graph",
+	"frame": "landscape",
+	"title": "A capability layer, not a connector.",
+	"nodes": [
+		{ "key": "agent", "title": "Agent", "column": 0, "row": 1 },
+		{
+			"key": "mcp",
+			"title": "MCP",
+			"detail": "capability layer",
+			"accent": true,
+			"column": 1,
+			"row": 1
+		},
+		{ "key": "memory", "title": "Memory", "column": 2, "row": 0 },
+		{ "key": "packages", "title": "Packages", "column": 2, "row": 1 },
+		{ "key": "email", "title": "Email", "column": 2, "row": 2 }
+	],
+	"edges": [
+		{ "from": "agent", "to": "mcp" },
+		{ "from": "mcp", "to": "memory" },
+		{ "from": "mcp", "to": "packages" },
+		{ "from": "mcp", "to": "email" }
+	]
+}

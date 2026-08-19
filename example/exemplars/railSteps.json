@@ -1,0 +1,12 @@
+{
+	"kind": "railSteps",
+	"id": "exemplar-railSteps",
+	"frame": "landscape",
+	"title": "The loop is sense, act, observe, stop.",
+	"steps": [
+		{ "name": "Sense", "detail": "Read only the state needed for the next decision." },
+		{ "name": "Think", "detail": "Choose one action and name the expected result." },
+		{ "name": "Act", "detail": "Call one permitted tool with bounded arguments." },
+		{ "name": "Observe", "detail": "Compare the tool result to the goal, not to fluency." }
+	]
+}
