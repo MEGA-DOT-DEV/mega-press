@@ -36,10 +36,25 @@ export type PressFontTheme = {
 	readonly pixel?: string;
 };
 
+/**
+ * Token-class inks for verbatim code. Values are cabinet ink names
+ * ("text" | "ink" | "muted" | "quiet" | "red" | "knockout") or hex colours
+ * held to the text contrast floor against the panel ground.
+ */
+export type PressSyntaxTheme = {
+	readonly plain?: string;
+	readonly keyword?: string;
+	readonly string?: string;
+	readonly number?: string;
+	readonly comment?: string;
+	readonly punct?: string;
+};
+
 export type PressTheme = {
 	readonly chrome?: PressChrome | PressChromePreset;
 	readonly color?: PressColorTheme;
 	readonly fonts?: PressFontTheme;
+	readonly syntax?: PressSyntaxTheme;
 };
 
 export type ResolvedChrome = {

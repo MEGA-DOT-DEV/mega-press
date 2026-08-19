@@ -924,11 +924,16 @@ const codeKind: KindModule = {
 		const accentLines = (plan.accentLines ?? [])
 			.map(Number)
 			.filter((n) => Number.isInteger(n) && n >= 1 && n <= lines.length);
+		const lang =
+			plan.codeLang === "js" || plan.codeLang === "json" || plan.codeLang === "none"
+				? plan.codeLang
+				: undefined;
 		return finish(plan, {
 			type: "code",
 			code: lines.join("\n"),
 			...(label ? { label } : {}),
 			...(accentLines.length ? { accentLines } : {}),
+			...(lang ? { lang } : {}),
 		});
 	},
 };

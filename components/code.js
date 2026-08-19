@@ -26,6 +26,7 @@
  */
 
 import { box, custom, row, stack, text } from "../src/solve.js";
+import { detectLang, syntaxColor, tokenizeLine } from "../src/syntax.js";
 import { measure } from "../src/text.js";
 import { COLOR, FAMILY, lineHeight, PressError, space, type, typeSize } from "../src/tokens.js";
 
@@ -43,8 +44,14 @@ const truncate = (s, n = 40) => (s.length > n ? `${s.slice(0, n)}…` : s);
 /**
  * One verbatim line. Painted, not typeset: the wrap pipeline would strip the
  * indentation and re-break the run, and both are rewrites of the code.
+ *
+ * Colour comes from the syntax theme slot, one fill per token run. Each run is
+ * placed at the measured width of everything before it, the same additive
+ * advances the solver sized the line by, so a coloured line and a plain line
+ * occupy identical pixels. An accented line stays a single red run: the accent
+ * marks the line the claim turns on, and it outranks the grammar.
  */
-const codeLine = (line, accent, index) => {
+const codeLine = (line, accent, index, lang) => {
 	const tracking = type(ROLE).tracking * typeSize(ROLE);
 	const h = lineHeight(ROLE);
 	return custom({
@@ -61,12 +68,21 @@ const codeLine = (line, accent, index) => {
 			return { w, h };
 		},
 		paint: (ctx, rect, C) => {
-			ctx.fillStyle = accent ? C.red : C.text;
 			ctx.font = `400 ${typeSize(ROLE)}px ${FAMILY.mono}`;
 			ctx.textAlign = "left";
 			ctx.textBaseline = "middle";
 			if ("letterSpacing" in ctx) ctx.letterSpacing = `${tracking}px`;
-			ctx.fillText(line, rect.x, rect.cy);
+			if (accent) {
+				ctx.fillStyle = C.red;
+				ctx.fillText(line, rect.x, rect.cy);
+			} else {
+				let consumed = "";
+				for (const run of tokenizeLine(line, lang)) {
+					ctx.fillStyle = syntaxColor(run.cls, C);
+					ctx.fillText(run.text, rect.x + measure(consumed, ROLE), rect.cy);
+					consumed += run.text;
+				}
+			}
 			if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
 		},
 	});
@@ -86,8 +102,13 @@ const codeLine = (line, accent, index) => {
  * @param {boolean} [opts.accent]  accent the border: the one block the claim is about
  * @param {boolean} [opts.unit]    count the block as an information unit
  * @param {number} [opts.pad]      scale step inside the border
+ * @param {"js" | "json" | "none" | "auto"} [opts.lang] token colouring; auto
+ *   sniffs JSON from the first drawn line, none paints every run in plain ink
  */
-export function codeBlock(source, { accentLines = [], accent = false, unit = false, pad = 4 } = {}) {
+export function codeBlock(
+	source,
+	{ accentLines = [], accent = false, unit = false, pad = 4, lang = "auto" } = {},
+) {
 	if (typeof source !== "string" || !source.trim()) {
 		throw new PressError(
 			"CODE_MISSING",
@@ -116,9 +137,13 @@ export function codeBlock(source, { accentLines = [], accent = false, unit = fal
 	}
 
 	const accented = new Set(accentLines.map(Number));
+	const resolvedLang =
+		lang === "js" || lang === "json" || lang === "none" ? lang : detectLang(source);
 
 	const body = lines.map((line, i) =>
-		line.trim().length === 0 ? blank(space(3)) : codeLine(line, accented.has(i + 1), i),
+		line.trim().length === 0
+			? blank(space(3))
+			: codeLine(line, accented.has(i + 1), i, resolvedLang),
 	);
 
 	return box({
@@ -140,8 +165,8 @@ export function codeBlock(source, { accentLines = [], accent = false, unit = fal
  * @param {number[]} [spec.accentLines] 1-based line numbers drawn in the accent
  * @param {number} [spec.gap]    scale step between label and block
  */
-export function code({ code: source, label, accentLines = [], gap = 2 } = {}) {
-	const block = codeBlock(source, { accentLines, unit: true });
+export function code({ code: source, label, accentLines = [], gap = 2, lang = "auto" } = {}) {
+	const block = codeBlock(source, { accentLines, unit: true, lang });
 
 	if (!label) return block;
 

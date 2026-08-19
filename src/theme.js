@@ -21,6 +21,7 @@ import {
 	GROUND,
 	PressError,
 } from "./tokens.js";
+import { DEFAULT_SYNTAX, SYNTAX, SYNTAX_CLASSES } from "./syntax.js";
 
 export const CHROME_PRESETS = {
 	/** Standalone specimen: chase chrome paints when the spec provides it. */
@@ -85,6 +86,7 @@ const snapshot = () => ({
 	family: { ...FAMILY },
 	ground: { ...GROUND },
 	categorical: [...CATEGORICAL],
+	syntax: { ...SYNTAX },
 });
 
 const restore = (snap) => {
@@ -93,6 +95,7 @@ const restore = (snap) => {
 	Object.assign(FAMILY, snap.family);
 	Object.assign(GROUND, snap.ground);
 	for (let i = 0; i < CATEGORICAL.length; i += 1) CATEGORICAL[i] = snap.categorical[i];
+	Object.assign(SYNTAX, snap.syntax);
 };
 
 const assertHex = (key, value) => {
@@ -169,11 +172,56 @@ function applyFonts(partial) {
 	}
 }
 
+/* Cabinet inks a syntax class may name. `zinc` is borders-and-icons-never-text
+   by upstream contract, grounds are grounds, so the roster is the text-safe
+   inks plus the accent and the knockout. */
+const SYNTAX_INK_KEYS = ["text", "ink", "muted", "quiet", "red", "knockout"];
+
+function applySyntax(partial) {
+	if (!isRecord(partial)) {
+		throw new PressError(
+			"THEME_SYNTAX",
+			"theme.syntax must map token classes to cabinet ink names or hex colours.",
+		);
+	}
+	const unknown = Object.keys(partial).filter((k) => !SYNTAX_CLASSES.includes(k));
+	if (unknown.length) {
+		throw new PressError(
+			"THEME_SYNTAX",
+			`unknown syntax class(es): ${unknown.join(", ")}. Classes: ${SYNTAX_CLASSES.join(", ")}.`,
+		);
+	}
+	const next = { ...SYNTAX };
+	for (const [cls, value] of Object.entries(partial)) {
+		if (typeof value !== "string" || !value.trim()) {
+			throw new PressError("THEME_SYNTAX", `theme.syntax.${cls} must be a non-empty string.`);
+		}
+		const v = value.trim();
+		if (SYNTAX_INK_KEYS.includes(v)) {
+			next[cls] = v;
+			continue;
+		}
+		if ((COLOR_KEYS.includes(v) && !SYNTAX_INK_KEYS.includes(v)) || GROUND_KEYS.includes(v)) {
+			throw new PressError(
+				"THEME_SYNTAX",
+				`theme.syntax.${cls} may not use "${v}": code paints as text, and that token is not a text ink. Inks: ${SYNTAX_INK_KEYS.join(", ")}.`,
+			);
+		}
+		assertHex(`syntax.${cls}`, v);
+		// Code sits on the panel fill inside its border; hold hex inks to the
+		// same floor every other text ink passes.
+		assertPair(v, COLOR.panel, CONTRAST.text, `syntax.${cls} on panel`);
+		next[cls] = v;
+	}
+	Object.assign(SYNTAX, next);
+}
+
 /**
  * Set the process default theme. Colour and fonts replace the cabinet as a set
- * and must still pass the contrast lock. Chrome hides chase furniture.
+ * and must still pass the contrast lock. Chrome hides chase furniture. Syntax
+ * re-maps how verbatim code classes paint, in cabinet ink names or checked hex.
  *
- * @param {{ chrome?: object | "specimen" | "embed", color?: object, fonts?: object }} next
+ * @param {{ chrome?: object | "specimen" | "embed", color?: object, fonts?: object, syntax?: object }} next
  */
 export function configurePress(next = {}) {
 	if (!isRecord(next)) {
@@ -182,6 +230,7 @@ export function configurePress(next = {}) {
 	if (next.chrome !== undefined) current.chrome = resolveChrome(next.chrome);
 	if (next.color !== undefined) applyColor(next.color);
 	if (next.fonts !== undefined) applyFonts(next.fonts);
+	if (next.syntax !== undefined) applySyntax(next.syntax);
 	return getPressTheme();
 }
 
@@ -190,6 +239,7 @@ export function getPressTheme() {
 		chrome: { ...current.chrome },
 		color: { ...COLOR },
 		fonts: { ...FAMILY },
+		syntax: { ...SYNTAX },
 	};
 }
 
@@ -200,6 +250,7 @@ export function resetPressTheme() {
 	Object.assign(FAMILY, DEFAULT_FAMILY);
 	Object.assign(GROUND, DEFAULT_GROUND);
 	for (let i = 0; i < CATEGORICAL.length; i += 1) CATEGORICAL[i] = DEFAULT_CATEGORICAL[i];
+	Object.assign(SYNTAX, DEFAULT_SYNTAX);
 	return getPressTheme();
 }
 

@@ -67,9 +67,11 @@ export type {
 	PressChromePreset,
 	PressColorTheme,
 	PressFontTheme,
+	PressSyntaxTheme,
 	PressTheme,
 	ResolvedChrome,
 } from "./theme.js";
+export { DEFAULT_SYNTAX, SYNTAX_CLASSES } from "./syntax.js";
 export {
 	CHROME_PRESETS,
 	configurePress,

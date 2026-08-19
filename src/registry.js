@@ -547,11 +547,17 @@ const STRUCTURE = [
 			},
 			label: { type: "string", doc: "small mono caption above the block (a filename, a tool name)" },
 			accentLines: { type: "number[]", doc: "1-based line numbers drawn in the accent" },
+			lang: {
+				type: "'js' | 'json' | 'none'",
+				default: "auto",
+				doc: "token colouring; auto sniffs JSON from the first line, none paints plain ink",
+			},
 		},
 		notes: [
 			"Every line is measured with maxLines: 1, so a line too wide for the frame refuses by name instead of wrapping. Code that wraps has been rewritten by the renderer.",
 			"The whole block is one information unit: ten lines of one snippet are one thing the reader takes in.",
 			"Blank lines are kept as vertical space; leading spaces are indentation and indentation is content.",
+			"Token colouring follows the theme's syntax slot: keywords in the accent, strings in ink, punctuation held back. Hosts re-map it once via configurePress({ syntax }), in cabinet ink names or contrast-checked hex. The spec never names a colour.",
 		],
 		example: {
 			type: "code",

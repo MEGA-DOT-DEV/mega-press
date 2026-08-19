@@ -194,7 +194,26 @@ function normalizeNode(node: unknown): unknown {
 			out.code = out.lines.map(String).join("\n");
 		}
 		if (out.label == null && out.codeLabel != null) out.label = out.codeLabel;
-		if (out.label == null && out.language != null) out.label = out.language;
+		const LANGS: Record<string, string> = {
+			js: "js",
+			javascript: "js",
+			ts: "js",
+			typescript: "js",
+			json: "json",
+			none: "none",
+			plain: "none",
+		};
+		const langWord =
+			typeof out.lang === "string"
+				? out.lang
+				: typeof out.language === "string"
+					? out.language
+					: null;
+		const mapped = langWord ? LANGS[langWord.trim().toLowerCase()] : undefined;
+		if (mapped) out.lang = mapped;
+		else if (out.lang != null) delete out.lang;
+		// A language word that is not a known id was probably meant as the caption.
+		if (out.label == null && !mapped && out.language != null) out.label = out.language;
 		delete out.source;
 		delete out.text;
 		delete out.content;

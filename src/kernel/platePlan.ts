@@ -168,6 +168,8 @@ export type PlatePlan = {
 	readonly code?: string;
 	readonly codeLabel?: string;
 	readonly accentLines?: readonly number[];
+	/** token colouring; omitted = auto-detect, "none" = plain ink */
+	readonly codeLang?: "js" | "json" | "none";
 	/** tree — a mono hierarchy: root, 2..4 branches, children at most one level deeper */
 	readonly root?: { readonly name: string; readonly detail?: string };
 	readonly branches?: readonly {
@@ -538,6 +540,7 @@ export const PLATE_PLAN_JSON_SCHEMA: Record<string, unknown> = {
 		code: { type: "string", maxLength: 1200 },
 		codeLabel: { type: "string", maxLength: 48 },
 		accentLines: { type: "array", maxItems: 14, items: { type: "number" } },
+		codeLang: { type: "string", enum: ["js", "json", "none"] },
 		root: {
 			type: "object",
 			additionalProperties: false,
