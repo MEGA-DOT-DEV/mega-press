@@ -18,6 +18,21 @@ This repo lives at `~/mega/mega-press`. Consumers (starting with mega-experience
 
 Both repos must be siblings under `~/mega`. This package is private and is not published to npm.
 
+## CLI
+
+After `pnpm install && pnpm build`:
+
+```sh
+node bin/press.mjs kinds
+node bin/press.mjs schema railSteps
+node bin/press.mjs check example/fixtures/rail.json
+node bin/press.mjs render example/fixtures/rail.json --format json
+node bin/press.mjs render example/fixtures/rail.json --format html --out rail.html
+node bin/press.mjs render example/fixtures/rail.json --format png --out rail.png
+```
+
+`--json` on any command. Exit `0` lock / `1` refuse / `2` tool-broke. Agents start at `AGENTS.md`.
+
 ## Scripts
 
 ```sh
@@ -25,7 +40,7 @@ pnpm install
 pnpm typecheck
 pnpm test
 pnpm build
-pnpm example   # local fixtures via mountArtifact — no /lab/* 
+pnpm example   # local fixtures via mountArtifact — no /lab/*
 ```
 
 ## Public API

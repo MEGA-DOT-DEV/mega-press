@@ -15,17 +15,24 @@
 		"./vendor/*": "./vendor/*",
 		"./package.json": "./package.json"
 	},
+	"bin": {
+		"press": "./bin/press.mjs"
+	},
 	"files": [
 		"src",
+		"bin",
+		"cli",
 		"components",
 		"vendor",
 		"NOTICE.md",
-		"README.md"
+		"README.md",
+		"AGENTS.md"
 	],
 	"scripts": {
 		"typecheck": "tsc --noEmit -p tsconfig.json",
 		"test": "vitest run",
 		"build": "tsc -p tsconfig.build.json",
+		"press": "node bin/press.mjs",
 		"example": "vite --config example/vite.config.ts"
 	},
 	"devDependencies": {
