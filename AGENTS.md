@@ -11,7 +11,7 @@ attention on **what the frame says**. The lock handles where things go.
 ```bash
 press kinds                 # what you can build. Read this first, every time.
 press schema <kind>         # slot shape for one kind
-press check slide.json      # does it lock? writes nothing
+press check slide.json      # parse → lock → solve → validate. writes nothing
 press render slide.json --format json
 press render slide.json --format html --out slide.html
 press render slide.json --format png --out slide.png

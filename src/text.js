@@ -30,6 +30,8 @@ import {
 	measureNaturalWidth,
 	prepareWithSegments,
 } from "../vendor/pretext/layout.js";
+import { setMeasureContext } from "../vendor/pretext/measurement.js";
+import { createTableMeasureContext } from "./metrics/table.js";
 import { FAMILY, lineHeight, minTypeSize, PressError, type } from "./tokens.js";
 
 /* --------------------------------------------------------------------------
@@ -49,7 +51,29 @@ import { FAMILY, lineHeight, minTypeSize, PressError, type } from "./tokens.js";
  * agree to 0.0157px.
  * ------------------------------------------------------------------------ */
 
+let liveMetrics = false;
 let ctx = null;
+const tableCtx = createTableMeasureContext();
+setMeasureContext(tableCtx);
+ctx = tableCtx;
+
+/** Canvas/DOM measurement. Verification only — production uses the baked table. */
+export function useLiveMetrics(on = true) {
+	liveMetrics = on;
+	if (on) {
+		setMeasureContext(null);
+		ctx = null;
+	} else {
+		setMeasureContext(tableCtx);
+		ctx = tableCtx;
+	}
+	resetMetrics();
+}
+
+export function usingLiveMetrics() {
+	return liveMetrics;
+}
+
 function context() {
 	if (!ctx) {
 		const canvas =
@@ -321,12 +345,15 @@ export function fit(
 	}
 
 	const best = attempts[attempts.length - 1];
+	const avg = measure("n", best.role, weight) || type(best.role).size * 0.5;
+	const aboutCharacters = Math.max(1, Math.ceil(best.needed / avg));
+	const aboutLines = Math.max(1, Math.ceil(best.needed / lineHeight(best.role)));
 	throw new PressError(
 		"TEXT_OVERFLOW",
-		`"${truncate(text)}" does not fit ${box.w}x${box.h} at any role from ` +
-			`'${startRole}' down to '${floorRole}'. Smallest attempt overflows by ` +
-			`${Math.ceil(best.needed)}px. Remove information before reducing typography.`,
-		{ text, box: box.toJSON ? box.toJSON() : box, attempts },
+		`"${truncate(text)}" does not fit. Shorten this run by about ${aboutCharacters} characters, ` +
+			`or remove one information unit (~${aboutLines} line${aboutLines === 1 ? "" : "s"} over). ` +
+			`Smallest attempt at '${best.role}' overflows ${box.w}x${box.h} by ${Math.ceil(best.needed)}px.`,
+		{ text, box: box.toJSON ? box.toJSON() : box, attempts, aboutCharacters, aboutLines },
 	);
 }
 

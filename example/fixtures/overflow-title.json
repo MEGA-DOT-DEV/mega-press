@@ -1,0 +1,28 @@
+{
+	"kind": "compare",
+	"id": "overflow-title",
+	"title": "A claim that still sits under the sanity cap but not the frame.",
+	"lead": "LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL",
+	"before": {
+		"label": "BEFORE",
+		"title": "Without the check",
+		"items": [
+			"Fact 1: a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, end.",
+			"Fact 2: a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, end.",
+			"Fact 3: a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, end.",
+			"Fact 4: a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, end.",
+			"Fact 5: a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, end."
+		]
+	},
+	"after": {
+		"label": "AFTER",
+		"title": "With the check",
+		"items": [
+			"Fact 6: a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, end.",
+			"Fact 7: a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, end.",
+			"Fact 8: a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, end.",
+			"Fact 9: a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, end.",
+			"Fact 10: a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, a concrete check the reader can actually perform, end."
+		]
+	}
+}

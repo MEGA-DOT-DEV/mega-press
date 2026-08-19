@@ -56,6 +56,7 @@ const PLATE_FIELDS = new Set([
 	"body",
 	"marks",
 	"notes",
+	"steppedFrom",
 ]);
 
 export class SpecError extends Error {

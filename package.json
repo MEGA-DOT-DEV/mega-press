@@ -32,6 +32,7 @@
 		"typecheck": "tsc --noEmit -p tsconfig.json",
 		"test": "vitest run",
 		"build": "tsc -p tsconfig.build.json",
+		"metrics": "node scripts/bake-metrics.mjs",
 		"press": "node bin/press.mjs",
 		"example": "vite --config example/vite.config.ts"
 	},

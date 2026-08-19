@@ -1,3 +1,5 @@
+import { ITEM_BOUNDS, STRING_CAPS } from "./slotContract.js";
+
 /**
  * Generatable artifact modules for the article composer agent.
  * Catalog is the agent's discovery surface; compile templates remain the only
@@ -53,8 +55,8 @@ const MODULES: readonly ArtifactModuleSchema[] = [
 			properties: {
 				steps: {
 					type: "array",
-					minItems: 4,
-					maxItems: 6,
+					minItems: ITEM_BOUNDS.railSteps.steps.min,
+					maxItems: ITEM_BOUNDS.railSteps.steps.max,
 					items: {
 						type: "object",
 						required: ["name", "detail"],
@@ -63,7 +65,8 @@ const MODULES: readonly ArtifactModuleSchema[] = [
 							detail: {
 								type: "string",
 								minLength: 24,
-								description: "Full clause; not a title echo",
+								maxLength: STRING_CAPS.detail.max,
+								description: `Full clause; not a title echo. ${STRING_CAPS.detail.description}`,
 							},
 						},
 					},
@@ -101,7 +104,12 @@ const MODULES: readonly ArtifactModuleSchema[] = [
 					properties: {
 						label: { type: "string" },
 						title: { type: "string" },
-						items: { type: "array", minItems: 2, maxItems: 5, items: { type: "string" } },
+						items: {
+							type: "array",
+							minItems: ITEM_BOUNDS.compare.items.min,
+							maxItems: ITEM_BOUNDS.compare.items.max,
+							items: { type: "string", maxLength: STRING_CAPS.detail.max },
+						},
 					},
 				},
 				after: {
@@ -110,7 +118,12 @@ const MODULES: readonly ArtifactModuleSchema[] = [
 					properties: {
 						label: { type: "string" },
 						title: { type: "string" },
-						items: { type: "array", minItems: 2, maxItems: 5, items: { type: "string" } },
+						items: {
+							type: "array",
+							minItems: ITEM_BOUNDS.compare.items.min,
+							maxItems: ITEM_BOUNDS.compare.items.max,
+							items: { type: "string", maxLength: STRING_CAPS.detail.max },
+						},
 					},
 				},
 			},
@@ -137,8 +150,8 @@ const MODULES: readonly ArtifactModuleSchema[] = [
 			properties: {
 				metrics: {
 					type: "array",
-					minItems: 3,
-					maxItems: 5,
+					minItems: ITEM_BOUNDS.metrics.metrics.min,
+					maxItems: ITEM_BOUNDS.metrics.metrics.max,
 					items: {
 						type: "object",
 						required: ["label", "value", "unit"],
@@ -173,14 +186,19 @@ const MODULES: readonly ArtifactModuleSchema[] = [
 			properties: {
 				cards: {
 					type: "array",
-					minItems: 3,
-					maxItems: 4,
+					minItems: ITEM_BOUNDS.cards.cards.min,
+					maxItems: ITEM_BOUNDS.cards.cards.max,
 					items: {
 						type: "object",
 						required: ["title", "body"],
 						properties: {
 							title: { type: "string" },
-							body: { type: "string", minLength: 40 },
+							body: {
+								type: "string",
+								minLength: 40,
+								maxLength: STRING_CAPS.detail.max,
+								description: STRING_CAPS.detail.description,
+							},
 						},
 					},
 				},
@@ -208,13 +226,18 @@ const MODULES: readonly ArtifactModuleSchema[] = [
 			properties: {
 				checks: {
 					type: "array",
-					minItems: 4,
-					maxItems: 6,
+					minItems: ITEM_BOUNDS.checklist.checks.min,
+					maxItems: ITEM_BOUNDS.checklist.checks.max,
 					items: {
 						type: "object",
 						required: ["text", "ok"],
 						properties: {
-							text: { type: "string", minLength: 16 },
+							text: {
+								type: "string",
+								minLength: 16,
+								maxLength: STRING_CAPS.detail.max,
+								description: STRING_CAPS.detail.description,
+							},
 							ok: { type: "boolean", description: "true = do, false = avoid" },
 						},
 					},
@@ -244,8 +267,8 @@ const MODULES: readonly ArtifactModuleSchema[] = [
 			properties: {
 				columns: {
 					type: "array",
-					minItems: 2,
-					maxItems: 3,
+					minItems: ITEM_BOUNDS.table.columns.min,
+					maxItems: ITEM_BOUNDS.table.columns.max,
 					items: {
 						type: "object",
 						required: ["key", "label"],
@@ -254,9 +277,16 @@ const MODULES: readonly ArtifactModuleSchema[] = [
 				},
 				rows: {
 					type: "array",
-					minItems: 3,
-					maxItems: 5,
-					items: { type: "object", additionalProperties: { type: "string" } },
+					minItems: ITEM_BOUNDS.table.rows.min,
+					maxItems: ITEM_BOUNDS.table.rows.max,
+					items: {
+						type: "object",
+						additionalProperties: {
+							type: "string",
+							maxLength: STRING_CAPS.cell.max,
+							description: STRING_CAPS.cell.description,
+						},
+					},
 				},
 			},
 		},
@@ -282,14 +312,19 @@ const MODULES: readonly ArtifactModuleSchema[] = [
 			properties: {
 				layers: {
 					type: "array",
-					minItems: 3,
-					maxItems: 4,
+					minItems: ITEM_BOUNDS.layers.layers.min,
+					maxItems: ITEM_BOUNDS.layers.layers.max,
 					items: {
 						type: "object",
 						required: ["title", "detail"],
 						properties: {
 							title: { type: "string" },
-							detail: { type: "string", minLength: 24 },
+							detail: {
+								type: "string",
+								minLength: 24,
+								maxLength: STRING_CAPS.detail.max,
+								description: STRING_CAPS.detail.description,
+							},
 						},
 					},
 				},

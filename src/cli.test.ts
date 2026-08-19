@@ -9,6 +9,8 @@ const ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..");
 const BIN = join(ROOT, "bin/press.mjs");
 const RAIL = join(ROOT, "example/fixtures/rail.json");
 const INVALID = join(ROOT, "example/fixtures/invalid.json");
+const OVERFLOW = join(ROOT, "example/fixtures/overflow-title.json");
+const TOO_LONG = join(ROOT, "example/fixtures/too-long-title.json");
 
 const run = (args: string[]) =>
 	spawnSync(process.execPath, [BIN, ...args], {
@@ -68,7 +70,38 @@ describe("press cli", () => {
 	it("check locks a valid rail", () => {
 		const r = run(["check", RAIL, "--json"]);
 		expect(r.status).toBe(0);
-		expect(JSON.parse(r.stdout).ok).toBe(true);
+		const body = JSON.parse(r.stdout);
+		expect(body.ok).toBe(true);
+		expect(Array.isArray(body.warnings)).toBe(true);
+	});
+
+	it("check refuses a garbage-length title with TITLE_TOO_LONG", () => {
+		const r = run(["check", TOO_LONG, "--json"]);
+		expect(r.status).toBe(1);
+		const body = JSON.parse(r.stdout);
+		expect(body.errors.some((e: { code: string }) => e.code === "TITLE_TOO_LONG")).toBe(true);
+	});
+
+	it("check refuses a geometric overflow with a named code", () => {
+		const r = run(["check", OVERFLOW, "--json"]);
+		expect(r.status).toBe(1);
+		const body = JSON.parse(r.stdout);
+		expect(body.ok).toBe(false);
+		expect(
+			body.errors.some((e: { code: string }) => e.code === "TEXT_OVERFLOW" || e.code === "CONTENT_OVERFLOW"),
+		).toBe(true);
+	});
+
+	it("render overflow writes no png and exits 1", () => {
+		const dir = mkdtempSync(join(tmpdir(), "mega-press-cli-"));
+		const dest = join(dir, "nope.png");
+		const r = run(["render", OVERFLOW, "--format", "png", "--out", dest, "--json"]);
+		expect(r.status).toBe(1);
+		expect(existsSync(dest)).toBe(false);
+		const body = JSON.parse(r.stdout);
+		expect(
+			body.errors.some((e: { code: string }) => e.code === "TEXT_OVERFLOW" || e.code === "CONTENT_OVERFLOW"),
+		).toBe(true);
 	});
 
 	it("check refuses a thin rail and writes nothing", () => {

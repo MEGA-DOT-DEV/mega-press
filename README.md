@@ -31,7 +31,7 @@ node bin/press.mjs render example/fixtures/rail.json --format html --out rail.ht
 node bin/press.mjs render example/fixtures/rail.json --format png --out rail.png
 ```
 
-`--json` on any command. Exit `0` lock / `1` refuse / `2` tool-broke. Agents start at `AGENTS.md`.
+`--json` on any command. Exit `0` lock / `1` refuse / `2` tool-broke. `press check` runs the full pipeline (structural lock, then solve + validate) and may escalate landscape → square → portrait before refusing. Agents start at `AGENTS.md`.
 
 ## Scripts
 

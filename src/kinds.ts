@@ -4,6 +4,12 @@
  */
 import type { ArtifactKind, ArtifactPlan } from "./kernel/platePlan.js";
 import { normalizePlateSpec } from "./kernel/normalize.js";
+import {
+	arraySchema,
+	ITEM_BOUNDS,
+	refuseCount,
+	STRING_CAPS,
+} from "./kernel/slotContract.js";
 
 export type ArtifactError = {
 	readonly code: string;
@@ -28,6 +34,11 @@ const fail = (code: string, message: string): CompileFail => ({
 	errors: [{ code, message }],
 });
 
+const countFail = (kind: string, slot: string, n: number): CompileFail | null => {
+	const err = refuseCount(kind, slot, n);
+	return err ? fail(err.code, err.message) : null;
+};
+
 const PLAN_FRAMES = ["landscape", "portrait", "square"] as const;
 
 const plateBase = (plan: ArtifactPlan): Record<string, unknown> => ({
@@ -37,7 +48,7 @@ const plateBase = (plan: ArtifactPlan): Record<string, unknown> => ({
 		: ("landscape" as const),
 	...(plan.title ? { title: plan.title } : {}),
 	...(typeof plan.footnote === "string" && plan.footnote.trim().length > 0
-		? { footnote: plan.footnote.trim().slice(0, 36) }
+		? { footnote: plan.footnote.trim() }
 		: {}),
 	...(plan.kicker ? { kicker: plan.kicker } : {}),
 	...(plan.number ? { number: plan.number } : {}),
@@ -55,19 +66,18 @@ const railSteps: KindModule = {
 		type: "object",
 		required: ["steps"],
 		properties: {
-			steps: {
-				type: "array",
-				minItems: 4,
-				maxItems: 6,
-				items: {
-					type: "object",
-					required: ["name", "detail"],
-					properties: {
-						name: { type: "string" },
-						detail: { type: "string" },
+			steps: arraySchema(ITEM_BOUNDS.railSteps.steps, {
+				type: "object",
+				required: ["name", "detail"],
+				properties: {
+					name: { type: "string" },
+					detail: {
+						type: "string",
+						maxLength: STRING_CAPS.detail.max,
+						description: STRING_CAPS.detail.description,
 					},
 				},
-			},
+			}),
 		},
 	},
 	compile(plan) {
@@ -77,14 +87,12 @@ const railSteps: KindModule = {
 				detail: String(s.detail ?? "").trim(),
 			}))
 			.filter((s) => s.name.length > 0)
-			.slice(0, 4)
 			.map((s) => ({
 				name: s.name,
 				...(s.detail ? { detail: s.detail } : {}),
 			}));
-		if (steps.length < 2) {
-			return fail("STEPS_MISSING", "railSteps needs at least two named steps");
-		}
+		const counted = countFail("railSteps", "steps", steps.length);
+		if (counted) return counted;
 		return finish(plan, { type: "railSteps", items: steps });
 	},
 };
@@ -105,11 +113,12 @@ const compare: KindModule = {
 		if (!before || !after) {
 			return fail("COMPARE_SIDES_MISSING", "compare needs before and after sides");
 		}
-		const beforeItems = [...before.items].slice(0, 5);
-		const afterItems = [...after.items].slice(0, 5);
-		if (beforeItems.length < 2 || afterItems.length < 2) {
-			return fail("COMPARE_SIDES_MISSING", "compare needs ≥2 items on each side");
-		}
+		const beforeItems = [...before.items];
+		const afterItems = [...after.items];
+		const beforeCount = countFail("compare", "items", beforeItems.length);
+		if (beforeCount) return beforeCount;
+		const afterCount = countFail("compare", "items", afterItems.length);
+		if (afterCount) return afterCount;
 		return finish(plan, {
 			type: "compare",
 			before: { label: before.label, title: before.title, items: beforeItems },
@@ -123,13 +132,14 @@ const metrics: KindModule = {
 	slotsSchema: {
 		type: "object",
 		required: ["metrics"],
-		properties: { metrics: { type: "array", minItems: 3 } },
+		properties: {
+			metrics: arraySchema(ITEM_BOUNDS.metrics.metrics, { type: "object" }),
+		},
 	},
 	compile(plan) {
-		const metricsRows = (plan.metrics ?? []).slice(0, 6);
-		if (metricsRows.length < 2) {
-			return fail("METRICS_TOO_FEW", "metrics needs at least two {label, value, unit} rows");
-		}
+		const metricsRows = [...(plan.metrics ?? [])];
+		const counted = countFail("metrics", "metrics", metricsRows.length);
+		if (counted) return counted;
 		return finish(plan, {
 			type: "metrics",
 			items: metricsRows.map((m) => ({
@@ -146,13 +156,23 @@ const cards: KindModule = {
 	slotsSchema: {
 		type: "object",
 		required: ["cards"],
-		properties: { cards: { type: "array", minItems: 3 } },
+		properties: {
+			cards: arraySchema(ITEM_BOUNDS.cards.cards, {
+				type: "object",
+				properties: {
+					body: {
+						type: "string",
+						maxLength: STRING_CAPS.detail.max,
+						description: STRING_CAPS.detail.description,
+					},
+				},
+			}),
+		},
 	},
 	compile(plan) {
-		const cardRows = (plan.cards ?? []).slice(0, 5);
-		if (cardRows.length < 2) {
-			return fail("CARDS_TOO_FEW", "cards needs at least two {title, body} cards");
-		}
+		const cardRows = [...(plan.cards ?? [])];
+		const counted = countFail("cards", "cards", cardRows.length);
+		if (counted) return counted;
 		return finish(plan, {
 			type: "cards",
 			items: cardRows.map((c) => ({ title: c.title, body: c.body })),
@@ -165,13 +185,23 @@ const checklist: KindModule = {
 	slotsSchema: {
 		type: "object",
 		required: ["checks"],
-		properties: { checks: { type: "array", minItems: 4 } },
+		properties: {
+			checks: arraySchema(ITEM_BOUNDS.checklist.checks, {
+				type: "object",
+				properties: {
+					text: {
+						type: "string",
+						maxLength: STRING_CAPS.detail.max,
+						description: STRING_CAPS.detail.description,
+					},
+				},
+			}),
+		},
 	},
 	compile(plan) {
-		const checks = (plan.checks ?? []).slice(0, 8);
-		if (checks.length < 2) {
-			return fail("CHECKS_TOO_FEW", "checklist needs at least two {text, ok} lines");
-		}
+		const checks = [...(plan.checks ?? [])];
+		const counted = countFail("checklist", "checks", checks.length);
+		if (counted) return counted;
 		return finish(plan, {
 			type: "checklist",
 			items: checks.map((c) => ({ text: c.text, ok: Boolean(c.ok) })),
@@ -185,15 +215,14 @@ const table: KindModule = {
 		type: "object",
 		required: ["columns", "rows"],
 		properties: {
-			columns: { type: "array", minItems: 2 },
-			rows: { type: "array", minItems: 2 },
+			columns: arraySchema(ITEM_BOUNDS.table.columns, { type: "object" }),
+			rows: arraySchema(ITEM_BOUNDS.table.rows, { type: "object" }),
 		},
 	},
 	compile(plan) {
-		const rawCols = plan.columns;
-		if (!rawCols || rawCols.length < 2) {
-			return fail("COLUMNS_MISSING", "table needs at least two columns with key + label");
-		}
+		const rawCols = plan.columns ?? [];
+		const colCount = countFail("table", "columns", rawCols.length);
+		if (colCount) return colCount;
 		const columns = rawCols.map((c, i) => ({
 			key: String(c.key || `c${i}`),
 			label: String(c.label || `COL ${i + 1}`).toUpperCase(),
@@ -201,10 +230,9 @@ const table: KindModule = {
 			grow: i === 0,
 		}));
 		const keys = columns.map((c) => c.key);
-		if (!plan.rows || plan.rows.length < 2) {
-			return fail("ROWS_TOO_FEW", "table needs at least two data rows");
-		}
-		const rows = plan.rows.map((r) => {
+		const rowCount = countFail("table", "rows", (plan.rows ?? []).length);
+		if (rowCount) return rowCount;
+		const rows = (plan.rows ?? []).map((r) => {
 			const out: Record<string, string> = {};
 			keys.forEach((k, i) => {
 				const v = r[k] ?? r[String(i)] ?? r[i as unknown as string];
@@ -221,13 +249,23 @@ const layers: KindModule = {
 	slotsSchema: {
 		type: "object",
 		required: ["layers"],
-		properties: { layers: { type: "array", minItems: 2 } },
+		properties: {
+			layers: arraySchema(ITEM_BOUNDS.layers.layers, {
+				type: "object",
+				properties: {
+					detail: {
+						type: "string",
+						maxLength: STRING_CAPS.detail.max,
+						description: STRING_CAPS.detail.description,
+					},
+				},
+			}),
+		},
 	},
 	compile(plan) {
-		const layerRows = (plan.layers ?? []).slice(0, 5);
-		if (layerRows.length < 2) {
-			return fail("LAYERS_TOO_FEW", "layers needs at least two {title, detail} layers");
-		}
+		const layerRows = [...(plan.layers ?? [])];
+		const counted = countFail("layers", "layers", layerRows.length);
+		if (counted) return counted;
 		return finish(plan, {
 			type: "layers",
 			items: layerRows.map((l) => ({ title: l.title, detail: l.detail })),
@@ -259,16 +297,17 @@ const bars: KindModule = {
 	slotsSchema: {
 		type: "object",
 		required: ["bars"],
-		properties: { bars: { type: "array", minItems: 3 } },
+		properties: {
+			bars: arraySchema(ITEM_BOUNDS.bars.bars, { type: "object" }),
+		},
 	},
 	compile(plan) {
-		if (!plan.bars || plan.bars.length < 2) {
-			return fail("BARS_TOO_FEW", "bars needs at least two {label, value} items");
-		}
+		const barCount = countFail("bars", "bars", (plan.bars ?? []).length);
+		if (barCount) return barCount;
 		return finish(plan, {
 			type: "bars",
 			unit: plan.barUnit?.trim() || "share",
-			items: plan.bars.map((b) => ({
+			items: (plan.bars ?? []).map((b) => ({
 				label: String(b.label),
 				value: Number(b.value),
 			})),
@@ -281,13 +320,14 @@ const segments: KindModule = {
 	slotsSchema: {
 		type: "object",
 		required: ["segments"],
-		properties: { segments: { type: "array", minItems: 3 } },
+		properties: {
+			segments: arraySchema(ITEM_BOUNDS.segments.segments, { type: "object" }),
+		},
 	},
 	compile(plan) {
-		if (!plan.segments || plan.segments.length < 2) {
-			return fail("SEGMENTS_TOO_FEW", "segments needs at least two {label, value} parts");
-		}
-		const items = plan.segments.map((s) => ({
+		const segCount = countFail("segments", "segments", (plan.segments ?? []).length);
+		if (segCount) return segCount;
+		const items = (plan.segments ?? []).map((s) => ({
 			label: String(s.label),
 			value: Number(s.value),
 		}));
@@ -306,13 +346,14 @@ const quadrant: KindModule = {
 	slotsSchema: {
 		type: "object",
 		required: ["quadrants"],
-		properties: { quadrants: { type: "array", minItems: 4, maxItems: 4 } },
+		properties: {
+			quadrants: arraySchema(ITEM_BOUNDS.quadrant.quadrants, { type: "object" }),
+		},
 	},
 	compile(plan) {
-		const cellsRaw = (plan.quadrants ?? []).slice(0, 4);
-		if (cellsRaw.length !== 4) {
-			return fail("QUADRANTS_MISSING", "quadrant needs exactly four cells (TL TR BL BR)");
-		}
+		const cellsRaw = [...(plan.quadrants ?? [])];
+		const counted = countFail("quadrant", "quadrants", cellsRaw.length);
+		if (counted) return counted;
 		return finish(plan, {
 			type: "quadrant",
 			x: plan.xLabel?.trim() || "LOW TO HIGH AUTOMATION",
@@ -378,30 +419,27 @@ const timeline: KindModule = {
 		type: "object",
 		required: ["stops"],
 		properties: {
-			stops: {
-				type: "array",
-				minItems: 3,
-				maxItems: 5,
-				items: {
-					type: "object",
-					required: ["at", "title"],
-					properties: {
-						at: { type: "string" },
-						title: { type: "string" },
-						detail: { type: "string" },
+			stops: arraySchema(ITEM_BOUNDS.timeline.stops, {
+				type: "object",
+				required: ["at", "title"],
+				properties: {
+					at: { type: "string" },
+					title: { type: "string" },
+					detail: {
+						type: "string",
+						maxLength: STRING_CAPS.detail.max,
+						description: STRING_CAPS.detail.description,
 					},
 				},
-			},
+			}),
 		},
 	},
 	compile(plan) {
 		const items = (plan.stops ?? [])
 			.map(stopToItem)
-			.filter((s): s is NonNullable<typeof s> => s != null)
-			.slice(0, 5);
-		if (items.length < 3) {
-			return fail("STOPS_TOO_FEW", "timeline needs at least three {at, title} stops");
-		}
+			.filter((s): s is NonNullable<typeof s> => s != null);
+		const counted = countFail("timeline", "stops", items.length);
+		if (counted) return counted;
 		return finish(plan, { type: "timeline", items });
 	},
 };
@@ -412,30 +450,27 @@ const timelineVertical: KindModule = {
 		type: "object",
 		required: ["events"],
 		properties: {
-			events: {
-				type: "array",
-				minItems: 3,
-				maxItems: 6,
-				items: {
-					type: "object",
-					required: ["at", "title"],
-					properties: {
-						at: { type: "string" },
-						title: { type: "string" },
-						detail: { type: "string" },
+			events: arraySchema(ITEM_BOUNDS.timelineVertical.events, {
+				type: "object",
+				required: ["at", "title"],
+				properties: {
+					at: { type: "string" },
+					title: { type: "string" },
+					detail: {
+						type: "string",
+						maxLength: STRING_CAPS.detail.max,
+						description: STRING_CAPS.detail.description,
 					},
 				},
-			},
+			}),
 		},
 	},
 	compile(plan) {
 		const items = (plan.events ?? [])
 			.map(stopToItem)
-			.filter((s): s is NonNullable<typeof s> => s != null)
-			.slice(0, 6);
-		if (items.length < 3) {
-			return fail("EVENTS_TOO_FEW", "timelineVertical needs at least three {at, title} events");
-		}
+			.filter((s): s is NonNullable<typeof s> => s != null);
+		const counted = countFail("timelineVertical", "events", items.length);
+		if (counted) return counted;
 		return finish(plan, { type: "timelineVertical", items });
 	},
 };
@@ -446,19 +481,18 @@ const railFlow: KindModule = {
 		type: "object",
 		required: ["steps"],
 		properties: {
-			steps: {
-				type: "array",
-				minItems: 3,
-				maxItems: 5,
-				items: {
-					type: "object",
-					required: ["name"],
-					properties: {
-						name: { type: "string" },
-						detail: { type: "string" },
+			steps: arraySchema(ITEM_BOUNDS.railFlow.steps, {
+				type: "object",
+				required: ["name"],
+				properties: {
+					name: { type: "string" },
+					detail: {
+						type: "string",
+						maxLength: STRING_CAPS.detail.max,
+						description: STRING_CAPS.detail.description,
 					},
 				},
-			},
+			}),
 		},
 	},
 	compile(plan) {
@@ -468,14 +502,12 @@ const railFlow: KindModule = {
 				detail: String(s.detail ?? "").trim(),
 			}))
 			.filter((s) => s.name.length > 0)
-			.slice(0, 5)
 			.map((s) => ({
 				name: s.name,
 				...(s.detail ? { detail: s.detail } : {}),
 			}));
-		if (steps.length < 3) {
-			return fail("STEPS_MISSING", "railFlow needs at least three named steps");
-		}
+		const counted = countFail("railFlow", "steps", steps.length);
+		if (counted) return counted;
 		return finish(plan, { type: "railFlow", items: steps });
 	},
 };
@@ -488,8 +520,8 @@ const graph: KindModule = {
 		properties: {
 			nodes: {
 				type: "array",
-				minItems: 2,
-				maxItems: 7,
+				minItems: ITEM_BOUNDS.graph.nodes.min,
+				maxItems: ITEM_BOUNDS.graph.nodes.max,
 				items: {
 					type: "object",
 					required: ["key", "title"],
@@ -505,8 +537,8 @@ const graph: KindModule = {
 			},
 			edges: {
 				type: "array",
-				minItems: 1,
-				maxItems: 10,
+				minItems: ITEM_BOUNDS.graph.edges.min,
+				maxItems: ITEM_BOUNDS.graph.edges.max,
 				items: {
 					type: "object",
 					required: ["from", "to"],
@@ -529,22 +561,18 @@ const graph: KindModule = {
 				column: n.column,
 				row: n.row,
 			}))
-			.filter((n) => n.key.length > 0 && n.title.length > 0)
-			.slice(0, 7);
-		if (nodes.length < 2) {
-			return fail("GRAPH_NODES_TOO_FEW", "graph needs at least two {key, title} nodes");
-		}
+			.filter((n) => n.key.length > 0 && n.title.length > 0);
+		const nodeCount = countFail("graph", "nodes", nodes.length);
+		if (nodeCount) return nodeCount;
 		const keys = new Set(nodes.map((n) => n.key));
 		if (keys.size !== nodes.length) {
 			return fail("GRAPH_KEY_DUPLICATE", "graph node keys must be unique");
 		}
 		const edges = (plan.edges ?? [])
 			.map((e) => ({ from: String(e.from ?? "").trim(), to: String(e.to ?? "").trim() }))
-			.filter((e) => e.from.length > 0 && e.to.length > 0)
-			.slice(0, 10);
-		if (edges.length < 1) {
-			return fail("GRAPH_EDGES_MISSING", "graph needs at least one {from, to} edge");
-		}
+			.filter((e) => e.from.length > 0 && e.to.length > 0);
+		const edgeCount = countFail("graph", "edges", edges.length);
+		if (edgeCount) return edgeCount;
 		const dangling = edges.find((e) => !keys.has(e.from) || !keys.has(e.to));
 		if (dangling) {
 			return fail(
@@ -579,8 +607,8 @@ const derivation: KindModule = {
 		properties: {
 			exprs: {
 				type: "array",
-				minItems: 2,
-				maxItems: 5,
+				minItems: ITEM_BOUNDS.derivation.exprs.min,
+				maxItems: ITEM_BOUNDS.derivation.exprs.max,
 				items: {
 					type: "object",
 					required: ["expr"],
@@ -600,11 +628,9 @@ const derivation: KindModule = {
 				note: String(s.note ?? "").trim(),
 				accent: Boolean(s.accent),
 			}))
-			.filter((s) => s.expr.length > 0)
-			.slice(0, 5);
-		if (steps.length < 2) {
-			return fail("EXPRS_TOO_FEW", "derivation needs at least two {expr} steps");
-		}
+			.filter((s) => s.expr.length > 0);
+		const counted = countFail("derivation", "exprs", steps.length);
+		if (counted) return counted;
 		const unnoted = steps.findIndex((s, i) => i > 0 && s.note.length === 0);
 		if (unnoted > 0) {
 			return fail(

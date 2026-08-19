@@ -79,15 +79,17 @@ function ensureDist() {
 
 async function kernel() {
 	ensureDist();
-	const [{ parseArtifact }, { buildArtifact }, catalog, lock] = await Promise.all([
+	const [{ parseArtifact }, { buildArtifact }, catalog, lock, evaluate] = await Promise.all([
 		import(join(ROOT, "dist/parse.js")),
 		import(join(ROOT, "dist/build.js")),
 		import(join(ROOT, "dist/kernel/artifactModules.js")),
 		import(join(ROOT, "dist/kernel/lock.js")),
+		import(join(ROOT, "src/evaluate.js")),
 	]);
 	return {
 		parseArtifact,
 		buildArtifact,
+		proveArtifact: evaluate.proveArtifact,
 		listArtifactModules: catalog.listArtifactModules,
 		getArtifactModuleSchema: catalog.getArtifactModuleSchema,
 		frameSize: lock.frameSize,
@@ -106,10 +108,14 @@ function readSpec(source) {
 
 function lockPlan(api, json) {
 	const parsed = api.parseArtifact(json);
-	if (!parsed.ok) return { ok: false, errors: parsed.errors };
+	if (!parsed.ok) return { ok: false, errors: parsed.errors, warnings: [] };
 	const built = api.buildArtifact(parsed.plan);
-	if (!built.ok) return { ok: false, errors: built.errors, spec: built.spec };
-	return { ok: true, spec: built.spec };
+	if (!built.ok) return { ok: false, errors: built.errors, spec: built.spec, warnings: [] };
+	const proved = api.proveArtifact(built.spec);
+	if (!proved.ok) {
+		return { ok: false, errors: proved.errors, spec: proved.spec, warnings: proved.warnings ?? [] };
+	}
+	return { ok: true, spec: proved.spec, warnings: proved.warnings ?? [] };
 }
 
 function printErrors(errors) {
@@ -144,14 +150,28 @@ function cmdSchema(api) {
 	out(`${schema.id}  ${schema.use}\n\n${JSON.stringify(schema.slots, null, 2)}\n`);
 }
 
+function printWarnings(warnings) {
+	if (!warnings?.length) return "";
+	return warnings.map((w) => `warn  ${w.code}: ${w.message}`).join("\n");
+}
+
 function cmdCheck(api) {
 	const result = lockPlan(api, readSpec(positional[0]));
 	if (!result.ok) {
-		if (JSON_OUT) out(null, { ok: false, errors: result.errors });
+		if (JSON_OUT) out(null, { ok: false, errors: result.errors, warnings: result.warnings ?? [] });
 		else console.error(`\n  ${printErrors(result.errors)}\n`);
 		process.exit(1);
 	}
-	out("ok", { ok: true, id: result.spec.id, frame: result.spec.frame });
+	const payload = {
+		ok: true,
+		id: result.spec.id,
+		frame: result.spec.frame,
+		...(result.spec.steppedFrom ? { steppedFrom: result.spec.steppedFrom } : {}),
+		warnings: result.warnings ?? [],
+	};
+	if (JSON_OUT) return out(null, payload);
+	const warn = printWarnings(result.warnings);
+	out(warn ? `ok\n  ${warn.replaceAll("\n", "\n  ")}` : "ok", payload);
 }
 
 function defaultOut(spec, format) {
@@ -213,7 +233,26 @@ async function writeHtml(spec, dest) {
 
 function serveHtml(html) {
 	const preferred = Number(process.env.PRESS_PORT || 4273);
-	const handler = (_req, res) => {
+	let settle;
+	const status = new Promise((resolve) => {
+		settle = resolve;
+	});
+	const handler = (req, res) => {
+		if (req.method === "POST" && req.url === "/__press__/status") {
+			const chunks = [];
+			req.on("data", (c) => chunks.push(c));
+			req.on("end", () => {
+				const raw = Buffer.concat(chunks).toString("utf8");
+				try {
+					settle(JSON.parse(raw || "{}"));
+				} catch {
+					settle({ ok: false, errors: [{ code: "BAD_STATUS", message: raw }] });
+				}
+				res.writeHead(204);
+				res.end();
+			});
+			return;
+		}
 		res.writeHead(200, {
 			"content-type": "text/html; charset=utf-8",
 			"cache-control": "no-store",
@@ -227,16 +266,65 @@ function serveHtml(html) {
 				if (err && err.code === "EADDRINUSE" && port < preferred + 12) tryListen(port + 1);
 				else reject(err);
 			});
-			server.listen(port, "127.0.0.1", () => resolveServe({ server, port }));
+			server.listen(port, "127.0.0.1", () => resolveServe({ server, port, status }));
 		};
 		tryListen(preferred);
 	});
 }
 
-function chromeShot(url, file, frame, scale) {
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function waitForFile(path, timeoutMs) {
+	const started = Date.now();
+	while (Date.now() - started < timeoutMs) {
+		if (existsSync(path) && statSync(path).size > 0) return readFileSync(path, "utf8");
+		await sleep(40);
+	}
+	throw new Error(`chrome did not write ${path}`);
+}
+
+async function openCdp(profile) {
+	const portFile = join(profile, "DevToolsActivePort");
+	const text = await waitForFile(portFile, 8000);
+	const port = Number(text.split("\n")[0]);
+	if (!Number.isFinite(port)) throw new Error("chrome DevTools port missing");
+	const started = Date.now();
+	let page;
+	while (!page) {
+		const list = await fetch(`http://127.0.0.1:${port}/json/list`).then((r) => r.json());
+		page = list.find((t) => t.type === "page" && t.webSocketDebuggerUrl);
+		if (!page) {
+			if (Date.now() - started > 8000) throw new Error("chrome had no page target");
+			await sleep(50);
+		}
+	}
+	const ws = new WebSocket(page.webSocketDebuggerUrl);
+	await new Promise((resolve, reject) => {
+		ws.addEventListener("open", resolve);
+		ws.addEventListener("error", () => reject(new Error("cdp websocket failed")));
+	});
+	let nextId = 1;
+	const pending = new Map();
+	ws.addEventListener("message", (ev) => {
+		const msg = JSON.parse(String(ev.data));
+		if (msg.id == null || !pending.has(msg.id)) return;
+		const { resolve, reject } = pending.get(msg.id);
+		pending.delete(msg.id);
+		if (msg.error) reject(new Error(msg.error.message || "cdp error"));
+		else resolve(msg.result);
+	});
+	const send = (method, params) => {
+		const id = nextId++;
+		return new Promise((resolve, reject) => {
+			pending.set(id, { resolve, reject });
+			ws.send(JSON.stringify({ id, method, params }));
+		});
+	};
+	return { send, close: () => ws.close() };
+}
+
+function launchChrome(url, frame, scale, profile) {
 	if (!CHROME) die("no Chrome binary found. Install Google Chrome or set CHROME.");
-	const budget = Number(opt("timeout", "20000"));
-	const profile = mkdtempSync(join(tmpdir(), "mega-press-chrome-"));
 	const child = spawn(
 		CHROME,
 		[
@@ -250,45 +338,93 @@ function chromeShot(url, file, frame, scale) {
 			"--disable-background-networking",
 			"--disable-component-update",
 			"--mute-audio",
+			"--remote-debugging-port=0",
 			"--run-all-compositor-stages-before-draw",
 			`--user-data-dir=${profile}`,
-			`--virtual-time-budget=${budget}`,
 			`--force-device-scale-factor=${scale}`,
 			`--window-size=${frame.w},${frame.h}`,
-			`--screenshot=${file}`,
 			url,
 		],
 		{ stdio: "ignore" },
 	);
-	return new Promise((resolveShot, reject) => {
-		const started = Date.now();
-		const tick = setInterval(() => {
-			const ready = existsSync(file) && statSync(file).size > 32;
-			const late = Date.now() - started > budget + 4000;
-			if (!ready && !late) return;
-			clearInterval(tick);
+	const exit = new Promise((resolve) => child.once("exit", (code, signal) => resolve({ code, signal })));
+	return {
+		exit,
+		kill() {
 			child.kill("SIGKILL");
-			rmSync(profile, { recursive: true, force: true });
-			if (ready) resolveShot();
-			else reject(new Error(`chrome screenshot timed out after ${budget}ms`));
-		}, 150);
-	});
+		},
+	};
+}
+
+function refuseRender(errors) {
+	if (JSON_OUT) out(null, { ok: false, errors });
+	else console.error(`\n  ${printErrors(errors)}\n`);
+	process.exit(1);
 }
 
 async function writePng(api, spec, dest) {
 	const frame = api.frameSize(String(spec.frame ?? "landscape"));
 	const scale = Number(opt("scale", "2"));
+	const budget = Number(opt("timeout", "20000"));
 	const tmp = join(mkdtempSync(join(tmpdir(), "mega-press-png-")), "plate.html");
 	await writeHtml(spec, tmp);
 	const html = readFileSync(tmp, "utf8");
-	const { server, port } = await serveHtml(html);
+	const { server, port, status } = await serveHtml(html);
+	const profile = mkdtempSync(join(tmpdir(), "mega-press-chrome-"));
+	const chrome = launchChrome(`http://127.0.0.1:${port}/`, frame, scale, profile);
+	let cdp;
+	let refuse;
+	let toolBroke;
 	try {
+		const timed = sleep(budget).then(() => {
+			const err = new Error(`chrome screenshot timed out after ${budget}ms`);
+			err.toolBroke = true;
+			throw err;
+		});
+		const died = chrome.exit.then(({ signal }) => {
+			const err = new Error(signal ? `chrome killed (${signal})` : "chrome exited before the plate was ready");
+			err.toolBroke = true;
+			throw err;
+		});
+		const report = await Promise.race([status, timed, died]);
+		if (!report?.ok) {
+			const err = new Error("mount refused");
+			err.refuse = true;
+			err.errors = report?.errors ?? [{ code: "MOUNT_FAILED", message: "mount refused with no report" }];
+			throw err;
+		}
+		cdp = await openCdp(profile);
+		await cdp.send("Emulation.setDeviceMetricsOverride", {
+			width: frame.w,
+			height: frame.h,
+			deviceScaleFactor: scale,
+			mobile: false,
+		});
+		const shot = await cdp.send("Page.captureScreenshot", {
+			format: "png",
+			fromSurface: true,
+			captureBeyondViewport: false,
+		});
+		if (!shot?.data) {
+			const err = new Error("chrome wrote no png");
+			err.toolBroke = true;
+			throw err;
+		}
 		mkdirSync(dirname(dest), { recursive: true });
-		await chromeShot(`http://127.0.0.1:${port}/`, dest, frame, scale);
+		writeFileSync(dest, Buffer.from(shot.data, "base64"));
+	} catch (err) {
+		if (existsSync(dest)) rmSync(dest, { force: true });
+		if (err?.refuse) refuse = err.errors;
+		else if (err?.toolBroke) toolBroke = err.message;
+		else throw err;
 	} finally {
+		cdp?.close();
+		chrome.kill();
+		rmSync(profile, { recursive: true, force: true });
 		await new Promise((r) => server.close(r));
 	}
-	if (!existsSync(dest)) die("chrome wrote no png");
+	if (refuse) refuseRender(refuse);
+	if (toolBroke) die(toolBroke, 2);
 }
 
 async function cmdRender(api) {
@@ -303,15 +439,19 @@ async function cmdRender(api) {
 		process.exit(1);
 	}
 	const dest = opt("out") ? resolve(process.cwd(), opt("out")) : format === "json" ? null : defaultOut(result.spec, format);
+	const meta = {
+		...(result.spec.steppedFrom ? { steppedFrom: result.spec.steppedFrom } : {}),
+		warnings: result.warnings ?? [],
+	};
 
 	if (format === "json") {
 		const text = `${JSON.stringify(result.spec, null, 2)}\n`;
 		if (dest) {
 			mkdirSync(dirname(dest), { recursive: true });
 			writeFileSync(dest, text);
-			out(dest, { ok: true, file: dest, spec: result.spec });
+			out(dest, { ok: true, file: dest, spec: result.spec, ...meta });
 		} else if (JSON_OUT) {
-			out(null, { ok: true, spec: result.spec });
+			out(null, { ok: true, spec: result.spec, ...meta });
 		} else {
 			process.stdout.write(text);
 		}
@@ -320,12 +460,12 @@ async function cmdRender(api) {
 
 	if (format === "html") {
 		await writeHtml(result.spec, dest);
-		out(dest, { ok: true, file: dest, id: result.spec.id });
+		out(dest, { ok: true, file: dest, id: result.spec.id, ...meta });
 		return;
 	}
 
 	await writePng(api, result.spec, dest);
-	out(dest, { ok: true, file: dest, id: result.spec.id });
+	out(dest, { ok: true, file: dest, id: result.spec.id, ...meta });
 }
 
 async function main() {

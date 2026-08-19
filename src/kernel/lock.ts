@@ -3,6 +3,7 @@
  * Not a second layout solver; drops specs the lab would refuse on content grounds.
  */
 
+import { STRING_CAPS } from "./slotContract.js";
 import { normalizePlateSpec } from "./normalize.js";
 import {
 	ALLOWED_COMPONENTS,
@@ -237,6 +238,11 @@ export const lockPlate = (raw: unknown): LockResult => {
 		validateNode(spec.body, "body", errors, 0);
 	}
 
+	const tooLong = (code: string, path: string, value: string, max: number): PressError => ({
+		code,
+		message: `${path || "spec"}: ${value.length} characters; sanity bound is ${max}. Shorten it. This cap is a garbage guard, not a fit guarantee.`,
+	});
+
 	walkStrings(spec, "", (path, s) => {
 		if (s === "") {
 			// Match packages/press solve assertContent — empty strings refuse at paint time.
@@ -251,6 +257,15 @@ export const lockPlate = (raw: unknown): LockResult => {
 				code: "EM_DASH",
 				message: `${path || "spec"}: em/en dashes refused — use comma or colon`,
 			});
+		}
+		if (path === "title" && s.length > STRING_CAPS.title.max) {
+			errors.push(tooLong(STRING_CAPS.title.code, path, s, STRING_CAPS.title.max));
+		} else if (path === "lead" && s.length > STRING_CAPS.lead.max) {
+			errors.push(tooLong(STRING_CAPS.lead.code, path, s, STRING_CAPS.lead.max));
+		} else if (/\.rows\[\d+]\.[^.]+$/.test(path) && s.length > STRING_CAPS.cell.max) {
+			errors.push(tooLong(STRING_CAPS.cell.code, path, s, STRING_CAPS.cell.max));
+		} else if (/\.(detail|body|text|content|note)$/.test(path) && s.length > STRING_CAPS.detail.max) {
+			errors.push(tooLong(STRING_CAPS.detail.code, path, s, STRING_CAPS.detail.max));
 		}
 	});
 

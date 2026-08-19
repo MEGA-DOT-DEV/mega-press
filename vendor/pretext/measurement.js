@@ -1,7 +1,15 @@
 import { isCJK } from "./analysis.js";
 
 let measureContext = null;
+let measureContextOverride = null;
 const segmentMetricCaches = new Map();
+export function setMeasureContext(ctx) {
+	measureContext = null;
+	measureContextOverride = ctx;
+}
+export function getMeasureContextOverride() {
+	return measureContextOverride;
+}
 let cachedEngineProfile = null;
 // Safari's prefix-fit policy is useful for ordinary word-sized runs, but letting
 // it measure every growing prefix of a giant segment recreates a pathological
@@ -14,6 +22,7 @@ const maybeEmojiRe =
 let sharedGraphemeSegmenter = null;
 const emojiCorrectionCache = new Map();
 export function getMeasureContext() {
+	if (measureContextOverride) return measureContextOverride;
 	if (measureContext !== null) return measureContext;
 	if (typeof OffscreenCanvas !== "undefined") {
 		measureContext = new OffscreenCanvas(1, 1).getContext("2d");

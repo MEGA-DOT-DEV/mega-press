@@ -135,8 +135,8 @@ export const PLATE_PLAN_JSON_SCHEMA: Record<string, unknown> = {
 		frame: { type: "string", enum: ["landscape", "portrait", "square"] },
 		kicker: { type: "string", maxLength: 48 },
 		number: { type: "string", maxLength: 8 },
-		title: { type: "string", minLength: 8, maxLength: 120 },
-		lead: { type: "string", maxLength: 160 },
+		title: { type: "string", minLength: 8, maxLength: 140 },
+		lead: { type: "string", maxLength: 200 },
 		footnote: { type: "string", maxLength: 36 },
 		steps: {
 			type: "array",
@@ -175,7 +175,7 @@ export const PLATE_PLAN_JSON_SCHEMA: Record<string, unknown> = {
 		metrics: {
 			type: "array",
 			minItems: 3,
-			maxItems: 6,
+			maxItems: 5,
 			items: {
 				type: "object",
 				additionalProperties: false,
@@ -190,7 +190,7 @@ export const PLATE_PLAN_JSON_SCHEMA: Record<string, unknown> = {
 		cards: {
 			type: "array",
 			minItems: 3,
-			maxItems: 5,
+			maxItems: 4,
 			items: {
 				type: "object",
 				additionalProperties: false,
@@ -204,7 +204,7 @@ export const PLATE_PLAN_JSON_SCHEMA: Record<string, unknown> = {
 		checks: {
 			type: "array",
 			minItems: 4,
-			maxItems: 8,
+			maxItems: 6,
 			items: {
 				type: "object",
 				additionalProperties: false,
@@ -218,7 +218,7 @@ export const PLATE_PLAN_JSON_SCHEMA: Record<string, unknown> = {
 		columns: {
 			type: "array",
 			minItems: 2,
-			maxItems: 4,
+			maxItems: 3,
 			items: {
 				type: "object",
 				additionalProperties: false,
@@ -231,14 +231,14 @@ export const PLATE_PLAN_JSON_SCHEMA: Record<string, unknown> = {
 		},
 		rows: {
 			type: "array",
-			minItems: 2,
-			maxItems: 8,
+			minItems: 3,
+			maxItems: 5,
 			items: { type: "object", additionalProperties: { type: "string" } },
 		},
 		layers: {
 			type: "array",
-			minItems: 2,
-			maxItems: 5,
+			minItems: 3,
+			maxItems: 4,
 			items: {
 				type: "object",
 				additionalProperties: false,
@@ -285,7 +285,7 @@ export const PLATE_PLAN_JSON_SCHEMA: Record<string, unknown> = {
 		dir: { type: "string", enum: ["x", "y"] },
 		nodes: {
 			type: "array",
-			minItems: 2,
+			minItems: 3,
 			maxItems: 7,
 			items: {
 				type: "object",
@@ -303,7 +303,7 @@ export const PLATE_PLAN_JSON_SCHEMA: Record<string, unknown> = {
 		},
 		edges: {
 			type: "array",
-			minItems: 1,
+			minItems: 2,
 			maxItems: 10,
 			items: {
 				type: "object",

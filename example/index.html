@@ -28,8 +28,19 @@
 			}
 			.plate {
 				width: 100%;
-				min-height: 200px;
 				background: #000;
+			}
+			.resize-host {
+				resize: both;
+				overflow: auto;
+				width: 100%;
+				min-height: 220px;
+				border: 1px solid #333;
+			}
+			.narrow {
+				width: 200px;
+				overflow: auto;
+				border: 1px solid #333;
 			}
 			.error {
 				border: 1px solid #7a2e2e;
@@ -59,6 +70,20 @@
 			<section>
 				<h2>invalid</h2>
 				<div id="invalid" class="plate"></div>
+			</section>
+			<section>
+				<h2>resize</h2>
+				<p>Drag the box. The plate scales; it never reflows or shrinks below the legibility floor.</p>
+				<div class="resize-host">
+					<div id="resize-rail" class="plate"></div>
+				</div>
+			</section>
+			<section>
+				<h2>narrow (200px)</h2>
+				<p>Host scrolls. The plate stays at the clamp width.</p>
+				<div class="narrow">
+					<div id="narrow-rail" class="plate"></div>
+				</div>
 			</section>
 		</main>
 		<script type="module" src="./main.ts"></script>

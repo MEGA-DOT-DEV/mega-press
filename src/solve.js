@@ -345,6 +345,7 @@ export function placeNode(n, rect, ctx = {}) {
 				});
 				n._block = fitted;
 				n.role = fitted.role;
+				if (fitted.steppedFrom) n.steppedFrom = fitted.steppedFrom;
 			}
 			return;
 		}

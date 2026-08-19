@@ -29,3 +29,5 @@ render("rail", rail);
 render("table", table);
 render("bars", bars);
 render("invalid", invalid);
+render("resize-rail", rail);
+render("narrow-rail", rail);

@@ -20,6 +20,7 @@ import {
 	COMMENTARY_ROLE,
 	CONTRAST,
 	contrast,
+	lineHeight,
 	MIN_RULE_SEPARATION,
 	MIN_SEMANTIC_STROKE,
 	minTypeSize,
@@ -118,15 +119,25 @@ export function validate(plate) {
 	const held = painted.filter((n) => !n.bleed);
 	const contentBottom = held.length ? Math.max(...held.map((n) => n.rect.bottom)) : safe.bottom;
 	const overflow = contentBottom - safe.bottom;
+	const bodyLine = lineHeight("body");
 	if (overflow > 0.5) {
+		const aboutLines = Math.max(1, Math.ceil(overflow / bodyLine));
 		r.error(
 			"CONTENT_OVERFLOW",
-			`The plate runs ${Math.ceil(overflow)}px past the bottom of its safe area ` +
-				`(content ends at ${contentBottom.toFixed(0)}, the safe area ends at ${safe.bottom}). ` +
-				`Remove information before reducing typography: drop an information unit, ` +
-				`a lead line, or a note.`,
-			{ overflow, contentBottom, safeBottom: safe.bottom },
+			`The plate runs about ${aboutLines} line${aboutLines === 1 ? "" : "s"} past the safe area ` +
+				`(${Math.ceil(overflow)}px; content ends at ${contentBottom.toFixed(0)}, safe ends at ${safe.bottom}). ` +
+				`Remove one information unit, a lead line, or a note.`,
+			{ overflow, contentBottom, safeBottom: safe.bottom, aboutLines },
 		);
+	} else {
+		const slack = safe.bottom - contentBottom;
+		if (held.length && slack <= bodyLine + 0.5) {
+			r.warn(
+				"NEAR_OVERFLOW",
+				`Content sits ${Math.ceil(Math.max(0, slack))}px from the safe bottom (within one line).`,
+				{ slack, safeBottom: safe.bottom, contentBottom },
+			);
+		}
 	}
 
 	for (const n of painted) {
@@ -251,6 +262,15 @@ export function validate(plate) {
         identity travels on a flag rather than on the size it ended up at.
         What must stay unique is the claim, not the point size. */
 	const titles = texts.filter((n) => n.isTitle);
+	for (const n of titles) {
+		if (n.steppedFrom) {
+			r.warn(
+				"TITLE_STEPPED",
+				`The title stepped from '${n.steppedFrom}' to '${n.role}' to fit.`,
+				{ from: n.steppedFrom, to: n.role },
+			);
+		}
+	}
 	if (titles.length === 0) {
 		if (plate.chrome?.title !== false) {
 			r.error("NO_TITLE", "The plate has no title. Every frame states exactly one claim.");
