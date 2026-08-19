@@ -35,6 +35,8 @@ export type ArtifactKind = PlatePlanKind;
 export type PlatePlan = {
 	readonly kind: PlatePlanKind;
 	readonly id: string;
+	/** Frame proportions; landscape when absent. Tall sequences fit portrait/square. */
+	readonly frame?: "landscape" | "portrait" | "square";
 	readonly kicker?: string;
 	readonly number?: string;
 	readonly title?: string;
@@ -130,6 +132,7 @@ export const PLATE_PLAN_JSON_SCHEMA: Record<string, unknown> = {
 	properties: {
 		kind: { type: "string", enum: [...PLATE_PLAN_KINDS] },
 		id: { type: "string", minLength: 2, maxLength: 64 },
+		frame: { type: "string", enum: ["landscape", "portrait", "square"] },
 		kicker: { type: "string", maxLength: 48 },
 		number: { type: "string", maxLength: 8 },
 		title: { type: "string", minLength: 8, maxLength: 120 },
