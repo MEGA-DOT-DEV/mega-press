@@ -245,6 +245,75 @@ export const assessPlatePedagogy = (spec: Record<string, unknown>): readonly Ped
 		}
 	}
 
+	if (type === "timeline" || type === "timelineVertical") {
+		const items = Array.isArray(body.items) ? body.items : [];
+		if (items.length < 3) {
+			errors.push({
+				code: "PLATE_THIN",
+				message: `${type} needs at least three stops with a label and a title.`,
+			});
+		}
+		const detailed = items.filter(
+			(it) => isRecord(it) && String(it.detail ?? "").trim().length >= 16,
+		);
+		if (detailed.length < 2) {
+			errors.push({
+				code: "PLATE_THIN",
+				message: `${type} needs detail clauses on most stops, not bare titles.`,
+			});
+		}
+	}
+
+	if (type === "railFlow") {
+		const items = Array.isArray(body.items) ? body.items : [];
+		if (items.length < 3) {
+			errors.push({
+				code: "PLATE_THIN",
+				message: "railFlow needs three to five named steps.",
+			});
+		}
+		const detailed = items.filter(
+			(it) => isRecord(it) && String(it.detail ?? "").trim().length >= 16,
+		);
+		if (detailed.length < 2) {
+			errors.push({
+				code: "PLATE_THIN",
+				message: "railFlow steps need detail clauses on most steps.",
+			});
+		}
+	}
+
+	if (type === "graph") {
+		const nodes = Array.isArray(body.nodes) ? body.nodes : [];
+		const edges = Array.isArray(body.edges) ? body.edges : [];
+		if (nodes.length < 3) {
+			errors.push({
+				code: "PLATE_THIN",
+				message: "graph needs at least three nodes; two boxes are a compare, not a system.",
+			});
+		}
+		if (edges.length < 2) {
+			errors.push({
+				code: "PLATE_THIN",
+				message: "graph needs at least two edges so the structure carries information.",
+			});
+		}
+	}
+
+	if (type === "derivation") {
+		const steps = Array.isArray(body.steps) ? body.steps : [];
+		const noted = steps.filter(
+			(s, i) => i === 0 || (isRecord(s) && String(s.note ?? "").trim().length >= 16),
+		);
+		if (steps.length < 2 || noted.length < steps.length) {
+			errors.push({
+				code: "PLATE_THIN",
+				message:
+					"derivation needs 2 to 5 steps and a real note (≥16 chars) on every step after the first.",
+			});
+		}
+	}
+
 	if (type === "quote") {
 		errors.push({
 			code: "KIND_WEAK",

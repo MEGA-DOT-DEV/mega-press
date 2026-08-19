@@ -19,6 +19,28 @@ const splitDash = (line: string): { left: string; right: string } => {
 	return { left: raw.slice(0, 40), right: raw };
 };
 
+/** "AT | Title | detail" → three parts; the third is optional. */
+const splitStop = (line: string): { at: string; title: string; detail?: string } => {
+	const raw = clean(line);
+	const parts = raw
+		.split("|")
+		.map((p) => p.trim())
+		.filter(Boolean);
+	if (parts.length >= 3) {
+		return { at: parts[0] ?? raw, title: parts[1] ?? raw, detail: parts.slice(2).join(" | ") };
+	}
+	if (parts.length === 2) return { at: parts[0] ?? raw, title: parts[1] ?? raw };
+	const { left, right } = splitDash(raw);
+	return { at: left.slice(0, 16), title: right };
+};
+
+const slug = (s: string): string =>
+	s
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-|-$/g, "")
+		.slice(0, 24);
+
 const parseDoAvoid = (line: string): { text: string; ok: boolean } => {
 	const raw = clean(line);
 	if (/^\[?\s*avoid/i.test(raw)) {
@@ -268,6 +290,69 @@ export const outlineToPlatePlan = (input: {
 				yLabel,
 				quadrants: cells.slice(0, 4),
 			};
+		}
+		case "timeline": {
+			const stops = lines.slice(0, 5).map((l) => {
+				const { at, title, detail } = splitStop(l);
+				return { at: at.slice(0, 16), title, ...(detail ? { detail } : {}) };
+			});
+			if (stops.length < 3) return null;
+			return { ...base, kind: "timeline", stops };
+		}
+		case "timelineVertical": {
+			const events = lines.slice(0, 6).map((l) => {
+				const { at, title, detail } = splitStop(l);
+				return { at: at.slice(0, 16), title, ...(detail ? { detail } : {}) };
+			});
+			if (events.length < 3) return null;
+			return { ...base, kind: "timelineVertical", events };
+		}
+		case "railFlow": {
+			const steps = lines.slice(0, 5).map((l) => {
+				const { left, right } = splitDash(l);
+				return {
+					name: left.slice(0, 24),
+					detail: right.length >= 12 ? right : `${right} Complete this step with a checkable result.`,
+				};
+			});
+			if (steps.length < 3) return null;
+			return { ...base, kind: "railFlow", steps };
+		}
+		case "graph": {
+			const nodes: { key: string; title: string; detail?: string }[] = [];
+			const edges: { from: string; to: string }[] = [];
+			for (const l of lines) {
+				const raw = clean(l);
+				const edge = raw.match(/^(.+?)\s*->\s*(.+)$/);
+				if (edge) {
+					edges.push({ from: slug(edge[1] ?? ""), to: slug(edge[2] ?? "") });
+					continue;
+				}
+				const parts = raw
+					.split("|")
+					.map((p) => p.trim())
+					.filter(Boolean);
+				const title = parts[0] ?? raw;
+				const detail = parts.slice(1).join(" | ");
+				nodes.push({ key: slug(title), title, ...(detail ? { detail } : {}) });
+			}
+			if (nodes.length < 3 || edges.length < 2) return null;
+			const keys = new Set(nodes.map((n) => n.key));
+			if (edges.some((e) => !keys.has(e.from) || !keys.has(e.to))) return null;
+			return { ...base, kind: "graph", nodes: nodes.slice(0, 7), edges: edges.slice(0, 10) };
+		}
+		case "derivation": {
+			const exprs = lines.slice(0, 5).map((l) => {
+				const raw = clean(l);
+				const at = raw.indexOf("//");
+				if (at === -1) return { expr: raw.trim() };
+				const expr = raw.slice(0, at).trim();
+				const note = raw.slice(at + 2).trim();
+				return { expr, ...(note ? { note } : {}) };
+			});
+			if (exprs.length < 2) return null;
+			if (exprs.some((s, i) => i > 0 && !s.note)) return null;
+			return { ...base, kind: "derivation", exprs };
 		}
 		default:
 			return null;

@@ -128,13 +128,73 @@ const validateNode = (node: unknown, path: string, errors: PressError[], depth: 
 		}
 	}
 
-	if (type === "railSteps" || type === "cards" || type === "layers") {
+	if (
+		type === "railSteps" ||
+		type === "cards" ||
+		type === "layers" ||
+		type === "railFlow" ||
+		type === "timeline" ||
+		type === "timelineVertical"
+	) {
 		const items = node.items;
 		if (!Array.isArray(items) || items.length === 0) {
 			errors.push({ code: "ITEMS", message: `${path}: needs items` });
 		} else if (items.length > 8) {
 			errors.push({ code: "TOO_MANY_UNITS", message: `${path}: too many items` });
 		}
+	}
+
+	if (type === "timeline" || type === "timelineVertical") {
+		const items = Array.isArray(node.items) ? node.items : [];
+		items.forEach((item, i) => {
+			if (!isRecord(item) || !String(item.date ?? "").trim() || !String(item.title ?? "").trim()) {
+				errors.push({
+					code: "STOP_INCOMPLETE",
+					message: `${path}.items[${i}]: ${type} stops need date + title`,
+				});
+			}
+		});
+	}
+
+	if (type === "graph") {
+		const nodes = Array.isArray(node.nodes) ? node.nodes : [];
+		const edges = Array.isArray(node.edges) ? node.edges : [];
+		if (nodes.length < 2) {
+			errors.push({ code: "GRAPH_NODES", message: `${path}: graph needs at least two nodes` });
+		}
+		const keys = new Set(
+			nodes.filter(isRecord).map((n) => String(n.key ?? "").trim()),
+		);
+		edges.forEach((edge, i) => {
+			if (!isRecord(edge)) return;
+			const from = String(edge.from ?? "").trim();
+			const to = String(edge.to ?? "").trim();
+			if (!keys.has(from) || !keys.has(to)) {
+				errors.push({
+					code: "GRAPH_EDGE_UNKNOWN",
+					message: `${path}.edges[${i}]: edge names a key no node has`,
+				});
+			}
+		});
+	}
+
+	if (type === "derivation") {
+		const steps = Array.isArray(node.steps) ? node.steps : [];
+		if (steps.length < 2 || steps.length > 5) {
+			errors.push({
+				code: "DERIVATION_STEPS",
+				message: `${path}: derivation needs two to five steps`,
+			});
+		}
+		steps.forEach((step, i) => {
+			if (i === 0) return;
+			if (!isRecord(step) || !String(step.note ?? "").trim()) {
+				errors.push({
+					code: "DERIVATION_NOTE_MISSING",
+					message: `${path}.steps[${i}]: every step after the first needs a note`,
+				});
+			}
+		});
 	}
 };
 

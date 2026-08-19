@@ -26,6 +26,11 @@ describe("fail-closed kinds", () => {
 		["quadrant", "QUADRANTS_MISSING"],
 		["quote", "QUOTE_TEXT_MISSING"],
 		["note", "NOTE_MISSING"],
+		["timeline", "STOPS_TOO_FEW"],
+		["timelineVertical", "EVENTS_TOO_FEW"],
+		["railFlow", "STEPS_MISSING"],
+		["graph", "GRAPH_NODES_TOO_FEW"],
+		["derivation", "EXPRS_TOO_FEW"],
 	] as const)("%s refuses empty slots with %s", (kind, code) => {
 		const result = buildArtifact(thin(kind));
 		expect(result.ok).toBe(false);
@@ -52,5 +57,35 @@ describe("fail-closed kinds", () => {
 		expect(result.ok).toBe(false);
 		if (result.ok) throw new Error("expected fail");
 		expect(result.errors.some((e) => e.code === "HERO_CAPTION_MISSING")).toBe(true);
+	});
+
+	it("graph with a dangling edge uses GRAPH_EDGE_UNKNOWN", () => {
+		const result = buildArtifact(
+			thin("graph", {
+				nodes: [
+					{ key: "a", title: "Agent" },
+					{ key: "b", title: "MCP" },
+					{ key: "c", title: "Memory" },
+				],
+				edges: [
+					{ from: "a", to: "b" },
+					{ from: "b", to: "missing" },
+				],
+			}),
+		);
+		expect(result.ok).toBe(false);
+		if (result.ok) throw new Error("expected fail");
+		expect(result.errors.some((e) => e.code === "GRAPH_EDGE_UNKNOWN")).toBe(true);
+	});
+
+	it("derivation with an unnoted later step uses DERIVATION_NOTE_MISSING", () => {
+		const result = buildArtifact(
+			thin("derivation", {
+				exprs: [{ expr: "value_set({ name: 'tz' })" }, { expr: "value_get({ name: 'tz' })" }],
+			}),
+		);
+		expect(result.ok).toBe(false);
+		if (result.ok) throw new Error("expected fail");
+		expect(result.errors.some((e) => e.code === "DERIVATION_NOTE_MISSING")).toBe(true);
 	});
 });

@@ -40,6 +40,11 @@ describe("press cli", () => {
 			"bars",
 			"segments",
 			"quadrant",
+			"timeline",
+			"timelineVertical",
+			"railFlow",
+			"graph",
+			"derivation",
 		]);
 	});
 

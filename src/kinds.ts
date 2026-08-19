@@ -354,6 +354,271 @@ const note: KindModule = {
 	},
 };
 
+const stopToItem = (s: {
+	readonly at?: string;
+	readonly title?: string;
+	readonly detail?: string;
+}): { date: string; title: string; detail?: string } | null => {
+	const date = String(s.at ?? "")
+		.trim()
+		.toUpperCase();
+	const title = String(s.title ?? "").trim();
+	if (!date || !title) return null;
+	const detail = String(s.detail ?? "").trim();
+	return { date, title, ...(detail ? { detail } : {}) };
+};
+
+const timeline: KindModule = {
+	id: "timeline",
+	slotsSchema: {
+		type: "object",
+		required: ["stops"],
+		properties: {
+			stops: {
+				type: "array",
+				minItems: 3,
+				maxItems: 5,
+				items: {
+					type: "object",
+					required: ["at", "title"],
+					properties: {
+						at: { type: "string" },
+						title: { type: "string" },
+						detail: { type: "string" },
+					},
+				},
+			},
+		},
+	},
+	compile(plan) {
+		const items = (plan.stops ?? [])
+			.map(stopToItem)
+			.filter((s): s is NonNullable<typeof s> => s != null)
+			.slice(0, 5);
+		if (items.length < 3) {
+			return fail("STOPS_TOO_FEW", "timeline needs at least three {at, title} stops");
+		}
+		return finish(plan, { type: "timeline", items });
+	},
+};
+
+const timelineVertical: KindModule = {
+	id: "timelineVertical",
+	slotsSchema: {
+		type: "object",
+		required: ["events"],
+		properties: {
+			events: {
+				type: "array",
+				minItems: 3,
+				maxItems: 6,
+				items: {
+					type: "object",
+					required: ["at", "title"],
+					properties: {
+						at: { type: "string" },
+						title: { type: "string" },
+						detail: { type: "string" },
+					},
+				},
+			},
+		},
+	},
+	compile(plan) {
+		const items = (plan.events ?? [])
+			.map(stopToItem)
+			.filter((s): s is NonNullable<typeof s> => s != null)
+			.slice(0, 6);
+		if (items.length < 3) {
+			return fail("EVENTS_TOO_FEW", "timelineVertical needs at least three {at, title} events");
+		}
+		return finish(plan, { type: "timelineVertical", items });
+	},
+};
+
+const railFlow: KindModule = {
+	id: "railFlow",
+	slotsSchema: {
+		type: "object",
+		required: ["steps"],
+		properties: {
+			steps: {
+				type: "array",
+				minItems: 3,
+				maxItems: 5,
+				items: {
+					type: "object",
+					required: ["name"],
+					properties: {
+						name: { type: "string" },
+						detail: { type: "string" },
+					},
+				},
+			},
+		},
+	},
+	compile(plan) {
+		const steps = (plan.steps ?? [])
+			.map((s) => ({
+				name: String(s.name ?? "").trim(),
+				detail: String(s.detail ?? "").trim(),
+			}))
+			.filter((s) => s.name.length > 0)
+			.slice(0, 5)
+			.map((s) => ({
+				name: s.name,
+				...(s.detail ? { detail: s.detail } : {}),
+			}));
+		if (steps.length < 3) {
+			return fail("STEPS_MISSING", "railFlow needs at least three named steps");
+		}
+		return finish(plan, { type: "railFlow", items: steps });
+	},
+};
+
+const graph: KindModule = {
+	id: "graph",
+	slotsSchema: {
+		type: "object",
+		required: ["nodes", "edges"],
+		properties: {
+			nodes: {
+				type: "array",
+				minItems: 2,
+				maxItems: 7,
+				items: {
+					type: "object",
+					required: ["key", "title"],
+					properties: {
+						key: { type: "string" },
+						title: { type: "string" },
+						detail: { type: "string" },
+						accent: { type: "boolean" },
+						column: { type: "number" },
+						row: { type: "number" },
+					},
+				},
+			},
+			edges: {
+				type: "array",
+				minItems: 1,
+				maxItems: 10,
+				items: {
+					type: "object",
+					required: ["from", "to"],
+					properties: {
+						from: { type: "string" },
+						to: { type: "string" },
+					},
+				},
+			},
+			dir: { type: "string", enum: ["x", "y"] },
+		},
+	},
+	compile(plan) {
+		const nodes = (plan.nodes ?? [])
+			.map((n) => ({
+				key: String(n.key ?? "").trim(),
+				title: String(n.title ?? "").trim(),
+				detail: String(n.detail ?? "").trim(),
+				accent: Boolean(n.accent),
+				column: n.column,
+				row: n.row,
+			}))
+			.filter((n) => n.key.length > 0 && n.title.length > 0)
+			.slice(0, 7);
+		if (nodes.length < 2) {
+			return fail("GRAPH_NODES_TOO_FEW", "graph needs at least two {key, title} nodes");
+		}
+		const keys = new Set(nodes.map((n) => n.key));
+		if (keys.size !== nodes.length) {
+			return fail("GRAPH_KEY_DUPLICATE", "graph node keys must be unique");
+		}
+		const edges = (plan.edges ?? [])
+			.map((e) => ({ from: String(e.from ?? "").trim(), to: String(e.to ?? "").trim() }))
+			.filter((e) => e.from.length > 0 && e.to.length > 0)
+			.slice(0, 10);
+		if (edges.length < 1) {
+			return fail("GRAPH_EDGES_MISSING", "graph needs at least one {from, to} edge");
+		}
+		const dangling = edges.find((e) => !keys.has(e.from) || !keys.has(e.to));
+		if (dangling) {
+			return fail(
+				"GRAPH_EDGE_UNKNOWN",
+				`graph edge ${dangling.from} to ${dangling.to} names a key no node has`,
+			);
+		}
+		// Ranks are all-or-nothing in the renderer: a partial set is dropped.
+		const rankKey = plan.dir === "y" ? "row" : "column";
+		const ranked = nodes.every((n) => typeof n[rankKey] === "number");
+		return finish(plan, {
+			type: "graph",
+			...(plan.dir === "y" ? { dir: "y" } : {}),
+			nodes: nodes.map((n) => ({
+				key: n.key,
+				title: n.title,
+				...(n.detail ? { detail: n.detail } : {}),
+				...(n.accent ? { accent: true } : {}),
+				...(ranked && typeof n.column === "number" ? { column: n.column } : {}),
+				...(ranked && typeof n.row === "number" ? { row: n.row } : {}),
+			})),
+			edges,
+		});
+	},
+};
+
+const derivation: KindModule = {
+	id: "derivation",
+	slotsSchema: {
+		type: "object",
+		required: ["exprs"],
+		properties: {
+			exprs: {
+				type: "array",
+				minItems: 2,
+				maxItems: 5,
+				items: {
+					type: "object",
+					required: ["expr"],
+					properties: {
+						expr: { type: "string" },
+						note: { type: "string" },
+						accent: { type: "boolean" },
+					},
+				},
+			},
+		},
+	},
+	compile(plan) {
+		const steps = (plan.exprs ?? [])
+			.map((s) => ({
+				expr: String(s.expr ?? "").trim(),
+				note: String(s.note ?? "").trim(),
+				accent: Boolean(s.accent),
+			}))
+			.filter((s) => s.expr.length > 0)
+			.slice(0, 5);
+		if (steps.length < 2) {
+			return fail("EXPRS_TOO_FEW", "derivation needs at least two {expr} steps");
+		}
+		const unnoted = steps.findIndex((s, i) => i > 0 && s.note.length === 0);
+		if (unnoted > 0) {
+			return fail(
+				"DERIVATION_NOTE_MISSING",
+				`derivation step ${unnoted + 1} needs a note saying what changed`,
+			);
+		}
+		return finish(plan, {
+			type: "derivation",
+			steps: steps.map((s, i) => ({
+				expr: s.expr,
+				...(i > 0 || s.note ? { note: s.note } : {}),
+				...(s.accent ? { accent: true } : {}),
+			})),
+		});
+	},
+};
+
 export const KIND_MODULES: readonly KindModule[] = [
 	railSteps,
 	compare,
@@ -368,6 +633,11 @@ export const KIND_MODULES: readonly KindModule[] = [
 	quadrant,
 	quote,
 	note,
+	timeline,
+	timelineVertical,
+	railFlow,
+	graph,
+	derivation,
 ];
 
 const byId = new Map(KIND_MODULES.map((m) => [m.id, m]));

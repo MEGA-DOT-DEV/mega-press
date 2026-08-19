@@ -25,6 +25,11 @@ export const ALLOWED_COMPONENTS = [
 	"quadrant",
 	"stack",
 	"row",
+	"timeline",
+	"timelineVertical",
+	"railFlow",
+	"graph",
+	"derivation",
 ] as const;
 
 export type AllowedComponent = (typeof ALLOWED_COMPONENTS)[number];
@@ -231,6 +236,96 @@ export const COMPONENT_GUIDE: Record<string, { readonly use: string; readonly ex
 				],
 			},
 		},
+		timeline: {
+			use: "events or calls in order, read left to right, when the intervals do not matter",
+			example: {
+				type: "timeline",
+				items: [
+					{ date: "CALL 1", title: "send_email", detail: "Fails: missing audience_id." },
+					{ date: "HINT", title: "Error names the next step", detail: "Call list_audiences first." },
+					{ date: "CALL 2", title: "list_audiences", detail: "Returns the missing id." },
+					{ date: "CALL 3", title: "send_email", detail: "Delivered." },
+				],
+			},
+		},
+		timelineVertical: {
+			use: "an event log or transcript read top to bottom, the label (actor, stage, or date) in its own column",
+			example: {
+				type: "timelineVertical",
+				items: [
+					{
+						date: "USER",
+						title: "Asks in plain language",
+						detail: "How did last week's campaign perform?",
+					},
+					{
+						date: "AGENT",
+						title: "Picks a tool from the shared schema",
+						detail: "get_campaign_stats with range last_week.",
+					},
+					{
+						date: "TOOL",
+						title: "Returns the numbers",
+						detail: "128,400 impressions, 3,210 clicks, 142 conversions.",
+					},
+					{
+						date: "AGENT",
+						title: "Answers with evidence",
+						detail: "3,210 clicks and 142 conversions, a 4.4% conversion rate.",
+					},
+				],
+			},
+		},
+		railFlow: {
+			use: "a compact process read left to right, three to five short named steps",
+			example: {
+				type: "railFlow",
+				items: [
+					{ name: "Fetch sources", detail: "Pull the feeds the user follows." },
+					{ name: "Write script", detail: "Draft one tight episode outline." },
+					{ name: "Synthesize audio", detail: "Text to speech over the script." },
+					{ name: "Send link", detail: "Deliver the hosted player." },
+				],
+			},
+		},
+		graph: {
+			use: "a system of labelled boxes with arrows: a pipeline, an architecture, a hub with spokes",
+			example: {
+				type: "graph",
+				dir: "x",
+				nodes: [
+					{ key: "agent", title: "Agent", column: 0, row: 1 },
+					{ key: "mcp", title: "MCP", detail: "capability layer", accent: true, column: 1, row: 1 },
+					{ key: "memory", title: "Memory", column: 2, row: 0 },
+					{ key: "storage", title: "Storage", column: 2, row: 1 },
+					{ key: "email", title: "Email", column: 2, row: 2 },
+				],
+				edges: [
+					{ from: "agent", to: "mcp" },
+					{ from: "mcp", to: "memory" },
+					{ from: "mcp", to: "storage" },
+					{ from: "mcp", to: "email" },
+				],
+			},
+		},
+		derivation: {
+			use: "a short chain of expressions or calls where each step says what changed, the code walkthrough shape",
+			example: {
+				type: "derivation",
+				steps: [
+					{ expr: "value_set({ name: 'reportTimezone', value: 'Europe/Warsaw' })" },
+					{
+						expr: "stored = value_get({ name: 'reportTimezone' })",
+						note: "The package reads the same name at runtime instead of asking again.",
+					},
+					{
+						expr: "timezone = stored?.value ?? 'UTC'",
+						note: "A fallback keeps the report running before the value exists.",
+						accent: true,
+					},
+				],
+			},
+		},
 	};
 
 export const platesPromptSection = (): string => {
@@ -278,7 +373,7 @@ Compose two nodes with {"type":"stack","gap":3,"children":[...]} when one claim 
 4. No components: ${WITHHELD_COMPONENTS.join(", ")}.
 5. Only these body types: ${ALLOWED_COMPONENTS.join(", ")}.
 6. Never invent types (callout, infobox, alert). Use note with content.
-7. note = {type, content}. compare = before/after {label, title, items[]}. railSteps items = {name, detail}. checklist items = {text, ok}.
+7. note = {type, content}. compare = before/after {label, title, items[]}. railSteps/railFlow items = {name, detail}. checklist items = {text, ok}. timeline/timelineVertical items = {date, title, detail?} (date is the short label column: an actor, stage, or date). graph = nodes {key, title, detail?} + edges {from, to}. derivation steps = {expr, note} (note required after the first step).
 
 ## Choose the component by what the content is
   process / method / loop          railSteps
@@ -292,6 +387,11 @@ Compose two nodes with {"type":"stack","gap":3,"children":[...]} when one claim 
   one focal number                 hero
   a sharp reframe                  note
   two small nodes, one claim       stack
+  events or calls in order         timeline
+  transcript, actor log            timelineVertical
+  compact left-to-right flow       railFlow
+  system, architecture, hub        graph
+  code walkthrough                 derivation
 
 ## Density examples (match this richness, not stub cards)
 - compare: each side has a title AND 2–4 concrete items
@@ -299,6 +399,9 @@ Compose two nodes with {"type":"stack","gap":3,"children":[...]} when one claim 
 - metrics: 3–5 rows, each with label, value, unit
 - cards: 3–4 cards, each body a full explanatory sentence
 - checklist: 4–6 rules, mix of ok true/false
+- timelineVertical: 3–5 rows, each with a short label, a title, and a detail clause
+- graph: 4–6 nodes with at least three edges, every node a real part of the system
+- derivation: 2–4 expressions, every step after the first annotated with what changed
 
 ## Vocabulary JSON
 ${JSON.stringify(vocab)}

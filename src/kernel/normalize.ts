@@ -33,6 +33,21 @@ const TYPE_ALIASES: Record<string, string> = {
 	layer: "layers",
 	quoteblock: "quote",
 	blockquote: "quote",
+	flow: "railFlow",
+	transcript: "timelineVertical",
+	log: "timelineVertical",
+	events: "timelineVertical",
+	roadmap: "timeline",
+	diagram: "graph",
+	flowchart: "graph",
+	architecture: "graph",
+	pipeline: "graph",
+	tree: "graph",
+	orbit: "graph",
+	code: "derivation",
+	codeblock: "derivation",
+	snippet: "derivation",
+	walkthrough: "derivation",
 };
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>
@@ -118,7 +133,97 @@ function normalizeNode(node: unknown): unknown {
 		delete out.right;
 	}
 
-	if (type === "railSteps" && Array.isArray(out.items)) {
+	if (type === "timeline" || type === "timelineVertical") {
+		if (out.items == null) {
+			const alt = out.stops ?? out.events;
+			if (Array.isArray(alt)) out.items = alt;
+			delete out.stops;
+			delete out.events;
+		}
+	}
+
+	if (type === "derivation") {
+		if (out.steps == null && Array.isArray(out.items)) {
+			out.steps = out.items;
+			delete out.items;
+		}
+		if (out.steps == null && Array.isArray(out.exprs)) {
+			out.steps = out.exprs;
+			delete out.exprs;
+		}
+	}
+
+	if ((type === "timeline" || type === "timelineVertical") && Array.isArray(out.items)) {
+		out.items = out.items.map((item, i) => {
+			if (!isRecord(item)) return { date: `STEP ${i + 1}`, title: String(item) };
+			const row = { ...item };
+			if (row.date == null) row.date = row.at ?? row.label ?? row.actor ?? row.when ?? `STEP ${i + 1}`;
+			if (row.title == null) row.title = row.name ?? row.text ?? "";
+			if (row.detail == null) {
+				const d = row.body ?? row.description;
+				if (d != null) row.detail = d;
+			}
+			delete row.at;
+			delete row.label;
+			delete row.actor;
+			delete row.when;
+			delete row.name;
+			delete row.body;
+			delete row.description;
+			return row;
+		});
+	}
+
+	if (type === "graph") {
+		if (Array.isArray(out.nodes)) {
+			out.nodes = out.nodes.map((n, i) => {
+				if (!isRecord(n)) return { key: `n${i}`, title: String(n) };
+				const row = { ...n };
+				if (row.title == null) row.title = row.label ?? row.name ?? "";
+				if (row.key == null) {
+					row.key = String(row.title)
+						.toLowerCase()
+						.replace(/[^a-z0-9]+/g, "-")
+						.replace(/^-|-$/g, "");
+				}
+				delete row.label;
+				delete row.name;
+				return row;
+			});
+		}
+		if (Array.isArray(out.edges)) {
+			out.edges = out.edges.map((e) => {
+				if (!isRecord(e)) return e;
+				const row = { ...e };
+				if (row.from == null && row.source != null) row.from = row.source;
+				if (row.to == null && row.target != null) row.to = row.target;
+				delete row.source;
+				delete row.target;
+				return row;
+			});
+		}
+	}
+
+	if (type === "derivation" && Array.isArray(out.steps)) {
+		out.steps = out.steps.map((step) => {
+			if (!isRecord(step)) return { expr: String(step) };
+			const row = { ...step };
+			if (row.expr == null) row.expr = row.code ?? row.text ?? row.line ?? "";
+			if (row.note == null) {
+				const n = row.detail ?? row.annotation ?? row.comment;
+				if (n != null) row.note = n;
+			}
+			delete row.code;
+			delete row.text;
+			delete row.line;
+			delete row.detail;
+			delete row.annotation;
+			delete row.comment;
+			return row;
+		});
+	}
+
+	if ((type === "railSteps" || type === "railFlow") && Array.isArray(out.items)) {
 		out.items = out.items.map((item, i) => {
 			if (!isRecord(item)) return { name: String(item), detail: "" };
 			const row = { ...item };

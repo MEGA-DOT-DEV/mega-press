@@ -19,6 +19,11 @@ export const PLATE_PLAN_KINDS = [
 	"segments",
 	"quadrant",
 	"quote",
+	"timeline",
+	"timelineVertical",
+	"railFlow",
+	"graph",
+	"derivation",
 ] as const;
 
 export type PlatePlanKind = (typeof PLATE_PLAN_KINDS)[number];
@@ -84,6 +89,35 @@ export type PlatePlan = {
 	/** quote */
 	readonly quoteText?: string;
 	readonly attribution?: string;
+	/** timeline — horizontal stops */
+	readonly stops?: readonly {
+		readonly at: string;
+		readonly title: string;
+		readonly detail?: string;
+	}[];
+	/** timelineVertical — labelled events top to bottom */
+	readonly events?: readonly {
+		readonly at: string;
+		readonly title: string;
+		readonly detail?: string;
+	}[];
+	/** graph */
+	readonly dir?: "x" | "y";
+	readonly nodes?: readonly {
+		readonly key: string;
+		readonly title: string;
+		readonly detail?: string;
+		readonly accent?: boolean;
+		readonly column?: number;
+		readonly row?: number;
+	}[];
+	readonly edges?: readonly { readonly from: string; readonly to: string }[];
+	/** derivation — expression chain */
+	readonly exprs?: readonly {
+		readonly expr: string;
+		readonly note?: string;
+		readonly accent?: boolean;
+	}[];
 };
 
 export type ArtifactPlan = PlatePlan;
@@ -215,6 +249,84 @@ export const PLATE_PLAN_JSON_SCHEMA: Record<string, unknown> = {
 		note: { type: "string", minLength: 20, maxLength: 280 },
 		heroValue: { type: "string" },
 		heroCaption: { type: "string" },
+		stops: {
+			type: "array",
+			minItems: 3,
+			maxItems: 5,
+			items: {
+				type: "object",
+				additionalProperties: false,
+				required: ["at", "title"],
+				properties: {
+					at: { type: "string", maxLength: 16 },
+					title: { type: "string" },
+					detail: { type: "string" },
+				},
+			},
+		},
+		events: {
+			type: "array",
+			minItems: 3,
+			maxItems: 6,
+			items: {
+				type: "object",
+				additionalProperties: false,
+				required: ["at", "title"],
+				properties: {
+					at: { type: "string", maxLength: 16 },
+					title: { type: "string" },
+					detail: { type: "string" },
+				},
+			},
+		},
+		dir: { type: "string", enum: ["x", "y"] },
+		nodes: {
+			type: "array",
+			minItems: 2,
+			maxItems: 7,
+			items: {
+				type: "object",
+				additionalProperties: false,
+				required: ["key", "title"],
+				properties: {
+					key: { type: "string" },
+					title: { type: "string" },
+					detail: { type: "string" },
+					accent: { type: "boolean" },
+					column: { type: "number" },
+					row: { type: "number" },
+				},
+			},
+		},
+		edges: {
+			type: "array",
+			minItems: 1,
+			maxItems: 10,
+			items: {
+				type: "object",
+				additionalProperties: false,
+				required: ["from", "to"],
+				properties: {
+					from: { type: "string" },
+					to: { type: "string" },
+				},
+			},
+		},
+		exprs: {
+			type: "array",
+			minItems: 2,
+			maxItems: 5,
+			items: {
+				type: "object",
+				additionalProperties: false,
+				required: ["expr"],
+				properties: {
+					expr: { type: "string" },
+					note: { type: "string" },
+					accent: { type: "boolean" },
+				},
+			},
+		},
 	},
 };
 

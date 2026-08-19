@@ -14,7 +14,12 @@ export type ArtifactModuleId =
 	| "layers"
 	| "bars"
 	| "segments"
-	| "quadrant";
+	| "quadrant"
+	| "timeline"
+	| "timelineVertical"
+	| "railFlow"
+	| "graph"
+	| "derivation";
 
 export type ArtifactModuleSummary = {
 	readonly id: ArtifactModuleId;
@@ -412,6 +417,216 @@ const MODULES: readonly ArtifactModuleSchema[] = [
 		],
 		bans: ["Unlabeled axes", "Empty cells"],
 	},
+	{
+		id: "timeline",
+		title: "Event timeline",
+		use: "Calls or events in order, read left to right, when the intervals do not matter.",
+		pickWhen: "A short sequence of moments is the lesson (call, error, hint, retry, delivered).",
+		units: "3–5 stops {at, title, detail}",
+		slots: {
+			type: "object",
+			required: ["stops"],
+			properties: {
+				stops: {
+					type: "array",
+					minItems: 3,
+					maxItems: 5,
+					items: {
+						type: "object",
+						required: ["at", "title"],
+						properties: {
+							at: {
+								type: "string",
+								maxLength: 16,
+								description: "Short mono label above the stop (CALL 1, HINT, WEEK 2)",
+							},
+							title: { type: "string" },
+							detail: { type: "string", minLength: 16 },
+						},
+					},
+				},
+			},
+		},
+		density: ["3–5 stops", "detail clauses on most stops, not bare titles"],
+		outlineHint: "Each line: AT | Title | detail clause.",
+		exampleOutline: [
+			"CALL 1 | send_email | Fails: missing audience_id.",
+			"HINT | Error names the next step | Call list_audiences first.",
+			"CALL 2 | list_audiences | Returns the missing id.",
+			"CALL 3 | send_email | Delivered.",
+		],
+		bans: ["Two-stop timelines", "Labels longer than one short word or code"],
+	},
+	{
+		id: "timelineVertical",
+		title: "Transcript rail",
+		use: "An event log or transcript read top to bottom, actor or stage in its own column.",
+		pickWhen: "Teaching a request/response flow: USER, AGENT, TOOL, KODY turns in order.",
+		units: "3–6 events {at, title, detail}",
+		slots: {
+			type: "object",
+			required: ["events"],
+			properties: {
+				events: {
+					type: "array",
+					minItems: 3,
+					maxItems: 6,
+					items: {
+						type: "object",
+						required: ["at", "title"],
+						properties: {
+							at: {
+								type: "string",
+								maxLength: 16,
+								description: "Actor or stage label for the left column (USER, AGENT, STEP 2)",
+							},
+							title: { type: "string" },
+							detail: { type: "string", minLength: 16 },
+						},
+					},
+				},
+			},
+		},
+		density: ["3–6 events", "detail clauses on most events", "actor labels short and repeated verbatim"],
+		outlineHint: "Each line: ACTOR | Title | detail clause.",
+		exampleOutline: [
+			"USER | Asks in plain language | How did last week's campaign perform?",
+			"AGENT | Picks a tool from the shared schema | get_campaign_stats with range last_week.",
+			"TOOL | Returns the numbers | 128,400 impressions, 3,210 clicks, 142 conversions.",
+			"AGENT | Answers with evidence | 3,210 clicks and 142 conversions, a 4.4% rate.",
+		],
+		bans: ["Bare titles with no detail", "Paragraphs where a clause belongs"],
+	},
+	{
+		id: "railFlow",
+		title: "Flow rail",
+		use: "A compact process read left to right, three to five short named steps.",
+		pickWhen: "The steps are short enough to sit side by side (fetch, write, synthesize, send).",
+		units: "3–5 steps {name, detail}",
+		slots: {
+			type: "object",
+			required: ["steps"],
+			properties: {
+				steps: {
+					type: "array",
+					minItems: 3,
+					maxItems: 5,
+					items: {
+						type: "object",
+						required: ["name", "detail"],
+						properties: {
+							name: { type: "string", minLength: 2, maxLength: 24 },
+							detail: { type: "string", minLength: 16 },
+						},
+					},
+				},
+			},
+		},
+		density: ["3–5 steps", "names short enough for one column", "detail on most steps"],
+		outlineHint: "Each line: StepName — short detail clause.",
+		exampleOutline: [
+			"Fetch sources — Pull the feeds the user follows.",
+			"Write script — Draft one tight episode outline.",
+			"Synthesize audio — Text to speech over the script.",
+			"Send link — Deliver the hosted player.",
+		],
+		bans: ["Long step names that break the columns", "Six or more steps (use railSteps)"],
+	},
+	{
+		id: "graph",
+		title: "System graph",
+		use: "Labelled boxes with arrows: a pipeline, an architecture, a hub with spokes.",
+		pickWhen: "The relationships between parts are the lesson, not their order alone.",
+		units: "3–7 nodes {key, title} + 2–10 edges {from, to}",
+		slots: {
+			type: "object",
+			required: ["nodes", "edges"],
+			properties: {
+				nodes: {
+					type: "array",
+					minItems: 3,
+					maxItems: 7,
+					items: {
+						type: "object",
+						required: ["key", "title"],
+						properties: {
+							key: { type: "string", description: "Unique slug edges refer to" },
+							title: { type: "string" },
+							detail: { type: "string" },
+							accent: { type: "boolean", description: "true on the one node the claim is about" },
+							column: { type: "number", description: "Rank left to right; all nodes or none" },
+							row: { type: "number", description: "Order within a rank" },
+						},
+					},
+				},
+				edges: {
+					type: "array",
+					minItems: 2,
+					maxItems: 10,
+					items: {
+						type: "object",
+						required: ["from", "to"],
+						properties: {
+							from: { type: "string" },
+							to: { type: "string" },
+						},
+					},
+				},
+				dir: { type: "string", enum: ["x", "y"], description: "x = left to right (default)" },
+			},
+		},
+		density: ["≥3 nodes and ≥2 edges", "every edge names existing keys", "one accent node at most"],
+		outlineHint: "Node lines: Title | detail. Edge lines: FromTitle -> ToTitle.",
+		exampleOutline: [
+			"Agent | issues one call shape",
+			"MCP | capability layer",
+			"Memory | remembers across chats",
+			"Storage | durable state per identity",
+			"Agent -> MCP",
+			"MCP -> Memory",
+			"MCP -> Storage",
+		],
+		bans: ["Edges naming keys no node has", "Two-box graphs (use compare)"],
+	},
+	{
+		id: "derivation",
+		title: "Code walkthrough",
+		use: "A short chain of expressions or calls where each step says what changed.",
+		pickWhen: "The reasoning between code lines is the lesson, not the output alone.",
+		units: "2–5 steps {expr, note}",
+		slots: {
+			type: "object",
+			required: ["exprs"],
+			properties: {
+				exprs: {
+					type: "array",
+					minItems: 2,
+					maxItems: 5,
+					items: {
+						type: "object",
+						required: ["expr"],
+						properties: {
+							expr: { type: "string", description: "One mono expression or call" },
+							note: {
+								type: "string",
+								minLength: 16,
+								description: "What changed; required after the first step",
+							},
+							accent: { type: "boolean", description: "true on the step that lands the claim" },
+						},
+					},
+				},
+			},
+		},
+		density: ["2–5 steps", "every step after the first has a real note", "expressions stay one line"],
+		outlineHint: "Each line: expression // note on what changed.",
+		exampleOutline: [
+			"value_set({ name: 'reportTimezone', value: 'Europe/Warsaw' })",
+			"stored = value_get({ name: 'reportTimezone' }) // The package reads the same name at runtime.",
+			"timezone = stored?.value ?? 'UTC' // A fallback keeps the report running before the value exists.",
+		],
+		bans: ["Unannotated steps after the first", "Multi-line code blocks in one expr"],
+	},
 ];
 
 const byId = new Map(MODULES.map((m) => [m.id, m]));
@@ -450,6 +665,6 @@ Discovery is mandatory before generate:
 Modules (summary — full slots only via artifact_schema):
 ${lines.join("\n")}
 
-Not available as freeform IR: stack/row/grid trees, timeline, graph, swimlanes, icons, image.
+Not available as freeform IR: stack/row/grid trees, schedule, swimlanes, icons, image.
 Those stay lab-only until they have a module template here.`;
 };

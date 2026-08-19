@@ -26,6 +26,84 @@ exports[`valid-plan snapshots > bars compile stays stable 1`] = `
 }
 `;
 
+exports[`valid-plan snapshots > derivation compile stays stable 1`] = `
+{
+  "body": {
+    "steps": [
+      {
+        "expr": "value_set({ name: 'reportTimezone', value: 'Europe/Warsaw' })",
+      },
+      {
+        "expr": "stored = value_get({ name: 'reportTimezone' })",
+        "note": "The package reads the same name at runtime instead of asking again.",
+      },
+      {
+        "accent": true,
+        "expr": "timezone = stored?.value ?? 'UTC'",
+        "note": "A fallback keeps the report running before the value exists.",
+      },
+    ],
+    "type": "derivation",
+  },
+  "frame": "landscape",
+  "id": "value-roundtrip",
+  "title": "A value stored once is read by name forever.",
+}
+`;
+
+exports[`valid-plan snapshots > graph compile stays stable 1`] = `
+{
+  "body": {
+    "edges": [
+      {
+        "from": "agent",
+        "to": "mcp",
+      },
+      {
+        "from": "mcp",
+        "to": "memory",
+      },
+      {
+        "from": "mcp",
+        "to": "storage",
+      },
+    ],
+    "nodes": [
+      {
+        "column": 0,
+        "key": "agent",
+        "row": 1,
+        "title": "Agent",
+      },
+      {
+        "accent": true,
+        "column": 1,
+        "detail": "capability layer",
+        "key": "mcp",
+        "row": 1,
+        "title": "MCP",
+      },
+      {
+        "column": 2,
+        "key": "memory",
+        "row": 0,
+        "title": "Memory",
+      },
+      {
+        "column": 2,
+        "key": "storage",
+        "row": 1,
+        "title": "Storage",
+      },
+    ],
+    "type": "graph",
+  },
+  "frame": "landscape",
+  "id": "mcp-capability-layer",
+  "title": "MCP is a capability layer, not a connector.",
+}
+`;
+
 exports[`valid-plan snapshots > railSteps compile stays stable 1`] = `
 {
   "body": {
@@ -100,5 +178,33 @@ exports[`valid-plan snapshots > table compile stays stable 1`] = `
   "frame": "landscape",
   "id": "stops",
   "title": "Every stop has a trigger and a next action.",
+}
+`;
+
+exports[`valid-plan snapshots > timelineVertical compile stays stable 1`] = `
+{
+  "body": {
+    "items": [
+      {
+        "date": "USER",
+        "detail": "How did last week's campaign perform?",
+        "title": "Asks in plain language",
+      },
+      {
+        "date": "AGENT",
+        "detail": "get_campaign_stats with range last_week.",
+        "title": "Picks a tool from the shared schema",
+      },
+      {
+        "date": "TOOL",
+        "detail": "128,400 impressions, 3,210 clicks, 142 conversions.",
+        "title": "Returns the numbers",
+      },
+    ],
+    "type": "timelineVertical",
+  },
+  "frame": "landscape",
+  "id": "mcp-transcript",
+  "title": "One schema turns a question into checked numbers.",
 }
 `;
