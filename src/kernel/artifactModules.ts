@@ -23,7 +23,9 @@ export type ArtifactModuleId =
 	| "railFlow"
 	| "graph"
 	| "derivation"
-	| "code";
+	| "code"
+	| "tree"
+	| "codeSteps";
 
 export type ArtifactModuleSummary = {
 	readonly id: ArtifactModuleId;
@@ -908,6 +910,158 @@ const MODULES: readonly ArtifactModuleSchema[] = [
 			"}",
 		],
 		bans: ["Whole files pasted as figures", "Lines wider than the frame", "Prose typeset as code"],
+	},
+	{
+		id: "tree",
+		title: "Mono hierarchy",
+		use: "A capability or file hierarchy drawn like terminal tree output, elbows as painted strokes.",
+		pickWhen:
+			"The lesson is what one thing contains: a server's capability map, a package layout, a config surface.",
+		units: "one map: a root plus 2–5 rows below it, six drawn rows total",
+		slots: {
+			type: "object",
+			required: ["root", "branches"],
+			properties: {
+				root: {
+					type: "object",
+					required: ["name"],
+					properties: {
+						name: {
+							type: "string",
+							maxLength: STRING_CAPS.treeName.max,
+							description: "The trunk line, accent mono (kody-mcp, packages/press)",
+						},
+						detail: {
+							type: "string",
+							maxLength: STRING_CAPS.treeName.max,
+							description: "Optional muted clause after the root name",
+						},
+					},
+				},
+				branches: {
+					type: "array",
+					minItems: ITEM_BOUNDS.tree.branches.min,
+					maxItems: ITEM_BOUNDS.tree.branches.max,
+					items: {
+						type: "object",
+						required: ["name"],
+						properties: {
+							name: { type: "string", maxLength: STRING_CAPS.treeName.max },
+							items: {
+								type: "array",
+								minItems: 1,
+								maxItems: 6,
+								items: { type: "string", maxLength: STRING_CAPS.treeItem.max },
+								description:
+									"Short mono tokens on the branch's own line, joined with a spaced middle dot",
+							},
+							children: {
+								type: "array",
+								minItems: 1,
+								maxItems: 4,
+								description: "One level deeper at most; six drawn rows total, root included",
+								items: {
+									type: "object",
+									required: ["name"],
+									properties: {
+										name: { type: "string", maxLength: STRING_CAPS.treeName.max },
+										items: {
+											type: "array",
+											minItems: 1,
+											maxItems: 6,
+											items: { type: "string", maxLength: STRING_CAPS.treeItem.max },
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		density: [
+			"2–4 branches; six drawn rows total, root included",
+			"most branches or children carry 2–4 short items on their own line",
+			"names stay short mono tokens; a row never wraps",
+		],
+		outlineHint:
+			"First line is the root; indent branches by two spaces, children by four; items after the name, separated by commas.",
+		exampleOutline: [
+			"kody-mcp",
+			"  tools: search, execute",
+			"  capabilities",
+			"    holds: memory, storage, values, secrets",
+			"    runs: packages, jobs",
+			"    reaches: integrations, email",
+		],
+		bans: [
+			"Depth past two levels below the root",
+			"Elbows typed as box-drawing characters",
+			"Rows wider than the column",
+		],
+	},
+	{
+		id: "codeSteps",
+		title: "Numbered code steps",
+		use: "Two or three labelled verbatim blocks in a meaningful order, each under a numbered header.",
+		pickWhen:
+			"The lesson is a sequence of snippets: store then read, request then response, define then run.",
+		units: "2–3 steps; each step (header + block) is one unit",
+		slots: {
+			type: "object",
+			required: ["blocks"],
+			properties: {
+				blocks: {
+					type: "array",
+					minItems: ITEM_BOUNDS.codeSteps.blocks.min,
+					maxItems: ITEM_BOUNDS.codeSteps.blocks.max,
+					items: {
+						type: "object",
+						required: ["label", "code"],
+						properties: {
+							label: {
+								type: "string",
+								maxLength: STRING_CAPS.stepLabel.max,
+								description: "Short mono name of the step (value_set, value_get)",
+							},
+							caption: {
+								type: "string",
+								maxLength: STRING_CAPS.detail.max,
+								description: "Optional body clause after the label saying what the step does",
+							},
+							code: {
+								type: "string",
+								maxLength: 600,
+								description:
+									"The step's snippet with \\n line breaks, 2 to 10 lines, drawn verbatim; never wrapped",
+							},
+						},
+					},
+				},
+			},
+		},
+		density: [
+			"2–3 steps in an order that matters, 01 before 02",
+			"every step labelled; captions on most steps",
+			"each block 2–10 lines, cut to the lines the claim needs",
+		],
+		outlineHint:
+			"Start each step with STEP: <label>, <caption>; every following line until the next STEP: is a verbatim code line.",
+		exampleOutline: [
+			"STEP: value_set, stored earlier by the user, agent, or app",
+			"value_set({",
+			'  "name": "reportTimezone",',
+			'  "value": "Europe/Warsaw"',
+			"})",
+			"STEP: value_get, the package reads it at runtime, with a fallback",
+			'const stored = value_get({ "name": "reportTimezone" })',
+			'const timezone = stored?.value ?? "UTC"',
+		],
+		bans: [
+			"A single block (use code)",
+			"Numbers on steps whose order does not matter",
+			"Blocks past ten lines",
+		],
 	},
 ];
 

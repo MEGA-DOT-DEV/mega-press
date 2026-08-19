@@ -297,6 +297,107 @@ const validateNode = (node: unknown, path: string, errors: PressError[], depth: 
 		}
 	}
 
+	if (type === "tree") {
+		const root = node.root;
+		if (!isRecord(root) || !String(root.name ?? "").trim()) {
+			errors.push({
+				code: "TREE_ROOT_MISSING",
+				message: `${path}: tree needs a root with a name`,
+			});
+		}
+		const branches = Array.isArray(node.branches) ? node.branches : [];
+		if (branches.length < 2) {
+			errors.push({
+				code: "TREE_TOO_SHALLOW",
+				message: `${path}: tree needs at least 2 branches (got ${branches.length})`,
+			});
+		} else if (branches.length > 4) {
+			errors.push({
+				code: "TREE_TOO_MANY_BRANCHES",
+				message: `${path}: ${branches.length} branches; 4 is the cap`,
+			});
+		}
+		let rows = 1;
+		branches.forEach((branch, i) => {
+			if (!isRecord(branch) || !String(branch.name ?? "").trim()) {
+				errors.push({
+					code: "TREE_NAME_MISSING",
+					message: `${path}.branches[${i}]: every tree node needs a name`,
+				});
+				return;
+			}
+			rows += 1;
+			// Children ride under `nodes` in the IR (normalize renames `children`,
+			// the spec compiler's reserved node slot).
+			const children = Array.isArray(branch.nodes) ? branch.nodes : [];
+			children.forEach((child, j) => {
+				rows += 1;
+				if (!isRecord(child) || !String(child.name ?? "").trim()) {
+					errors.push({
+						code: "TREE_NAME_MISSING",
+						message: `${path}.branches[${i}].nodes[${j}]: every tree node needs a name`,
+					});
+					return;
+				}
+				if (child.nodes !== undefined || child.children !== undefined) {
+					errors.push({
+						code: "TREE_TOO_DEEP",
+						message: `${path}.branches[${i}].nodes[${j}]: two levels below the root is the cap`,
+					});
+				}
+			});
+		});
+		if (rows > 6) {
+			errors.push({
+				code: "TREE_TOO_TALL",
+				message: `${path}: tree draws ${rows} rows (root included); 6 is the cap`,
+			});
+		}
+	}
+
+	if (type === "codeSteps") {
+		const steps = Array.isArray(node.steps) ? node.steps : [];
+		if (steps.length < 2) {
+			errors.push({
+				code: "CODESTEPS_TOO_FEW",
+				message: `${path}: codeSteps needs at least 2 steps (got ${steps.length})`,
+			});
+		} else if (steps.length > 3) {
+			errors.push({
+				code: "CODESTEPS_TOO_MANY",
+				message: `${path}: ${steps.length} steps; 3 is the cap`,
+			});
+		}
+		steps.forEach((step, i) => {
+			if (!isRecord(step) || !String(step.label ?? "").trim()) {
+				errors.push({
+					code: "CODESTEP_LABEL_MISSING",
+					message: `${path}.steps[${i}]: every codeSteps step needs a label`,
+				});
+				return;
+			}
+			const source = typeof step.code === "string" ? step.code : "";
+			const lines = source.split("\n");
+			const drawn = lines.filter((l) => l.trim().length > 0);
+			if (drawn.length === 0) {
+				errors.push({
+					code: "CODESTEP_CODE_MISSING",
+					message: `${path}.steps[${i}]: a numbered step needs a code block`,
+				});
+			} else if (drawn.length < 2) {
+				errors.push({
+					code: "CODESTEP_CODE_TOO_SHORT",
+					message: `${path}.steps[${i}]: a step's block needs at least 2 verbatim lines`,
+				});
+			} else if (lines.length > 10) {
+				errors.push({
+					code: "CODESTEP_CODE_TOO_LONG",
+					message: `${path}.steps[${i}]: ${lines.length} lines; 10 is the cap per step`,
+				});
+			}
+		});
+	}
+
 	if (type === "derivation") {
 		const steps = Array.isArray(node.steps) ? node.steps : [];
 		if (steps.length < 2 || steps.length > 5) {

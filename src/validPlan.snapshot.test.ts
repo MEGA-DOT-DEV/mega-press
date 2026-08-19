@@ -169,6 +169,42 @@ const codePlan: ArtifactPlan = {
 	accentLines: [3],
 };
 
+const treePlan: ArtifactPlan = {
+	kind: "tree",
+	id: "kody-capability-map",
+	title: "One server, six rows: everything kody-mcp can hold, run, and reach.",
+	root: { name: "kody-mcp" },
+	branches: [
+		{ name: "tools", items: ["search", "execute"] },
+		{
+			name: "capabilities",
+			children: [
+				{ name: "holds", items: ["memory", "storage", "values", "secrets"] },
+				{ name: "runs", items: ["packages", "jobs"] },
+				{ name: "reaches", items: ["integrations", "email"] },
+			],
+		},
+	],
+};
+
+const codeStepsPlan: ArtifactPlan = {
+	kind: "codeSteps",
+	id: "value-roundtrip-steps",
+	title: "A value stored under a name is read back by the same name.",
+	blocks: [
+		{
+			label: "value_set",
+			caption: "stored earlier by the user, agent, or app",
+			code: 'value_set({\n  "name": "reportTimezone",\n  "value": "Europe/Warsaw"\n})',
+		},
+		{
+			label: "value_get",
+			caption: "the package reads it at runtime, with a fallback",
+			code: 'const stored = value_get({ "name": "reportTimezone" })\nconst timezone = stored?.value ?? "UTC"',
+		},
+	],
+};
+
 describe("valid-plan snapshots", () => {
 	it("railSteps compile stays stable", () => {
 		const result = buildArtifact(rail);
@@ -228,6 +264,20 @@ describe("valid-plan snapshots", () => {
 
 	it("code compile stays stable", () => {
 		const result = buildArtifact(codePlan);
+		expect(result.ok).toBe(true);
+		if (!result.ok) throw new Error("expected ok");
+		expect(result.spec).toMatchSnapshot();
+	});
+
+	it("tree compile stays stable", () => {
+		const result = buildArtifact(treePlan);
+		expect(result.ok).toBe(true);
+		if (!result.ok) throw new Error("expected ok");
+		expect(result.spec).toMatchSnapshot();
+	});
+
+	it("codeSteps compile stays stable", () => {
+		const result = buildArtifact(codeStepsPlan);
 		expect(result.ok).toBe(true);
 		if (!result.ok) throw new Error("expected ok");
 		expect(result.spec).toMatchSnapshot();

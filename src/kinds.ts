@@ -933,6 +933,209 @@ const codeKind: KindModule = {
 	},
 };
 
+const treeChildSchema = {
+	type: "object",
+	required: ["name"],
+	properties: {
+		name: {
+			type: "string",
+			maxLength: STRING_CAPS.treeName.max,
+			description: "Short mono name of the node",
+		},
+		items: {
+			type: "array",
+			minItems: 1,
+			maxItems: 6,
+			items: { type: "string", maxLength: STRING_CAPS.treeItem.max },
+			description: "Short mono tokens drawn on the same line, joined with a spaced middle dot",
+		},
+	},
+} as const;
+
+const treeKind: KindModule = {
+	id: "tree",
+	slotsSchema: {
+		type: "object",
+		required: ["root", "branches"],
+		properties: {
+			root: {
+				type: "object",
+				required: ["name"],
+				properties: {
+					name: {
+						type: "string",
+						maxLength: STRING_CAPS.treeName.max,
+						description: "The trunk line, drawn in the accent",
+					},
+					detail: {
+						type: "string",
+						maxLength: STRING_CAPS.treeName.max,
+						description: "Optional muted clause after the root name",
+					},
+				},
+			},
+			branches: arraySchema(ITEM_BOUNDS.tree.branches, {
+				...treeChildSchema,
+				properties: {
+					...treeChildSchema.properties,
+					children: {
+						type: "array",
+						minItems: 1,
+						maxItems: 4,
+						items: treeChildSchema,
+						description: "One level deeper at most; six drawn rows total, root included",
+					},
+				},
+			}),
+		},
+	},
+	compile(plan) {
+		const cleanItems = (raw: unknown): string[] =>
+			(Array.isArray(raw) ? raw : [])
+				.map((i) => String(i ?? "").trim())
+				.filter((i) => i.length > 0);
+		const branches = (plan.branches ?? [])
+			.map((b) => ({
+				name: String(b?.name ?? "").trim(),
+				items: cleanItems(b?.items),
+				children: (Array.isArray(b?.children) ? b.children : [])
+					.map((c) => ({
+						name: String(c?.name ?? "").trim(),
+						items: cleanItems(c?.items),
+						deeper: (c as { children?: unknown })?.children !== undefined,
+					}))
+					.filter((c) => c.name.length > 0),
+			}))
+			.filter((b) => b.name.length > 0);
+		const counted = countFail("tree", "branches", branches.length);
+		if (counted) return counted;
+		const rootName = String(plan.root?.name ?? "").trim();
+		if (!rootName) {
+			return fail("TREE_ROOT_MISSING", "tree needs a root with a name: the thing the map is of");
+		}
+		const deep = branches.flatMap((b) => b.children).find((c) => c.deeper);
+		if (deep) {
+			return fail(
+				"TREE_TOO_DEEP",
+				`tree child "${deep.name}" carries children of its own; two levels below the root is the cap`,
+			);
+		}
+		const rows = 1 + branches.length + branches.reduce((n, b) => n + b.children.length, 0);
+		const rowCount = countFail("tree", "rows", rows);
+		if (rowCount) return rowCount;
+		const names = [
+			rootName,
+			...branches.flatMap((b) => [b.name, ...b.children.map((c) => c.name)]),
+		];
+		const longName = names.find((n) => n.length > STRING_CAPS.treeName.max);
+		if (longName) {
+			return fail(
+				STRING_CAPS.treeName.code,
+				`tree name "${longName.slice(0, 48)}" is ${longName.length} characters; ${STRING_CAPS.treeName.max} is the cap`,
+			);
+		}
+		const items = branches.flatMap((b) => [...b.items, ...b.children.flatMap((c) => c.items)]);
+		const longItem = items.find((i) => i.length > STRING_CAPS.treeItem.max);
+		if (longItem) {
+			return fail(
+				STRING_CAPS.treeItem.code,
+				`tree item "${longItem.slice(0, 40)}" is ${longItem.length} characters; an item is one short mono token, ${STRING_CAPS.treeItem.max} max`,
+			);
+		}
+		const rootDetail = String(plan.root?.detail ?? "").trim();
+		return finish(plan, {
+			type: "tree",
+			root: { name: rootName, ...(rootDetail ? { detail: rootDetail } : {}) },
+			branches: branches.map((b) => ({
+				name: b.name,
+				...(b.items.length ? { items: b.items } : {}),
+				/* `nodes`, not `children`, in the IR: `children` is the spec
+				   compiler's reserved node slot and would be recompiled as layout. */
+				...(b.children.length
+					? {
+							nodes: b.children.map((c) => ({
+								name: c.name,
+								...(c.items.length ? { items: c.items } : {}),
+							})),
+						}
+					: {}),
+			})),
+		});
+	},
+};
+
+const codeStepsKind: KindModule = {
+	id: "codeSteps",
+	slotsSchema: {
+		type: "object",
+		required: ["blocks"],
+		properties: {
+			blocks: arraySchema(ITEM_BOUNDS.codeSteps.blocks, {
+				type: "object",
+				required: ["label", "code"],
+				properties: {
+					label: {
+						type: "string",
+						maxLength: STRING_CAPS.stepLabel.max,
+						description: "Short mono name of the step (a call name, a filename)",
+					},
+					caption: {
+						type: "string",
+						maxLength: STRING_CAPS.detail.max,
+						description: "Optional body clause after the label saying what the step does",
+					},
+					code: {
+						type: "string",
+						maxLength: 600,
+						description:
+							"The step's snippet with \\n line breaks, 2 to 10 lines, drawn verbatim; never wrapped",
+					},
+				},
+			}),
+		},
+	},
+	compile(plan) {
+		const blocks = plan.blocks ?? [];
+		const counted = countFail("codeSteps", "blocks", blocks.length);
+		if (counted) return counted;
+		const steps: Record<string, unknown>[] = [];
+		for (const [i, block] of blocks.entries()) {
+			const label = String(block?.label ?? "").trim();
+			if (!label) {
+				return fail(
+					"CODESTEP_LABEL_MISSING",
+					`codeSteps step ${i + 1} needs a label; the numbered sequence is the claim`,
+				);
+			}
+			if (label.length > STRING_CAPS.stepLabel.max) {
+				return fail(
+					STRING_CAPS.stepLabel.code,
+					`codeSteps step ${i + 1} label is ${label.length} characters; ${STRING_CAPS.stepLabel.max} is the cap`,
+				);
+			}
+			const raw = String(block?.code ?? "").replace(/\t/g, "  ");
+			const lines = raw.split("\n");
+			while (lines.length && !(lines[0] ?? "").trim()) lines.shift();
+			while (lines.length && !(lines[lines.length - 1] ?? "").trim()) lines.pop();
+			if (lines.filter((l) => l.trim().length > 0).length === 0) {
+				return fail(
+					"CODESTEP_CODE_MISSING",
+					`codeSteps step ${i + 1} ("${label}") needs a code string with the snippet to draw`,
+				);
+			}
+			const lineCount = countFail("codeSteps", "lines", lines.length);
+			if (lineCount) return lineCount;
+			const caption = String(block?.caption ?? "").trim();
+			steps.push({
+				label,
+				...(caption ? { caption } : {}),
+				code: lines.join("\n"),
+			});
+		}
+		return finish(plan, { type: "codeSteps", steps });
+	},
+};
+
 export const KIND_MODULES: readonly KindModule[] = [
 	railSteps,
 	compare,
@@ -954,6 +1157,8 @@ export const KIND_MODULES: readonly KindModule[] = [
 	graph,
 	derivation,
 	codeKind,
+	treeKind,
+	codeStepsKind,
 ];
 
 const byId = new Map(KIND_MODULES.map((m) => [m.id, m]));

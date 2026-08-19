@@ -46,6 +46,33 @@ exports[`valid-plan snapshots > code compile stays stable 1`] = `
 }
 `;
 
+exports[`valid-plan snapshots > codeSteps compile stays stable 1`] = `
+{
+  "body": {
+    "steps": [
+      {
+        "caption": "stored earlier by the user, agent, or app",
+        "code": "value_set({
+  "name": "reportTimezone",
+  "value": "Europe/Warsaw"
+})",
+        "label": "value_set",
+      },
+      {
+        "caption": "the package reads it at runtime, with a fallback",
+        "code": "const stored = value_get({ "name": "reportTimezone" })
+const timezone = stored?.value ?? "UTC"",
+        "label": "value_get",
+      },
+    ],
+    "type": "codeSteps",
+  },
+  "frame": "landscape",
+  "id": "value-roundtrip-steps",
+  "title": "A value stored under a name is read back by the same name.",
+}
+`;
+
 exports[`valid-plan snapshots > compareFlows compile stays stable 1`] = `
 {
   "body": {
@@ -338,5 +365,56 @@ exports[`valid-plan snapshots > timelineVertical with chips compile stays stable
   "frame": "landscape",
   "id": "capability-pick",
   "title": "The agent picks one capability and the pick is inspectable.",
+}
+`;
+
+exports[`valid-plan snapshots > tree compile stays stable 1`] = `
+{
+  "body": {
+    "branches": [
+      {
+        "items": [
+          "search",
+          "execute",
+        ],
+        "name": "tools",
+      },
+      {
+        "name": "capabilities",
+        "nodes": [
+          {
+            "items": [
+              "memory",
+              "storage",
+              "values",
+              "secrets",
+            ],
+            "name": "holds",
+          },
+          {
+            "items": [
+              "packages",
+              "jobs",
+            ],
+            "name": "runs",
+          },
+          {
+            "items": [
+              "integrations",
+              "email",
+            ],
+            "name": "reaches",
+          },
+        ],
+      },
+    ],
+    "root": {
+      "name": "kody-mcp",
+    },
+    "type": "tree",
+  },
+  "frame": "landscape",
+  "id": "kody-capability-map",
+  "title": "One server, six rows: everything kody-mcp can hold, run, and reach.",
 }
 `;

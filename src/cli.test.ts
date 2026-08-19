@@ -49,6 +49,8 @@ describe("press cli", () => {
 			"graph",
 			"derivation",
 			"code",
+			"tree",
+			"codeSteps",
 		]);
 	});
 

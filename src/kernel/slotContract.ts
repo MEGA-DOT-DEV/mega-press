@@ -37,6 +37,16 @@ export const STRING_CAPS = {
 	trackLabel: { max: 40, code: "TRACK_LABEL_TOO_LONG", description: sanity(40) },
 	/** The caps mono label naming one column of a compareFlows contrast; same measure as trackLabel. */
 	flowLabel: { max: 40, code: "FLOW_LABEL_TOO_LONG", description: sanity(40) },
+	/** A tree node's mono name; same measure as trackLabel/flowLabel. */
+	treeName: { max: 40, code: "TREE_NAME_TOO_LONG", description: sanity(40) },
+	/** One tree item is one short mono token, the same drawn contract as a chip. */
+	treeItem: {
+		max: 32,
+		code: "TREE_ITEM_TOO_LONG",
+		description: "One short mono token, 32 characters max.",
+	},
+	/** A codeSteps header label; same measure as trackLabel/flowLabel. */
+	stepLabel: { max: 40, code: "CODESTEP_LABEL_TOO_LONG", description: sanity(40) },
 } as const satisfies Record<string, StringCap>;
 
 export const ITEM_BOUNDS = {
@@ -237,6 +247,40 @@ export const ITEM_BOUNDS = {
 			tooFew: "CODE_TOO_SHORT",
 			tooMany: "CODE_TOO_LONG",
 			label: "code lines",
+		},
+	},
+	tree: {
+		branches: {
+			min: 2,
+			max: 4,
+			tooFew: "TREE_TOO_SHALLOW",
+			tooMany: "TREE_TOO_MANY_BRANCHES",
+			label: "branches",
+		},
+		/** Every drawn line, root included; the reference figure is exactly six. */
+		rows: {
+			min: 3,
+			max: 6,
+			tooFew: "TREE_TOO_SHALLOW",
+			tooMany: "TREE_TOO_TALL",
+			label: "rows (root included)",
+		},
+	},
+	codeSteps: {
+		blocks: {
+			min: 2,
+			max: 3,
+			tooFew: "CODESTEPS_TOO_FEW",
+			tooMany: "CODESTEPS_TOO_MANY",
+			label: "numbered steps",
+		},
+		/** Verbatim lines inside one step's block, tighter than the shared 14. */
+		lines: {
+			min: 2,
+			max: 10,
+			tooFew: "CODESTEP_CODE_TOO_SHORT",
+			tooMany: "CODESTEP_CODE_TOO_LONG",
+			label: "code lines per step",
 		},
 	},
 } as const satisfies Record<string, Record<string, ItemBound>>;

@@ -25,12 +25,15 @@
  * empty string, and a blank line has no glyphs to refuse.
  */
 
-import { box, custom, stack, text } from "../src/solve.js";
+import { box, custom, row, stack, text } from "../src/solve.js";
 import { measure } from "../src/text.js";
 import { COLOR, FAMILY, lineHeight, PressError, space, type, typeSize } from "../src/tokens.js";
 
 const MAX_LINES = 14;
 const ROLE = "utility";
+
+const MIN_STEPS = 2;
+const MAX_STEPS = 3;
 
 /** A blank source line: vertical rhythm with nothing to paint. */
 const blank = (h) => custom({ measure: () => ({ w: 0, h }) });
@@ -146,4 +149,76 @@ export function code({ code: source, label, accentLines = [], gap = 2 } = {}) {
 		gap,
 		children: [text(label, ROLE, { color: COLOR.quiet }), block],
 	});
+}
+
+/**
+ * Numbered, labelled code blocks: a sequence read as steps.
+ *
+ * The numbers are MEANINGFUL, not furniture: 01 stores the value and 02 reads
+ * it back, and swapping them breaks the lesson. That is why each header opens
+ * with the number in the accent, the one ink reserved for the mark the claim
+ * turns on.
+ *
+ * Units: each STEP is one information unit, header and block together, so the
+ * unit sits on the step's wrapper stack and the inner codeBlock is passed
+ * unit: false. Counting the block again would charge the reader twice for one
+ * thing they take in once; counting the whole figure once would hide that two
+ * steps are two things to hold.
+ *
+ * @param {object} spec
+ * @param {Array<{label: string, caption?: string, code: string}>} spec.steps
+ *   2 or 3 steps: a short mono label (a call name, a filename), an optional
+ *   body-role clause saying what the step does, and the verbatim snippet.
+ * @param {number} [spec.gap]  scale step between steps
+ */
+export function codeSteps({ steps, gap = 4 } = {}) {
+	if (!Array.isArray(steps) || steps.length < MIN_STEPS) {
+		throw new PressError(
+			"CODESTEPS_TOO_FEW",
+			`codeSteps needs at least ${MIN_STEPS} steps (got ` +
+				`${Array.isArray(steps) ? steps.length : 0}). One block is the code figure, not a sequence.`,
+		);
+	}
+	if (steps.length > MAX_STEPS) {
+		throw new PressError(
+			"CODESTEPS_TOO_MANY",
+			`codeSteps has ${steps.length} steps and ${MAX_STEPS} is the cap. ` +
+				`A longer walkthrough belongs across plates, one claim each.`,
+		);
+	}
+
+	const blocks = steps.map((step, i) => {
+		const label = String(step?.label ?? "").trim();
+		if (!label) {
+			throw new PressError(
+				"CODESTEP_LABEL_MISSING",
+				`codeSteps step ${i + 1} needs a label. An unnamed block cannot be referred to, ` +
+					`and the sequence is the claim.`,
+			);
+		}
+		if (typeof step?.code !== "string" || !step.code.trim()) {
+			throw new PressError(
+				"CODESTEP_CODE_MISSING",
+				`codeSteps step ${i + 1} ("${label}") needs a code string. ` +
+					`A numbered header over nothing is a list item, not a step.`,
+			);
+		}
+		const caption = String(step?.caption ?? "").trim();
+		const header = row({
+			gap: 2,
+			align: "baseline",
+			children: [
+				text(String(i + 1).padStart(2, "0"), ROLE, { color: COLOR.red }),
+				text(label, ROLE, { color: COLOR.text }),
+				caption ? text(caption, "body", { color: COLOR.muted, commentary: true }) : null,
+			],
+		});
+		return stack({
+			gap: 2,
+			unit: true,
+			children: [header, codeBlock(step.code, { unit: false })],
+		});
+	});
+
+	return stack({ gap, children: blocks });
 }

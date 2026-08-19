@@ -33,6 +33,8 @@ describe("fail-closed kinds", () => {
 		["graph", "GRAPH_NODES_TOO_FEW"],
 		["derivation", "EXPRS_TOO_FEW"],
 		["code", "CODE_MISSING"],
+		["tree", "TREE_TOO_SHALLOW"],
+		["codeSteps", "CODESTEPS_TOO_FEW"],
 	] as const)("%s refuses empty slots with %s", (kind, code) => {
 		const result = buildArtifact(thin(kind));
 		expect(result.ok).toBe(false);

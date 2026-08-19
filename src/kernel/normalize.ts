@@ -45,13 +45,18 @@ const TYPE_ALIASES: Record<string, string> = {
 	flowchart: "graph",
 	architecture: "graph",
 	pipeline: "graph",
-	tree: "graph",
 	orbit: "graph",
 	codeblock: "code",
 	snippet: "code",
 	json: "code",
 	pre: "code",
 	walkthrough: "derivation",
+	hierarchy: "tree",
+	filetree: "tree",
+	directory: "tree",
+	codewalk: "codeSteps",
+	numberedcode: "codeSteps",
+	codesequence: "codeSteps",
 };
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>
@@ -197,6 +202,75 @@ function normalizeNode(node: unknown): unknown {
 		delete out.lines;
 		delete out.codeLabel;
 		delete out.language;
+	}
+
+	if (type === "tree") {
+		if (typeof out.root === "string") out.root = { name: out.root };
+		if (out.branches == null && Array.isArray(out.items)) {
+			out.branches = out.items;
+			delete out.items;
+		}
+		// A node's items handed as one string ("memory · storage" or "a, b") is
+		// shorthand for the token list the component draws. `children` becomes
+		// `nodes`: `children` is the spec compiler's reserved node slot, so the
+		// drawn IR must not carry it.
+		const coerceTreeNode = (node: unknown): unknown => {
+			if (typeof node === "string") return { name: node };
+			if (!isRecord(node)) return node;
+			const n = { ...node };
+			if (n.name == null) {
+				const l = n.label ?? n.title;
+				if (l != null) n.name = String(l);
+			}
+			if (typeof n.items === "string") {
+				n.items = n.items
+					.split(/[·,]/)
+					.map((s) => s.trim())
+					.filter(Boolean);
+			}
+			if (n.nodes == null && n.children != null) n.nodes = n.children;
+			if (Array.isArray(n.nodes)) n.nodes = n.nodes.map(coerceTreeNode);
+			delete n.children;
+			delete n.label;
+			delete n.title;
+			return n;
+		};
+		if (Array.isArray(out.branches)) out.branches = out.branches.map(coerceTreeNode);
+	}
+
+	if (type === "codeSteps") {
+		if (out.steps == null) {
+			const alt = out.blocks ?? out.items;
+			if (Array.isArray(alt)) out.steps = alt;
+			delete out.blocks;
+			delete out.items;
+		}
+		if (Array.isArray(out.steps)) {
+			out.steps = out.steps.map((step) => {
+				if (!isRecord(step)) return step;
+				const s = { ...step };
+				if (s.label == null) {
+					const l = s.name ?? s.title;
+					if (l != null) s.label = String(l);
+				}
+				if (s.caption == null) {
+					const c = s.detail ?? s.description;
+					if (c != null) s.caption = c;
+				}
+				if (s.code == null) {
+					const c = s.snippet ?? s.source;
+					if (typeof c === "string") s.code = c;
+					else if (Array.isArray(c)) s.code = c.map(String).join("\n");
+				}
+				delete s.name;
+				delete s.title;
+				delete s.detail;
+				delete s.description;
+				delete s.snippet;
+				delete s.source;
+				return s;
+			});
+		}
 	}
 
 	if (type === "derivation") {

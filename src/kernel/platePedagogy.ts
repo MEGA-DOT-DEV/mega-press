@@ -345,6 +345,54 @@ export const assessPlatePedagogy = (spec: Record<string, unknown>): readonly Ped
 		}
 	}
 
+	if (type === "tree") {
+		const branches = Array.isArray(body.branches) ? body.branches : [];
+		if (branches.length < 2) {
+			errors.push({
+				code: "PLATE_THIN",
+				message: "tree needs at least two branches; one limb is a note, not a hierarchy.",
+			});
+		}
+		// The map must name enough things to be a map: branches, children (IR
+		// key `nodes`), and the items riding on their lines all count as named.
+		let named = 0;
+		for (const branch of branches) {
+			if (!isRecord(branch)) continue;
+			named += 1 + (Array.isArray(branch.items) ? branch.items.length : 0);
+			const children = Array.isArray(branch.nodes) ? branch.nodes : [];
+			for (const child of children) {
+				if (!isRecord(child)) continue;
+				named += 1 + (Array.isArray(child.items) ? child.items.length : 0);
+			}
+		}
+		if (named < 4) {
+			errors.push({
+				code: "PLATE_THIN",
+				message:
+					"tree needs at least four named things below the root (branches, children, and items together), not a bare fork.",
+			});
+		}
+	}
+
+	if (type === "codeSteps") {
+		const steps = Array.isArray(body.steps) ? body.steps : [];
+		const solid = steps.filter(
+			(s) =>
+				isRecord(s) &&
+				String(s.label ?? "").trim().length > 0 &&
+				String(s.code ?? "")
+					.split("\n")
+					.filter((l) => l.trim().length > 0).length >= 2,
+		);
+		if (steps.length < 2 || solid.length < steps.length) {
+			errors.push({
+				code: "PLATE_THIN",
+				message:
+					"codeSteps needs 2 to 3 steps, every step labelled and carrying at least 2 verbatim code lines.",
+			});
+		}
+	}
+
 	if (type === "quote") {
 		errors.push({
 			code: "KIND_WEAK",

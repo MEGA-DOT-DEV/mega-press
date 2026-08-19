@@ -21,8 +21,9 @@ import { graph } from "../components/graph.js";
 import { ICON_NAMES, icon, iconGrid, iconTile } from "../components/icon.js";
 import { image, placeholder } from "../components/media.js";
 import { railFlow, railSteps } from "../components/rail.js";
-import { code } from "../components/code.js";
+import { code, codeSteps } from "../components/code.js";
 import { derivation } from "../components/reasoning.js";
+import { tree } from "../components/tree.js";
 import { compareFlows } from "../components/flows.js";
 import { checklist, compare, layers, quote } from "../components/structure.js";
 import { table } from "../components/table.js";
@@ -557,6 +558,94 @@ const STRUCTURE = [
 			label: "value_set",
 			code: '{\n  "name": "reportTimezone",\n  "value": "Europe/Warsaw",\n  "scope": "user"\n}',
 			accentLines: [3],
+		},
+	}),
+
+	def("codeSteps", {
+		fn: codeSteps,
+		summary: "Numbered, labelled verbatim blocks: a sequence of 2 or 3 code steps.",
+		use: "snippets whose order is the lesson: store then read, request then response, define then run",
+		params: {
+			steps: {
+				type: ITEMS,
+				required: true,
+				min: 2,
+				max: 3,
+				of: {
+					label: "string (required), short mono name of the step",
+					caption: "string, body clause after the label saying what the step does",
+					code: "string (required), the step's snippet with \\n line breaks, 2 to 10 lines, drawn verbatim",
+				},
+			},
+			gap: { type: GAP, default: 4 },
+		},
+		notes: [
+			"The numbers are meaningful: 01 must happen before 02. Do not use this for parallel snippets whose order is arbitrary.",
+			"Each step (header plus block) is one information unit; the inner block is passed unit: false so it never counts twice.",
+			"Blocks reuse codeBlock: verbatim lines, kept indentation, and a line too wide for the frame refuses by name instead of wrapping.",
+		],
+		example: {
+			type: "codeSteps",
+			steps: [
+				{
+					label: "value_set",
+					caption: "stored earlier by the user, agent, or app",
+					code: 'value_set({\n  "name": "reportTimezone",\n  "value": "Europe/Warsaw"\n})',
+				},
+				{
+					label: "value_get",
+					caption: "the package reads it at runtime, with a fallback",
+					code: 'const stored = value_get({ "name": "reportTimezone" })\nconst timezone = stored?.value ?? "UTC"',
+				},
+			],
+		},
+	}),
+
+	def("tree", {
+		fn: tree,
+		summary: "A mono hierarchy with drawn elbow connectors, one unit, terminal-tree shape.",
+		use: "a capability map or file layout: what one thing contains, read top to bottom",
+		params: {
+			root: {
+				type: "{name, detail?}",
+				required: true,
+				of: {
+					name: "string (required), the trunk line, accent mono",
+					detail: "string, muted clause after the root name",
+				},
+			},
+			branches: {
+				type: ITEMS,
+				required: true,
+				min: 2,
+				max: 4,
+				of: {
+					name: "string (required), short mono name",
+					items: "string[], short mono tokens on the same line, joined with a spaced middle dot",
+					nodes: "array of {name, items?}, one level deeper at most",
+				},
+			},
+			accent: { type: "boolean", default: true },
+		},
+		notes: [
+			"A branch's children ride under `nodes`, because `children` in a spec is the reserved layout slot; plans may still say children and are normalized.",
+			"The elbows are painted strokes (STROKE.connector in the connector ink), never box-drawing glyphs: the baked metrics table does not promise them, and structure is drawn, not typeset.",
+			"The whole tree is one information unit: the reader takes in the map as one thing.",
+			"Six drawn rows total, root included, and a row never wraps: a wider hierarchy folds siblings into items, a deeper one is a document.",
+		],
+		example: {
+			type: "tree",
+			root: { name: "kody-mcp" },
+			branches: [
+				{ name: "tools", items: ["search", "execute"] },
+				{
+					name: "capabilities",
+					nodes: [
+						{ name: "holds", items: ["memory", "storage", "values", "secrets"] },
+						{ name: "runs", items: ["packages", "jobs"] },
+					],
+				},
+			],
 		},
 	}),
 ];

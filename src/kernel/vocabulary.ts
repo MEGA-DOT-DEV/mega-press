@@ -32,6 +32,8 @@ export const ALLOWED_COMPONENTS = [
 	"graph",
 	"derivation",
 	"code",
+	"tree",
+	"codeSteps",
 ] as const;
 
 export type AllowedComponent = (typeof ALLOWED_COMPONENTS)[number];
@@ -377,6 +379,42 @@ export const COMPONENT_GUIDE: Record<string, { readonly use: string; readonly ex
 				accentLines: [3],
 			},
 		},
+		tree: {
+			use: "a capability or file hierarchy drawn like terminal tree output: an accent mono root, 2 to 4 branches with painted elbow connectors, children at most one level deeper, six drawn rows total (root included); a branch or child may carry items: short mono tokens on the same line, joined with a spaced middle dot",
+			example: {
+				type: "tree",
+				root: { name: "kody-mcp" },
+				branches: [
+					{ name: "tools", items: ["search", "execute"] },
+					{
+						name: "capabilities",
+						children: [
+							{ name: "holds", items: ["memory", "storage", "values", "secrets"] },
+							{ name: "runs", items: ["packages", "jobs"] },
+							{ name: "reaches", items: ["integrations", "email"] },
+						],
+					},
+				],
+			},
+		},
+		codeSteps: {
+			use: "a numbered code walkthrough in blocks: 2 or 3 steps in sequence, each a red mono number, a mono label, an optional muted caption, and a bordered verbatim block of 2 to 10 lines; the numbers are meaningful, step 01 must happen before step 02",
+			example: {
+				type: "codeSteps",
+				steps: [
+					{
+						label: "value_set",
+						caption: "stored earlier by the user, agent, or app",
+						code: 'value_set({\n  "name": "reportTimezone",\n  "value": "Europe/Warsaw"\n})',
+					},
+					{
+						label: "value_get",
+						caption: "the package reads it at runtime, with a fallback",
+						code: 'const stored = value_get({ "name": "reportTimezone" })\nconst timezone = stored?.value ?? "UTC"',
+					},
+				],
+			},
+		},
 	};
 
 export const platesPromptSection = (): string => {
@@ -424,7 +462,7 @@ Compose two nodes with {"type":"stack","gap":3,"children":[...]} when one claim 
 4. No components: ${WITHHELD_COMPONENTS.join(", ")}.
 5. Only these body types: ${ALLOWED_COMPONENTS.join(", ")}.
 6. Never invent types (callout, infobox, alert). Use note with content.
-7. note = {type, content}. compare = before/after {label, title, items[]}. compareFlows = left/right {label, intro?, items[]} (each side a labelled vertical transcript; items shaped like timelineVertical items, 2 to 6 per side). railSteps/railFlow items = {name, detail}. checklist items = {text, ok}. timeline/timelineVertical items = {date, title, detail?, accent?} (date is the short label column: an actor, stage, or date; accent: true marks the one stop the claim is about). A timeline node may add label (small caps mono above the rail naming the run); stack two labelled timelines to contrast two runs. A timelineVertical item may add code (a verbatim block, 2 to 8 lines with \\n breaks) and chips (1 to 6 short mono pills {text, accent?}, 32 chars max, drawn under the detail or code). graph = nodes {key, title, detail?} + edges {from, to}. derivation steps = {expr, note} (note required after the first step). code = {code, label?, accentLines?} (code is one string with \\n line breaks, 2 to 14 lines, drawn verbatim; a line too wide for the frame refuses instead of wrapping).
+7. note = {type, content}. compare = before/after {label, title, items[]}. compareFlows = left/right {label, intro?, items[]} (each side a labelled vertical transcript; items shaped like timelineVertical items, 2 to 6 per side). railSteps/railFlow items = {name, detail}. checklist items = {text, ok}. timeline/timelineVertical items = {date, title, detail?, accent?} (date is the short label column: an actor, stage, or date; accent: true marks the one stop the claim is about). A timeline node may add label (small caps mono above the rail naming the run); stack two labelled timelines to contrast two runs. A timelineVertical item may add code (a verbatim block, 2 to 8 lines with \\n breaks) and chips (1 to 6 short mono pills {text, accent?}, 32 chars max, drawn under the detail or code). graph = nodes {key, title, detail?} + edges {from, to}. derivation steps = {expr, note} (note required after the first step). code = {code, label?, accentLines?} (code is one string with \\n line breaks, 2 to 14 lines, drawn verbatim; a line too wide for the frame refuses instead of wrapping). tree = {root: {name, detail?}, branches: [{name, items?, children?}]} (2 to 4 branches, children one level deeper at most, six drawn rows total root included; items are short mono tokens on the node's own line and a row never wraps). codeSteps = {steps: [{label, caption?, code}]} (2 or 3 numbered steps in a meaningful order, each code block 2 to 10 verbatim lines).
 
 ## Choose the component by what the content is
   process / method / loop          railSteps
@@ -445,6 +483,8 @@ Compose two nodes with {"type":"stack","gap":3,"children":[...]} when one claim 
   system, architecture, hub        graph
   code walkthrough, annotated      derivation
   verbatim snippet or JSON         code
+  a capability or file hierarchy   tree
+  a numbered code walkthrough in blocks   codeSteps
 
 ## Density examples (match this richness, not stub cards)
 - compare: each side has a title AND 2–4 concrete items
@@ -457,6 +497,8 @@ Compose two nodes with {"type":"stack","gap":3,"children":[...]} when one claim 
 - graph: 4–6 nodes with at least three edges, every node a real part of the system
 - derivation: 2–4 expressions, every step after the first annotated with what changed
 - code: 4–12 verbatim lines, short enough to fit the frame unwrapped, with a label naming the source
+- tree: a root plus 4–5 named rows below it, most branches or children carrying 2–4 short items
+- codeSteps: 2–3 steps, each with a label, usually a caption, and a 2–8 line verbatim block
 
 ## Vocabulary JSON
 ${JSON.stringify(vocab)}

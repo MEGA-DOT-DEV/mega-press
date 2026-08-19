@@ -26,6 +26,8 @@ export const PLATE_PLAN_KINDS = [
 	"graph",
 	"derivation",
 	"code",
+	"tree",
+	"codeSteps",
 ] as const;
 
 export type PlatePlanKind = (typeof PLATE_PLAN_KINDS)[number];
@@ -166,6 +168,22 @@ export type PlatePlan = {
 	readonly code?: string;
 	readonly codeLabel?: string;
 	readonly accentLines?: readonly number[];
+	/** tree — a mono hierarchy: root, 2..4 branches, children at most one level deeper */
+	readonly root?: { readonly name: string; readonly detail?: string };
+	readonly branches?: readonly {
+		readonly name: string;
+		readonly items?: readonly string[];
+		readonly children?: readonly {
+			readonly name: string;
+			readonly items?: readonly string[];
+		}[];
+	}[];
+	/** codeSteps — 2..3 numbered, labelled verbatim blocks in sequence */
+	readonly blocks?: readonly {
+		readonly label: string;
+		readonly caption?: string;
+		readonly code: string;
+	}[];
 };
 
 export type ArtifactPlan = PlatePlan;
@@ -520,6 +538,63 @@ export const PLATE_PLAN_JSON_SCHEMA: Record<string, unknown> = {
 		code: { type: "string", maxLength: 1200 },
 		codeLabel: { type: "string", maxLength: 48 },
 		accentLines: { type: "array", maxItems: 14, items: { type: "number" } },
+		root: {
+			type: "object",
+			additionalProperties: false,
+			required: ["name"],
+			properties: {
+				name: { type: "string", maxLength: 40 },
+				detail: { type: "string", maxLength: 40 },
+			},
+		},
+		branches: {
+			type: "array",
+			minItems: 2,
+			maxItems: 4,
+			items: {
+				type: "object",
+				additionalProperties: false,
+				required: ["name"],
+				properties: {
+					name: { type: "string", maxLength: 40 },
+					items: { type: "array", minItems: 1, maxItems: 6, items: { type: "string", maxLength: 32 } },
+					children: {
+						type: "array",
+						minItems: 1,
+						maxItems: 4,
+						items: {
+							type: "object",
+							additionalProperties: false,
+							required: ["name"],
+							properties: {
+								name: { type: "string", maxLength: 40 },
+								items: {
+									type: "array",
+									minItems: 1,
+									maxItems: 6,
+									items: { type: "string", maxLength: 32 },
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		blocks: {
+			type: "array",
+			minItems: 2,
+			maxItems: 3,
+			items: {
+				type: "object",
+				additionalProperties: false,
+				required: ["label", "code"],
+				properties: {
+					label: { type: "string", maxLength: 40 },
+					caption: { type: "string", maxLength: 250 },
+					code: { type: "string", maxLength: 600 },
+				},
+			},
+		},
 	},
 };
 
