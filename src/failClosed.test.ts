@@ -31,6 +31,7 @@ describe("fail-closed kinds", () => {
 		["railFlow", "STEPS_MISSING"],
 		["graph", "GRAPH_NODES_TOO_FEW"],
 		["derivation", "EXPRS_TOO_FEW"],
+		["code", "CODE_MISSING"],
 	] as const)("%s refuses empty slots with %s", (kind, code) => {
 		const result = buildArtifact(thin(kind));
 		expect(result.ok).toBe(false);

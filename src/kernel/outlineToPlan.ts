@@ -354,6 +354,26 @@ export const outlineToPlatePlan = (input: {
 			if (exprs.some((s, i) => i > 0 && !s.note)) return null;
 			return { ...base, kind: "derivation", exprs };
 		}
+		case "code": {
+			// Code lines are verbatim: no bullet stripping, indentation is content.
+			const source = input.outline.map((l) => l.replace(/\s+$/, ""));
+			let codeLabel: string | undefined;
+			const first = source[0] ?? "";
+			const labelled = first.match(/^LABEL:\s*(.+)$/);
+			if (labelled) {
+				codeLabel = labelled[1]?.trim();
+				source.shift();
+			}
+			while (source.length && !(source[0] ?? "").trim()) source.shift();
+			while (source.length && !(source[source.length - 1] ?? "").trim()) source.pop();
+			if (source.filter((l) => l.trim()).length < 2 || source.length > 14) return null;
+			return {
+				...base,
+				kind: "code",
+				code: source.join("\n"),
+				...(codeLabel ? { codeLabel } : {}),
+			};
+		}
 		default:
 			return null;
 	}

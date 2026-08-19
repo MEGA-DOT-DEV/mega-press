@@ -179,6 +179,24 @@ const validateNode = (node: unknown, path: string, errors: PressError[], depth: 
 		});
 	}
 
+	if (type === "code") {
+		const source = typeof node.code === "string" ? node.code : "";
+		const lines = source.split("\n");
+		const drawn = lines.filter((l) => l.trim().length > 0);
+		if (drawn.length < 2) {
+			errors.push({
+				code: "CODE_TOO_SHORT",
+				message: `${path}: code needs at least two verbatim lines; one line belongs in derivation`,
+			});
+		}
+		if (lines.length > 14) {
+			errors.push({
+				code: "CODE_TOO_LONG",
+				message: `${path}: code has ${lines.length} lines and 14 is the cap; cut the snippet to the lines the claim needs`,
+			});
+		}
+	}
+
 	if (type === "derivation") {
 		const steps = Array.isArray(node.steps) ? node.steps : [];
 		if (steps.length < 2 || steps.length > 5) {
@@ -266,6 +284,8 @@ export const lockPlate = (raw: unknown): LockResult => {
 			errors.push(tooLong(STRING_CAPS.cell.code, path, s, STRING_CAPS.cell.max));
 		} else if (/\.(detail|body|text|content|note)$/.test(path) && s.length > STRING_CAPS.detail.max) {
 			errors.push(tooLong(STRING_CAPS.detail.code, path, s, STRING_CAPS.detail.max));
+		} else if (/\.code$/.test(path) && s.length > STRING_CAPS.snippet.max) {
+			errors.push(tooLong(STRING_CAPS.snippet.code, path, s, STRING_CAPS.snippet.max));
 		}
 	});
 

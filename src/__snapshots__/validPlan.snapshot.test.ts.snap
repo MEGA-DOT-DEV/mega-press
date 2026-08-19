@@ -26,6 +26,26 @@ exports[`valid-plan snapshots > bars compile stays stable 1`] = `
 }
 `;
 
+exports[`valid-plan snapshots > code compile stays stable 1`] = `
+{
+  "body": {
+    "accentLines": [
+      3,
+    ],
+    "code": "{
+  "name": "reportTimezone",
+  "value": "Europe/Warsaw",
+  "scope": "user"
+}",
+    "label": "value_set",
+    "type": "code",
+  },
+  "frame": "landscape",
+  "id": "value-set-payload",
+  "title": "The whole configuration is four readable fields.",
+}
+`;
+
 exports[`valid-plan snapshots > derivation compile stays stable 1`] = `
 {
   "body": {

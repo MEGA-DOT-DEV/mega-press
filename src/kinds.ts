@@ -649,6 +649,59 @@ const derivation: KindModule = {
 	},
 };
 
+const codeKind: KindModule = {
+	id: "code",
+	slotsSchema: {
+		type: "object",
+		required: ["code"],
+		properties: {
+			code: {
+				type: "string",
+				maxLength: STRING_CAPS.snippet.max,
+				description:
+					"The snippet with \\n line breaks, 2 to 14 lines, drawn verbatim; a line too wide for the frame refuses instead of wrapping",
+			},
+			codeLabel: {
+				type: "string",
+				description: "Small mono caption above the block (a filename, a tool name)",
+			},
+			accentLines: {
+				type: "array",
+				items: { type: "number" },
+				description: "1-based line numbers drawn in the accent",
+			},
+		},
+	},
+	compile(plan) {
+		const raw = String(plan.code ?? "").replace(/\t/g, "  ");
+		const lines = raw.split("\n");
+		while (lines.length && !(lines[0] ?? "").trim()) lines.shift();
+		while (lines.length && !(lines[lines.length - 1] ?? "").trim()) lines.pop();
+		const drawn = lines.filter((l) => l.trim().length > 0);
+		if (drawn.length === 0) {
+			return fail("CODE_MISSING", "code needs a `code` string with the snippet to draw");
+		}
+		const counted = countFail("code", "lines", lines.length);
+		if (counted) return counted;
+		if (raw.length > STRING_CAPS.snippet.max) {
+			return fail(
+				STRING_CAPS.snippet.code,
+				`code is ${raw.length} characters; sanity bound is ${STRING_CAPS.snippet.max}`,
+			);
+		}
+		const label = plan.codeLabel?.trim();
+		const accentLines = (plan.accentLines ?? [])
+			.map(Number)
+			.filter((n) => Number.isInteger(n) && n >= 1 && n <= lines.length);
+		return finish(plan, {
+			type: "code",
+			code: lines.join("\n"),
+			...(label ? { label } : {}),
+			...(accentLines.length ? { accentLines } : {}),
+		});
+	},
+};
+
 export const KIND_MODULES: readonly KindModule[] = [
 	railSteps,
 	compare,
@@ -668,6 +721,7 @@ export const KIND_MODULES: readonly KindModule[] = [
 	railFlow,
 	graph,
 	derivation,
+	codeKind,
 ];
 
 const byId = new Map(KIND_MODULES.map((m) => [m.id, m]));

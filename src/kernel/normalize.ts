@@ -44,9 +44,10 @@ const TYPE_ALIASES: Record<string, string> = {
 	pipeline: "graph",
 	tree: "graph",
 	orbit: "graph",
-	code: "derivation",
-	codeblock: "derivation",
-	snippet: "derivation",
+	codeblock: "code",
+	snippet: "code",
+	json: "code",
+	pre: "code",
 	walkthrough: "derivation",
 };
 
@@ -140,6 +141,26 @@ function normalizeNode(node: unknown): unknown {
 			delete out.stops;
 			delete out.events;
 		}
+	}
+
+	if (type === "code") {
+		if (out.code == null) {
+			const c = out.source ?? out.text ?? out.content ?? out.body;
+			if (typeof c === "string") out.code = c;
+			else if (Array.isArray(c)) out.code = c.map(String).join("\n");
+		}
+		if (out.code == null && Array.isArray(out.lines)) {
+			out.code = out.lines.map(String).join("\n");
+		}
+		if (out.label == null && out.codeLabel != null) out.label = out.codeLabel;
+		if (out.label == null && out.language != null) out.label = out.language;
+		delete out.source;
+		delete out.text;
+		delete out.content;
+		delete out.body;
+		delete out.lines;
+		delete out.codeLabel;
+		delete out.language;
 	}
 
 	if (type === "derivation") {

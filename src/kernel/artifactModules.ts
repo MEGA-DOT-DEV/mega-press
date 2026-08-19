@@ -21,7 +21,8 @@ export type ArtifactModuleId =
 	| "timelineVertical"
 	| "railFlow"
 	| "graph"
-	| "derivation";
+	| "derivation"
+	| "code";
 
 export type ArtifactModuleSummary = {
 	readonly id: ArtifactModuleId;
@@ -661,6 +662,51 @@ const MODULES: readonly ArtifactModuleSchema[] = [
 			"timezone = stored?.value ?? 'UTC' // A fallback keeps the report running before the value exists.",
 		],
 		bans: ["Unannotated steps after the first", "Multi-line code blocks in one expr"],
+	},
+	{
+		id: "code",
+		title: "Verbatim code block",
+		use: "A snippet, call shape, JSON payload, or config the reader should see exactly.",
+		pickWhen: "The exact characters are the lesson: a schema, a payload, a config file.",
+		units: "one block, 2–14 verbatim lines",
+		slots: {
+			type: "object",
+			required: ["code"],
+			properties: {
+				code: {
+					type: "string",
+					maxLength: 1200,
+					description:
+						"The snippet with \\n line breaks, drawn verbatim; a line too wide for the frame refuses instead of wrapping",
+				},
+				codeLabel: {
+					type: "string",
+					maxLength: 48,
+					description: "Small mono caption above the block (a filename, a tool name)",
+				},
+				accentLines: {
+					type: "array",
+					maxItems: 14,
+					items: { type: "number" },
+					description: "1-based line numbers drawn in the accent",
+				},
+			},
+		},
+		density: [
+			"2–14 lines, short enough to fit the frame unwrapped",
+			"cut the snippet to the lines the claim needs, not the whole file",
+			"a label naming the source (tool, file, endpoint)",
+		],
+		outlineHint: "First line LABEL: <caption> (optional); every following line is a verbatim code line.",
+		exampleOutline: [
+			"LABEL: value_set",
+			"{",
+			"  \"name\": \"reportTimezone\",",
+			"  \"value\": \"Europe/Warsaw\",",
+			"  \"scope\": \"user\"",
+			"}",
+		],
+		bans: ["Whole files pasted as figures", "Lines wider than the frame", "Prose typeset as code"],
 	},
 ];
 

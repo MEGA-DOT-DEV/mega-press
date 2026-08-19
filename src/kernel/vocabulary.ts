@@ -30,6 +30,7 @@ export const ALLOWED_COMPONENTS = [
 	"railFlow",
 	"graph",
 	"derivation",
+	"code",
 ] as const;
 
 export type AllowedComponent = (typeof ALLOWED_COMPONENTS)[number];
@@ -326,6 +327,15 @@ export const COMPONENT_GUIDE: Record<string, { readonly use: string; readonly ex
 				],
 			},
 		},
+		code: {
+			use: "a verbatim snippet, call shape, JSON payload, or config the reader should see exactly, drawn line by line with no wrapping",
+			example: {
+				type: "code",
+				label: "value_set",
+				code: '{\n  "name": "reportTimezone",\n  "value": "Europe/Warsaw",\n  "scope": "user"\n}',
+				accentLines: [3],
+			},
+		},
 	};
 
 export const platesPromptSection = (): string => {
@@ -373,7 +383,7 @@ Compose two nodes with {"type":"stack","gap":3,"children":[...]} when one claim 
 4. No components: ${WITHHELD_COMPONENTS.join(", ")}.
 5. Only these body types: ${ALLOWED_COMPONENTS.join(", ")}.
 6. Never invent types (callout, infobox, alert). Use note with content.
-7. note = {type, content}. compare = before/after {label, title, items[]}. railSteps/railFlow items = {name, detail}. checklist items = {text, ok}. timeline/timelineVertical items = {date, title, detail?} (date is the short label column: an actor, stage, or date). graph = nodes {key, title, detail?} + edges {from, to}. derivation steps = {expr, note} (note required after the first step).
+7. note = {type, content}. compare = before/after {label, title, items[]}. railSteps/railFlow items = {name, detail}. checklist items = {text, ok}. timeline/timelineVertical items = {date, title, detail?} (date is the short label column: an actor, stage, or date). graph = nodes {key, title, detail?} + edges {from, to}. derivation steps = {expr, note} (note required after the first step). code = {code, label?, accentLines?} (code is one string with \\n line breaks, 2 to 14 lines, drawn verbatim; a line too wide for the frame refuses instead of wrapping).
 
 ## Choose the component by what the content is
   process / method / loop          railSteps
@@ -391,7 +401,8 @@ Compose two nodes with {"type":"stack","gap":3,"children":[...]} when one claim 
   transcript, actor log            timelineVertical
   compact left-to-right flow       railFlow
   system, architecture, hub        graph
-  code walkthrough                 derivation
+  code walkthrough, annotated      derivation
+  verbatim snippet or JSON         code
 
 ## Density examples (match this richness, not stub cards)
 - compare: each side has a title AND 2–4 concrete items
@@ -402,6 +413,7 @@ Compose two nodes with {"type":"stack","gap":3,"children":[...]} when one claim 
 - timelineVertical: 3–5 rows, each with a short label, a title, and a detail clause
 - graph: 4–6 nodes with at least three edges, every node a real part of the system
 - derivation: 2–4 expressions, every step after the first annotated with what changed
+- code: 4–12 verbatim lines, short enough to fit the frame unwrapped, with a label naming the source
 
 ## Vocabulary JSON
 ${JSON.stringify(vocab)}

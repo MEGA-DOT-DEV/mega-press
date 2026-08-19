@@ -97,6 +97,15 @@ const derivationPlan: ArtifactPlan = {
 	],
 };
 
+const codePlan: ArtifactPlan = {
+	kind: "code",
+	id: "value-set-payload",
+	title: "The whole configuration is four readable fields.",
+	codeLabel: "value_set",
+	code: '{\n  "name": "reportTimezone",\n  "value": "Europe/Warsaw",\n  "scope": "user"\n}',
+	accentLines: [3],
+};
+
 describe("valid-plan snapshots", () => {
 	it("railSteps compile stays stable", () => {
 		const result = buildArtifact(rail);
@@ -135,6 +144,13 @@ describe("valid-plan snapshots", () => {
 
 	it("derivation compile stays stable", () => {
 		const result = buildArtifact(derivationPlan);
+		expect(result.ok).toBe(true);
+		if (!result.ok) throw new Error("expected ok");
+		expect(result.spec).toMatchSnapshot();
+	});
+
+	it("code compile stays stable", () => {
+		const result = buildArtifact(codePlan);
 		expect(result.ok).toBe(true);
 		if (!result.ok) throw new Error("expected ok");
 		expect(result.spec).toMatchSnapshot();

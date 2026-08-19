@@ -21,6 +21,7 @@ import { graph } from "../components/graph.js";
 import { ICON_NAMES, icon, iconGrid, iconTile } from "../components/icon.js";
 import { image, placeholder } from "../components/media.js";
 import { railFlow, railSteps } from "../components/rail.js";
+import { code } from "../components/code.js";
 import { derivation } from "../components/reasoning.js";
 import { checklist, compare, layers, quote } from "../components/structure.js";
 import { table } from "../components/table.js";
@@ -456,6 +457,32 @@ const STRUCTURE = [
 					accent: true,
 				},
 			],
+		},
+	}),
+
+	def("code", {
+		fn: code,
+		summary: "A verbatim mono block drawn line by line, one unit, no wrapping.",
+		use: "a snippet, a call shape, a JSON payload, a config the reader should see exactly",
+		params: {
+			code: {
+				type: "string",
+				required: true,
+				doc: "the snippet with \\n line breaks, 2 to 14 lines, drawn verbatim",
+			},
+			label: { type: "string", doc: "small mono caption above the block (a filename, a tool name)" },
+			accentLines: { type: "number[]", doc: "1-based line numbers drawn in the accent" },
+		},
+		notes: [
+			"Every line is measured with maxLines: 1, so a line too wide for the frame refuses by name instead of wrapping. Code that wraps has been rewritten by the renderer.",
+			"The whole block is one information unit: ten lines of one snippet are one thing the reader takes in.",
+			"Blank lines are kept as vertical space; leading spaces are indentation and indentation is content.",
+		],
+		example: {
+			type: "code",
+			label: "value_set",
+			code: '{\n  "name": "reportTimezone",\n  "value": "Europe/Warsaw",\n  "scope": "user"\n}',
+			accentLines: [3],
 		},
 	}),
 ];

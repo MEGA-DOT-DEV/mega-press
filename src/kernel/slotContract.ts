@@ -31,6 +31,7 @@ export const STRING_CAPS = {
 	lead: { max: 200, code: "LEAD_TOO_LONG", description: sanity(200) },
 	detail: { max: 250, code: "DETAIL_TOO_LONG", description: sanity(250) },
 	cell: { max: 120, code: "CELL_TOO_LONG", description: sanity(120) },
+	snippet: { max: 1200, code: "SNIPPET_TOO_LONG", description: sanity(1200) },
 } as const satisfies Record<string, StringCap>;
 
 export const ITEM_BOUNDS = {
@@ -181,6 +182,15 @@ export const ITEM_BOUNDS = {
 			tooFew: "EXPRS_TOO_FEW",
 			tooMany: "EXPRS_TOO_MANY",
 			label: "expression steps",
+		},
+	},
+	code: {
+		lines: {
+			min: 2,
+			max: 14,
+			tooFew: "CODE_TOO_SHORT",
+			tooMany: "CODE_TOO_LONG",
+			label: "code lines",
 		},
 	},
 } as const satisfies Record<string, Record<string, ItemBound>>;

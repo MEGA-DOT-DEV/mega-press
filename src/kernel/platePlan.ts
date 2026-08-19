@@ -24,6 +24,7 @@ export const PLATE_PLAN_KINDS = [
 	"railFlow",
 	"graph",
 	"derivation",
+	"code",
 ] as const;
 
 export type PlatePlanKind = (typeof PLATE_PLAN_KINDS)[number];
@@ -120,6 +121,10 @@ export type PlatePlan = {
 		readonly note?: string;
 		readonly accent?: boolean;
 	}[];
+	/** code — verbatim snippet, \n-separated lines */
+	readonly code?: string;
+	readonly codeLabel?: string;
+	readonly accentLines?: readonly number[];
 };
 
 export type ArtifactPlan = PlatePlan;
@@ -330,6 +335,9 @@ export const PLATE_PLAN_JSON_SCHEMA: Record<string, unknown> = {
 				},
 			},
 		},
+		code: { type: "string", maxLength: 1200 },
+		codeLabel: { type: "string", maxLength: 48 },
+		accentLines: { type: "array", maxItems: 14, items: { type: "number" } },
 	},
 };
 

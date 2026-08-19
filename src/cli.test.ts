@@ -47,6 +47,7 @@ describe("press cli", () => {
 			"railFlow",
 			"graph",
 			"derivation",
+			"code",
 		]);
 	});
 
