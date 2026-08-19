@@ -32,6 +32,9 @@ export const STRING_CAPS = {
 	detail: { max: 250, code: "DETAIL_TOO_LONG", description: sanity(250) },
 	cell: { max: 120, code: "CELL_TOO_LONG", description: sanity(120) },
 	snippet: { max: 1200, code: "SNIPPET_TOO_LONG", description: sanity(1200) },
+	/** A chip is one short mono label; this cap is the drawn contract, not a garbage guard. */
+	chip: { max: 32, code: "CHIP_TOO_LONG", description: "One short mono label, 32 characters max." },
+	trackLabel: { max: 40, code: "TRACK_LABEL_TOO_LONG", description: sanity(40) },
 } as const satisfies Record<string, StringCap>;
 
 export const ITEM_BOUNDS = {
@@ -140,6 +143,21 @@ export const ITEM_BOUNDS = {
 			tooMany: "STOPS_TOO_MANY",
 			label: "stops",
 		},
+		tracks: {
+			min: 2,
+			max: 2,
+			tooFew: "TRACKS_TOO_FEW",
+			tooMany: "TRACKS_TOO_MANY",
+			label: "labelled tracks",
+		},
+		/** Stops inside one track of a dual-track contrast. */
+		trackStops: {
+			min: 3,
+			max: 4,
+			tooFew: "TRACK_STOPS_TOO_FEW",
+			tooMany: "TRACK_STOPS_TOO_MANY",
+			label: "stops per track",
+		},
 	},
 	timelineVertical: {
 		events: {
@@ -148,6 +166,14 @@ export const ITEM_BOUNDS = {
 			tooFew: "EVENTS_TOO_FEW",
 			tooMany: "EVENTS_TOO_MANY",
 			label: "events",
+		},
+		/** Chips on one event: short mono pills, never extra information units. */
+		chips: {
+			min: 1,
+			max: 6,
+			tooFew: "CHIPS_TOO_FEW",
+			tooMany: "CHIPS_TOO_MANY",
+			label: "chips per event",
 		},
 	},
 	railFlow: {

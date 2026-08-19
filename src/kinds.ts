@@ -403,38 +403,95 @@ const stopToItem = (s: {
 	readonly at?: string;
 	readonly title?: string;
 	readonly detail?: string;
-}): { date: string; title: string; detail?: string } | null => {
+	readonly accent?: boolean;
+}): { date: string; title: string; detail?: string; accent?: boolean } | null => {
 	const date = String(s.at ?? "")
 		.trim()
 		.toUpperCase();
 	const title = String(s.title ?? "").trim();
 	if (!date || !title) return null;
 	const detail = String(s.detail ?? "").trim();
-	return { date, title, ...(detail ? { detail } : {}) };
+	return {
+		date,
+		title,
+		...(detail ? { detail } : {}),
+		...(s.accent ? { accent: true } : {}),
+	};
 };
+
+const timelineStopSchema = {
+	type: "object",
+	required: ["at", "title"],
+	properties: {
+		at: { type: "string" },
+		title: { type: "string" },
+		detail: {
+			type: "string",
+			maxLength: STRING_CAPS.detail.max,
+			description: STRING_CAPS.detail.description,
+		},
+		accent: {
+			type: "boolean",
+			description: "true on the one stop the claim is about: filled red marker, red title",
+		},
+	},
+} as const;
 
 const timeline: KindModule = {
 	id: "timeline",
 	slotsSchema: {
 		type: "object",
-		required: ["stops"],
+		description:
+			"Provide stops for one rail, or tracks (exactly 2 labelled rails, stacked) to contrast two runs of the same sequence.",
 		properties: {
-			stops: arraySchema(ITEM_BOUNDS.timeline.stops, {
+			stops: arraySchema(ITEM_BOUNDS.timeline.stops, timelineStopSchema),
+			tracks: arraySchema(ITEM_BOUNDS.timeline.tracks, {
 				type: "object",
-				required: ["at", "title"],
+				required: ["label", "stops"],
 				properties: {
-					at: { type: "string" },
-					title: { type: "string" },
-					detail: {
+					label: {
 						type: "string",
-						maxLength: STRING_CAPS.detail.max,
-						description: STRING_CAPS.detail.description,
+						maxLength: STRING_CAPS.trackLabel.max,
+						description: "Small caps mono label above the rail naming the run (uppercased)",
 					},
+					stops: arraySchema(ITEM_BOUNDS.timeline.trackStops, timelineStopSchema),
 				},
 			}),
 		},
 	},
 	compile(plan) {
+		if (plan.tracks !== undefined) {
+			const tracks = plan.tracks ?? [];
+			const trackCount = countFail("timeline", "tracks", tracks.length);
+			if (trackCount) return trackCount;
+			const rails: Record<string, unknown>[] = [];
+			for (const [i, track] of tracks.entries()) {
+				const label = String(track?.label ?? "")
+					.trim()
+					.toUpperCase();
+				if (!label) {
+					return fail("TRACK_LABEL_MISSING", `track ${i + 1} needs a label naming the run`);
+				}
+				if (label.length > STRING_CAPS.trackLabel.max) {
+					return fail(
+						STRING_CAPS.trackLabel.code,
+						`track ${i + 1} label is ${label.length} characters; ${STRING_CAPS.trackLabel.max} is the cap`,
+					);
+				}
+				const stops = (track.stops ?? [])
+					.map(stopToItem)
+					.filter((s): s is NonNullable<ReturnType<typeof stopToItem>> => s != null);
+				const stopCount = countFail("timeline", "trackStops", stops.length);
+				if (stopCount) return stopCount;
+				/* A dual-track timeline is ONE claim about a contrast between two runs,
+				   not seven claims about seven stops. Counting every stop as a unit
+				   would bust the plate budget for a figure the reader takes in as two
+				   lines, so each rail counts as one unit (unitPerStop: false marks the
+				   whole row node instead of each column) and the plate carries 2. */
+				rails.push({ type: "timeline", label, items: stops, unitPerStop: false });
+			}
+			return finish(plan, { type: "stack", gap: 5, children: rails });
+		}
 		const items = (plan.stops ?? [])
 			.map(stopToItem)
 			.filter((s): s is NonNullable<typeof s> => s != null);
@@ -471,6 +528,25 @@ const timelineVertical: KindModule = {
 						type: "boolean",
 						description: "true on the one event the claim is about",
 					},
+					chips: {
+						type: "array",
+						minItems: ITEM_BOUNDS.timelineVertical.chips.min,
+						maxItems: ITEM_BOUNDS.timelineVertical.chips.max,
+						description:
+							"Optional short mono pills under the event's detail or code: badges, a capability shortlist, result qualities; accent: true on the one chosen chip",
+						items: {
+							type: "object",
+							required: ["text"],
+							properties: {
+								text: {
+									type: "string",
+									maxLength: STRING_CAPS.chip.max,
+									description: STRING_CAPS.chip.description,
+								},
+								accent: { type: "boolean" },
+							},
+						},
+					},
 				},
 			}),
 		},
@@ -484,12 +560,29 @@ const timelineVertical: KindModule = {
 				const codeLines = source
 					.split("\n")
 					.filter((l, i, all) => l.trim().length > 0 || (i > 0 && i < all.length - 1));
+				// A plain string chip is shorthand for a quiet one; empties are dropped
+				// so a trailing comma in a hand-written plan never refuses the plate.
+				const chips = (Array.isArray(e.chips) ? e.chips : [])
+					.map((c) => (typeof c === "string" ? { text: c } : c))
+					.map((c) =>
+						c != null && typeof c === "object"
+							? { text: String(c.text ?? "").trim(), accent: Boolean(c.accent) }
+							: { text: "", accent: false },
+					)
+					.filter((c) => c.text.length > 0);
 				return {
 					...base,
 					...(codeLines.filter((l) => l.trim()).length >= 2
 						? { code: codeLines.join("\n") }
 						: {}),
-					...(e.accent ? { accent: true } : {}),
+					...(chips.length > 0
+						? {
+								chips: chips.map((c) => ({
+									text: c.text,
+									...(c.accent ? { accent: true } : {}),
+								})),
+							}
+						: {}),
 				};
 			})
 			.filter((s): s is NonNullable<typeof s> => s != null);
@@ -501,6 +594,18 @@ const timelineVertical: KindModule = {
 				"EVENT_CODE_TOO_LONG",
 				`event "${bloated.date}" carries ${bloated.code?.split("\n").length} code lines; 8 is the cap inside a transcript. Use the code kind for a standalone block.`,
 			);
+		}
+		for (const item of items) {
+			if (!item.chips) continue;
+			const chipCount = countFail("timelineVertical", "chips", item.chips.length);
+			if (chipCount) return chipCount;
+			const long = item.chips.find((c) => c.text.length > STRING_CAPS.chip.max);
+			if (long) {
+				return fail(
+					STRING_CAPS.chip.code,
+					`chip "${long.text.slice(0, 40)}" on event "${item.date}" is ${long.text.length} characters; a chip is one short mono label, ${STRING_CAPS.chip.max} characters max`,
+				);
+			}
 		}
 		return finish(plan, { type: "timelineVertical", items });
 	},

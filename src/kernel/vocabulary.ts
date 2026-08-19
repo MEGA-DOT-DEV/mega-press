@@ -238,19 +238,20 @@ export const COMPONENT_GUIDE: Record<string, { readonly use: string; readonly ex
 			},
 		},
 		timeline: {
-			use: "events or calls in order, read left to right, when the intervals do not matter",
+			use: "events or calls in order, read left to right, when the intervals do not matter; an item may set accent: true on the one stop the claim is about, and a rail may carry a label (small caps mono above it) so two labelled rails stacked in one frame contrast two runs",
 			example: {
 				type: "timeline",
+				label: "DIRECT API CALL, NO HINT",
 				items: [
 					{ date: "CALL 1", title: "send_email", detail: "Fails: missing audience_id." },
 					{ date: "HINT", title: "Error names the next step", detail: "Call list_audiences first." },
 					{ date: "CALL 2", title: "list_audiences", detail: "Returns the missing id." },
-					{ date: "CALL 3", title: "send_email", detail: "Delivered." },
+					{ date: "CALL 3", title: "send_email", detail: "Delivered.", accent: true },
 				],
 			},
 		},
 		timelineVertical: {
-			use: "an event log or transcript read top to bottom, the label (actor, stage, or date) in its own column; an event may carry a verbatim code block (the call, payload, or result the event is about) and accent: true on the one event the claim is about",
+			use: "an event log or transcript read top to bottom, the label (actor, stage, or date) in its own column; an event may carry a verbatim code block (the call, payload, or result the event is about), accent: true on the one event the claim is about, and chips: 1 to 6 short mono pills under the detail or code ({text, accent?}, 32 chars max) for badges, a capability shortlist, or result qualities",
 			example: {
 				type: "timelineVertical",
 				items: [
@@ -267,13 +268,18 @@ export const COMPONENT_GUIDE: Record<string, { readonly use: string; readonly ex
 					},
 					{
 						date: "AGENT",
-						title: "Picks a tool from the shared schema",
-						code: '{\n  "tool": "get_campaign_stats",\n  "arguments": { "range": "last_week" }\n}',
+						title: "Picks a capability from the shortlist",
+						chips: [
+							{ text: "get_campaign_stats", accent: true },
+							{ text: "send_email" },
+							{ text: "list_audiences" },
+						],
 					},
 					{
 						date: "AGENT",
 						title: "Answers with evidence",
 						detail: "3,210 clicks and 142 conversions, a 4.4% conversion rate.",
+						chips: [{ text: "predictable" }, { text: "cheap" }],
 					},
 				],
 			},
@@ -384,7 +390,7 @@ Compose two nodes with {"type":"stack","gap":3,"children":[...]} when one claim 
 4. No components: ${WITHHELD_COMPONENTS.join(", ")}.
 5. Only these body types: ${ALLOWED_COMPONENTS.join(", ")}.
 6. Never invent types (callout, infobox, alert). Use note with content.
-7. note = {type, content}. compare = before/after {label, title, items[]}. railSteps/railFlow items = {name, detail}. checklist items = {text, ok}. timeline/timelineVertical items = {date, title, detail?} (date is the short label column: an actor, stage, or date). A timelineVertical item may add code (a verbatim block, 2 to 8 lines with \\n breaks) and accent: true on the one event the claim is about. graph = nodes {key, title, detail?} + edges {from, to}. derivation steps = {expr, note} (note required after the first step). code = {code, label?, accentLines?} (code is one string with \\n line breaks, 2 to 14 lines, drawn verbatim; a line too wide for the frame refuses instead of wrapping).
+7. note = {type, content}. compare = before/after {label, title, items[]}. railSteps/railFlow items = {name, detail}. checklist items = {text, ok}. timeline/timelineVertical items = {date, title, detail?, accent?} (date is the short label column: an actor, stage, or date; accent: true marks the one stop the claim is about). A timeline node may add label (small caps mono above the rail naming the run); stack two labelled timelines to contrast two runs. A timelineVertical item may add code (a verbatim block, 2 to 8 lines with \\n breaks) and chips (1 to 6 short mono pills {text, accent?}, 32 chars max, drawn under the detail or code). graph = nodes {key, title, detail?} + edges {from, to}. derivation steps = {expr, note} (note required after the first step). code = {code, label?, accentLines?} (code is one string with \\n line breaks, 2 to 14 lines, drawn verbatim; a line too wide for the frame refuses instead of wrapping).
 
 ## Choose the component by what the content is
   process / method / loop          railSteps

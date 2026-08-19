@@ -191,22 +191,41 @@ const SEQUENCE = [
 	def("timeline", {
 		fn: timeline,
 		summary: "Horizontal stops, evenly spaced, axis derived from the markers.",
-		use: "when order matters but the intervals do not",
+		use: "when order matters but the intervals do not; stack two labelled rails to contrast two runs",
 		params: {
 			items: {
 				type: ITEMS,
 				required: true,
 				min: 2,
-				of: { date: "string (required)", title: "string (required)", detail: "string" },
+				of: {
+					date: "string (required)",
+					title: "string (required)",
+					detail: "string",
+					accent: "boolean, the one stop the claim is about",
+				},
 			},
 			activeTo: { type: "number", default: -1 },
 			gap: { type: GAP, default: 4 },
+			label: {
+				type: "string",
+				doc: "small caps mono section label above the rail, names the run this rail records",
+			},
+			unitPerStop: {
+				type: "boolean",
+				default: true,
+				doc: "false counts the whole rail as one unit; used when two labelled rails share one frame",
+			},
 		},
+		notes: [
+			"accent fills the stop's marker and colours its date and title: the one stop the claim is about.",
+			"Two labelled rails in one stack are one claim about a contrast; pass unitPerStop: false on each so the plate carries two units, not one per stop.",
+		],
 		example: {
 			type: "timeline",
+			label: "THROUGH RESEND MCP",
 			items: [
 				{ date: "WEEK 1", title: "Beyond prompting" },
-				{ date: "WEEK 2", title: "Agents" },
+				{ date: "WEEK 2", title: "Agents", accent: true },
 			],
 		},
 	}),
@@ -226,6 +245,7 @@ const SEQUENCE = [
 					detail: "string",
 					code: "string, \\n-separated verbatim block under the event, 2 to 8 lines",
 					accent: "boolean, the one event the claim is about",
+					chips: "[{text, accent?}], 1 to 6 short mono pills under the detail or code, text 32 chars max",
 				},
 			},
 			activeTo: { type: "number", default: -1 },
@@ -234,6 +254,7 @@ const SEQUENCE = [
 		notes: [
 			"An item's code block is painted verbatim by the code component's line painter: indentation kept, a too-wide line refused by name, never wrapped.",
 			"accent fills the item's marker, colours its label, and accents its block's border.",
+			"Chips are small bordered mono pills that hug their text: badges, a capability shortlist, result qualities. accent: true borders and inks the one chosen chip in red. They annotate the event and never count as extra units.",
 		],
 		example: {
 			type: "timelineVertical",

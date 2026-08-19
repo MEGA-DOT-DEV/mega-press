@@ -62,6 +62,35 @@ const transcript: ArtifactPlan = {
 	],
 };
 
+const chippedTranscript: ArtifactPlan = {
+	kind: "timelineVertical",
+	id: "capability-pick",
+	title: "The agent picks one capability and the pick is inspectable.",
+	events: [
+		{
+			at: "STEP 1",
+			title: "Guesses the endpoint from prose",
+			detail: "No schema to check the guess against.",
+			chips: [{ text: "~15% error chance" }],
+		},
+		{
+			at: "STEP 2",
+			title: "Reads the published shortlist",
+			chips: [
+				{ text: "email_message_search", accent: true },
+				{ text: "integrations" },
+				{ text: "jobs" },
+				{ text: "values" },
+			],
+		},
+		{
+			at: "STEP 3",
+			title: "Calls the chosen capability",
+			detail: "Arguments validated against the schema before the call leaves.",
+		},
+	],
+};
+
 const graphPlan: ArtifactPlan = {
 	kind: "graph",
 	id: "mcp-capability-layer",
@@ -130,6 +159,13 @@ describe("valid-plan snapshots", () => {
 
 	it("timelineVertical compile stays stable", () => {
 		const result = buildArtifact(transcript);
+		expect(result.ok).toBe(true);
+		if (!result.ok) throw new Error("expected ok");
+		expect(result.spec).toMatchSnapshot();
+	});
+
+	it("timelineVertical with chips compile stays stable", () => {
+		const result = buildArtifact(chippedTranscript);
 		expect(result.ok).toBe(true);
 		if (!result.ok) throw new Error("expected ok");
 		expect(result.spec).toMatchSnapshot();

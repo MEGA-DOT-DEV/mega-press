@@ -185,6 +185,11 @@ function normalizeNode(node: unknown): unknown {
 				if (d != null) row.detail = d;
 			}
 			if (row.code == null && row.snippet != null) row.code = row.snippet;
+			// A chip written as a plain string is shorthand for a quiet chip.
+			// Objects (and anything else) pass through for the lock to judge.
+			if (Array.isArray(row.chips)) {
+				row.chips = row.chips.map((c) => (typeof c === "string" ? { text: c } : c));
+			}
 			delete row.at;
 			delete row.label;
 			delete row.actor;

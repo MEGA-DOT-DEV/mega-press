@@ -155,6 +155,40 @@ const validateNode = (node: unknown, path: string, errors: PressError[], depth: 
 				});
 				return;
 			}
+			if (item.chips !== undefined) {
+				if (type === "timeline") {
+					errors.push({
+						code: "STOP_CHIPS_UNSUPPORTED",
+						message: `${path}.items[${i}]: a horizontal timeline stop has no room for chips; use timelineVertical`,
+					});
+				} else if (!Array.isArray(item.chips)) {
+					errors.push({
+						code: "CHIPS_NOT_A_LIST",
+						message: `${path}.items[${i}]: chips must be an array of { text, accent? }`,
+					});
+				} else {
+					if (item.chips.length > 6) {
+						errors.push({
+							code: "CHIPS_TOO_MANY",
+							message: `${path}.items[${i}]: ${item.chips.length} chips; 6 is the cap`,
+						});
+					}
+					item.chips.forEach((chip, j) => {
+						const text = isRecord(chip) ? String(chip.text ?? "").trim() : "";
+						if (!text) {
+							errors.push({
+								code: "CHIP_TEXT_MISSING",
+								message: `${path}.items[${i}].chips[${j}]: every chip needs non-empty text`,
+							});
+						} else if (text.length > 32) {
+							errors.push({
+								code: "CHIP_TOO_LONG",
+								message: `${path}.items[${i}].chips[${j}]: "${text.slice(0, 40)}" is ${text.length} characters; a chip is one short mono label, 32 max`,
+							});
+						}
+					});
+				}
+			}
 			if (item.code === undefined) return;
 			if (type === "timeline") {
 				errors.push({

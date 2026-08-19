@@ -458,10 +458,11 @@ const MODULES: readonly ArtifactModuleSchema[] = [
 		title: "Event timeline",
 		use: "Calls or events in order, read left to right, when the intervals do not matter.",
 		pickWhen: "A short sequence of moments is the lesson (call, error, hint, retry, delivered).",
-		units: "3–5 stops {at, title, detail}",
+		units: "3–5 stops {at, title, detail, accent?}, or exactly 2 labelled tracks of 3–4 stops",
 		slots: {
 			type: "object",
-			required: ["stops"],
+			description:
+				"Provide stops for one rail, or tracks (exactly 2 labelled rails, stacked) to contrast two runs.",
 			properties: {
 				stops: {
 					type: "array",
@@ -478,12 +479,53 @@ const MODULES: readonly ArtifactModuleSchema[] = [
 							},
 							title: { type: "string" },
 							detail: { type: "string", minLength: 16 },
+							accent: {
+								type: "boolean",
+								description: "true on the one stop the claim is about: filled red marker, red title",
+							},
+						},
+					},
+				},
+				tracks: {
+					type: "array",
+					minItems: 2,
+					maxItems: 2,
+					description: "Two runs of the same sequence, each rail under its own caps mono label",
+					items: {
+						type: "object",
+						required: ["label", "stops"],
+						properties: {
+							label: {
+								type: "string",
+								maxLength: 40,
+								description: "Small caps mono label above the rail naming the run",
+							},
+							stops: {
+								type: "array",
+								minItems: 3,
+								maxItems: 4,
+								items: {
+									type: "object",
+									required: ["at", "title"],
+									properties: {
+										at: { type: "string", maxLength: 16 },
+										title: { type: "string" },
+										detail: { type: "string", minLength: 16 },
+										accent: { type: "boolean" },
+									},
+								},
+							},
 						},
 					},
 				},
 			},
 		},
-		density: ["3–5 stops", "detail clauses on most stops, not bare titles"],
+		density: [
+			"3–5 stops",
+			"detail clauses on most stops, not bare titles",
+			"at most one accented stop per rail",
+			"tracks: exactly 2 labelled rails when the lesson is a contrast between two runs",
+		],
 		outlineHint: "Each line: AT | Title | detail clause.",
 		exampleOutline: [
 			"CALL 1 | send_email | Fails: missing audience_id.",
@@ -528,6 +570,21 @@ const MODULES: readonly ArtifactModuleSchema[] = [
 								type: "boolean",
 								description: "true on the one event the claim is about",
 							},
+							chips: {
+								type: "array",
+								minItems: 1,
+								maxItems: 6,
+								description:
+									"Optional short mono pills under the event's detail or code: a badge, a capability shortlist, result qualities; accent: true on the one chosen chip",
+								items: {
+									type: "object",
+									required: ["text"],
+									properties: {
+										text: { type: "string", maxLength: 32 },
+										accent: { type: "boolean" },
+									},
+								},
+							},
 						},
 					},
 				},
@@ -538,6 +595,7 @@ const MODULES: readonly ArtifactModuleSchema[] = [
 			"detail clauses or a verbatim code block on most events",
 			"actor labels short and repeated verbatim",
 			"at most one accented event",
+			"chips: 1–6 short pills (≤32 chars) when an event carries badges or a shortlist",
 		],
 		outlineHint: "Each line: ACTOR | Title | detail clause. Follow a line with indented lines to attach them as that event's code block.",
 		exampleOutline: [

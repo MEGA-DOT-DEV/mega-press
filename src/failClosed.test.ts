@@ -79,6 +79,34 @@ describe("fail-closed kinds", () => {
 		expect(result.errors.some((e) => e.code === "GRAPH_EDGE_UNKNOWN")).toBe(true);
 	});
 
+	it("a chip over 32 characters uses CHIP_TOO_LONG", () => {
+		const result = buildArtifact(
+			thin("timelineVertical", {
+				events: [
+					{
+						at: "STEP 1",
+						title: "Guesses the endpoint from prose",
+						detail: "No schema to check the guess against.",
+						chips: [{ text: "a chip label far too long to be one short mono pill" }],
+					},
+					{
+						at: "STEP 2",
+						title: "Reads the published shortlist",
+						detail: "The schema names every capability it offers.",
+					},
+					{
+						at: "STEP 3",
+						title: "Calls the chosen capability",
+						detail: "Arguments validated before the call leaves.",
+					},
+				],
+			}),
+		);
+		expect(result.ok).toBe(false);
+		if (result.ok) throw new Error("expected fail");
+		expect(result.errors.some((e) => e.code === "CHIP_TOO_LONG")).toBe(true);
+	});
+
 	it("derivation with an unnoted later step uses DERIVATION_NOTE_MISSING", () => {
 		const result = buildArtifact(
 			thin("derivation", {

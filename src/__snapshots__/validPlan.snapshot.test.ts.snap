@@ -228,3 +228,50 @@ exports[`valid-plan snapshots > timelineVertical compile stays stable 1`] = `
   "title": "One schema turns a question into checked numbers.",
 }
 `;
+
+exports[`valid-plan snapshots > timelineVertical with chips compile stays stable 1`] = `
+{
+  "body": {
+    "items": [
+      {
+        "chips": [
+          {
+            "text": "~15% error chance",
+          },
+        ],
+        "date": "STEP 1",
+        "detail": "No schema to check the guess against.",
+        "title": "Guesses the endpoint from prose",
+      },
+      {
+        "chips": [
+          {
+            "accent": true,
+            "text": "email_message_search",
+          },
+          {
+            "text": "integrations",
+          },
+          {
+            "text": "jobs",
+          },
+          {
+            "text": "values",
+          },
+        ],
+        "date": "STEP 2",
+        "title": "Reads the published shortlist",
+      },
+      {
+        "date": "STEP 3",
+        "detail": "Arguments validated against the schema before the call leaves.",
+        "title": "Calls the chosen capability",
+      },
+    ],
+    "type": "timelineVertical",
+  },
+  "frame": "landscape",
+  "id": "capability-pick",
+  "title": "The agent picks one capability and the pick is inspectable.",
+}
+`;

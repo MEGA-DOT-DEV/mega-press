@@ -30,7 +30,17 @@ import { rail as deriveRail } from "../src/connect.js";
 import { custom, marker, row, stack, text } from "../src/solve.js";
 import { codeBlock } from "./code.js";
 import { measure } from "../src/text.js";
-import { COLOR, FAMILY, lineHeight, STROKE, snap, space, type, typeSize } from "../src/tokens.js";
+import {
+	COLOR,
+	FAMILY,
+	lineHeight,
+	PressError,
+	STROKE,
+	snap,
+	space,
+	type,
+	typeSize,
+} from "../src/tokens.js";
 
 /* --------------------------------------------------------------------------
  * The marker
@@ -135,6 +145,96 @@ function refuseUnread(item, read, who) {
 }
 
 /* --------------------------------------------------------------------------
+ * Chips
+ *
+ * Small bordered mono pills under a transcript event: an error rate, a
+ * capability shortlist, a result quality. A chip is one short label, never a
+ * sentence, so it is a single painted line inside a border that hugs it.
+ *
+ * A box() cannot draw one: box measures to the width it is given, so a row of
+ * boxes is a row of full-width panels. A chip is therefore a custom node that
+ * reports its own measured width, exactly as a code line reports its own
+ * measured overflow, and it paints with the same mono face, tracking and
+ * middle baseline codeLine uses so the two verbatim voices cannot drift apart.
+ *
+ * `accent: true` borders and inks the chip in the accent: the one capability
+ * that was chosen, the one badge the claim is about. The rest stay quiet.
+ * ------------------------------------------------------------------------ */
+
+const CHIP_ROLE = "utility";
+const CHIP_MAX_CHARS = 32;
+const CHIP_MAX_COUNT = 6;
+
+function chip({ text: label, accent = false }) {
+	const pad = space(1);
+	const tracking = type(CHIP_ROLE).tracking * typeSize(CHIP_ROLE);
+	const w = Math.ceil(measure(label, CHIP_ROLE)) + 2 * pad;
+	const h = lineHeight(CHIP_ROLE) + 2 * pad;
+	return custom({
+		measure: () => ({ w, h }),
+		paint: (ctx, rect, C) => {
+			ctx.fillStyle = C.panel;
+			ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+			ctx.strokeStyle = accent ? C.red : C.black2;
+			ctx.lineWidth = STROKE.divider;
+			ctx.strokeRect(rect.x + 0.5, rect.y + 0.5, rect.w - 1, rect.h - 1);
+
+			ctx.fillStyle = accent ? C.red : C.muted;
+			ctx.font = `400 ${typeSize(CHIP_ROLE)}px ${FAMILY.mono}`;
+			ctx.textAlign = "left";
+			ctx.textBaseline = "middle";
+			if ("letterSpacing" in ctx) ctx.letterSpacing = `${tracking}px`;
+			ctx.fillText(label, rect.x + pad, rect.cy);
+			if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
+		},
+	});
+}
+
+/**
+ * Validate an event's chips and build the row, or return null when there are
+ * none. Refusals are by name, because a chip silently dropped or silently
+ * truncated is the accepted-and-not-drawn defect this file keeps refusing.
+ */
+function chipsRow(chips, where) {
+	if (chips === undefined || chips === null) return null;
+	if (!Array.isArray(chips)) {
+		throw new PressError(
+			"CHIPS_NOT_A_LIST",
+			`${where}: chips must be an array of { text, accent? }.`,
+		);
+	}
+	if (chips.length === 0) return null;
+	if (chips.length > CHIP_MAX_COUNT) {
+		throw new PressError(
+			"CHIPS_TOO_MANY",
+			`${where} carries ${chips.length} chips and ${CHIP_MAX_COUNT} is the cap. ` +
+				`A shortlist longer than that is a table, not a row of pills.`,
+		);
+	}
+	const cleaned = chips.map((c, i) => {
+		const item = typeof c === "string" ? { text: c } : c;
+		const label = String(item?.text ?? "").trim();
+		if (!label) {
+			throw new PressError(
+				"CHIP_TEXT_MISSING",
+				`${where}: chip ${i + 1} has no text. A bordered pill with nothing in it prints ` +
+					`as furniture; omit the chip instead.`,
+			);
+		}
+		if (label.length > CHIP_MAX_CHARS) {
+			throw new PressError(
+				"CHIP_TOO_LONG",
+				`${where}: chip "${label.slice(0, 40)}" is ${label.length} characters and ` +
+					`${CHIP_MAX_CHARS} is the cap. A chip is one short mono label; a sentence ` +
+					`belongs in the event's detail.`,
+			);
+		}
+		return { text: label, accent: Boolean(item.accent) };
+	});
+	return row({ gap: 2, align: "start", children: cleaned.map(chip) });
+}
+
+/* --------------------------------------------------------------------------
  * timeline: evenly spaced stops
  * ------------------------------------------------------------------------ */
 
@@ -145,6 +245,8 @@ export function timeline({
 	activeTo = -1,
 	accent = COLOR.red,
 	quiet = COLOR.black2,
+	label,
+	unitPerStop = true,
 } = {}) {
 	if (!items || items.length < 2) {
 		throw new Error("timeline needs at least two stops. One date is not a timeline.");
@@ -152,34 +254,52 @@ export function timeline({
 
 	const markers = [];
 
+	/* `unitPerStop` is the caller's claim about information density, the same
+	   claim codeBlock takes. A single rail is read stop by stop, so each stop is
+	   one unit. Two labelled rails stacked in one frame are ONE claim about a
+	   contrast between two runs; counting every stop would charge the reader's
+	   budget twice for a figure they take in as two lines, so the caller passes
+	   unitPerStop: false and the whole rail counts as one unit instead. */
 	const columns = items.map((item, i) => {
+		const active = i <= activeTo || Boolean(item.accent);
 		const dot = marker({
 			size: markerSize,
-			fill: i <= activeTo ? accent : quiet,
-			ring: i > activeTo,
+			fill: active ? accent : quiet,
+			ring: !active,
 		});
 		markers.push(dot);
 
 		return stack({
 			gap: 2,
 			grow: true,
-			unit: true,
+			unit: unitPerStop,
 			children: [
-				text(item.date, "utility", { color: i <= activeTo ? accent : COLOR.quiet }),
+				text(item.date, "utility", { color: active ? accent : COLOR.quiet }),
 				dot,
-				text(item.title, "list", { color: COLOR.text }),
+				text(item.title, "list", { color: item.accent ? accent : COLOR.text }),
 				item.detail ? text(item.detail, "body", { color: COLOR.muted, commentary: true }) : null,
 			],
 		});
 	});
 
-	const node = row({ gap, align: "start", children: columns });
+	const rail = row({
+		gap,
+		align: "start",
+		children: columns,
+		...(unitPerStop ? {} : { unit: true }),
+	});
 
-	node.press = {
+	rail.press = {
 		connect: () => ({
 			rails: [deriveRail(markers, { axis: "x", weight: STROKE.connector, color: quiet })],
 		}),
 	};
+
+	/* A small caps mono section label above the rail, left aligned: the name of
+	   the run this rail records. It is what tells two stacked rails apart. */
+	const node = label
+		? stack({ gap: 2, children: [text(label, "utility", { color: COLOR.quiet }), rail] })
+		: rail;
 
 	node.markers = markers;
 	return node;
@@ -445,6 +565,10 @@ export function schedule({ items, markerSize = space(2), accent = COLOR.red } = 
  * showing the pick is prose wearing a diagram's clothes; the block under the
  * title is the evidence. `accent: true` on an item fills its marker, colours
  * its label, and accents its block's border: the one event the claim is about.
+ *
+ * An item may also carry `chips`: one to six short mono pills under the detail
+ * and the code (an error rate badge, a capability shortlist, result
+ * qualities), each `{ text, accent? }` with the accented chip the one chosen.
  * ------------------------------------------------------------------------ */
 
 export function timelineVertical({
@@ -472,6 +596,11 @@ export function timelineVertical({
 		});
 		markers.push(dot);
 
+		/* Chips ride under the detail and the code, inside the event's stack, so
+		   they belong to the row and never count as extra units: the row already
+		   is the unit, and a badge on it is annotation, not new information. */
+		const chips = chipsRow(item.chips, `timelineVertical event "${item.date}"`);
+
 		return row({
 			gap: 3,
 			align: "baseline",
@@ -483,7 +612,7 @@ export function timelineVertical({
 				}),
 				dot,
 				stack({
-					gap: item.code ? 2 : 1,
+					gap: item.code || chips ? 2 : 1,
 					grow: true,
 					children: [
 						text(item.title, "list", { color: COLOR.text }),
@@ -493,6 +622,7 @@ export function timelineVertical({
 						item.code
 							? codeBlock(item.code, { accent: Boolean(item.accent), pad: 3 })
 							: null,
+						chips,
 					],
 				}),
 			],

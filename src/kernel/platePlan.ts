@@ -97,6 +97,17 @@ export type PlatePlan = {
 		readonly at: string;
 		readonly title: string;
 		readonly detail?: string;
+		readonly accent?: boolean;
+	}[];
+	/** timeline — exactly two labelled rails stacked to contrast two runs */
+	readonly tracks?: readonly {
+		readonly label: string;
+		readonly stops: readonly {
+			readonly at: string;
+			readonly title: string;
+			readonly detail?: string;
+			readonly accent?: boolean;
+		}[];
 	}[];
 	/** timelineVertical — labelled events top to bottom, optionally with a verbatim block */
 	readonly events?: readonly {
@@ -105,6 +116,8 @@ export type PlatePlan = {
 		readonly detail?: string;
 		readonly code?: string;
 		readonly accent?: boolean;
+		/** Short mono pills under the event; a plain string is shorthand for a quiet chip. */
+		readonly chips?: readonly (string | { readonly text: string; readonly accent?: boolean })[];
 	}[];
 	/** graph */
 	readonly dir?: "x" | "y";
@@ -271,6 +284,36 @@ export const PLATE_PLAN_JSON_SCHEMA: Record<string, unknown> = {
 					at: { type: "string", maxLength: 16 },
 					title: { type: "string" },
 					detail: { type: "string" },
+					accent: { type: "boolean" },
+				},
+			},
+		},
+		tracks: {
+			type: "array",
+			minItems: 2,
+			maxItems: 2,
+			items: {
+				type: "object",
+				additionalProperties: false,
+				required: ["label", "stops"],
+				properties: {
+					label: { type: "string", maxLength: 40 },
+					stops: {
+						type: "array",
+						minItems: 3,
+						maxItems: 4,
+						items: {
+							type: "object",
+							additionalProperties: false,
+							required: ["at", "title"],
+							properties: {
+								at: { type: "string", maxLength: 16 },
+								title: { type: "string" },
+								detail: { type: "string" },
+								accent: { type: "boolean" },
+							},
+						},
+					},
 				},
 			},
 		},
@@ -288,6 +331,25 @@ export const PLATE_PLAN_JSON_SCHEMA: Record<string, unknown> = {
 					detail: { type: "string" },
 					code: { type: "string", maxLength: 600 },
 					accent: { type: "boolean" },
+					chips: {
+						type: "array",
+						minItems: 1,
+						maxItems: 6,
+						items: {
+							anyOf: [
+								{ type: "string", maxLength: 32 },
+								{
+									type: "object",
+									additionalProperties: false,
+									required: ["text"],
+									properties: {
+										text: { type: "string", maxLength: 32 },
+										accent: { type: "boolean" },
+									},
+								},
+							],
+						},
+					},
 				},
 			},
 		},
