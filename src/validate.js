@@ -252,7 +252,9 @@ export function validate(plate) {
         What must stay unique is the claim, not the point size. */
 	const titles = texts.filter((n) => n.isTitle);
 	if (titles.length === 0) {
-		r.error("NO_TITLE", "The plate has no title. Every frame states exactly one claim.");
+		if (plate.chrome?.title !== false) {
+			r.error("NO_TITLE", "The plate has no title. Every frame states exactly one claim.");
+		}
 	} else if (titles.length > 1) {
 		r.error(
 			"MULTIPLE_TITLES",
@@ -455,8 +457,8 @@ export function validate(plate) {
 		}
 	}
 
-	/* 13. Brand. */
-	if (!texts.some((n) => /mega\.dev/i.test(n.text))) {
+	/* 13. Brand. Host chrome may hide it (article embed). */
+	if (plate.chrome?.brand !== false && !texts.some((n) => /mega\.dev/i.test(n.text))) {
 		r.error("NO_BRAND", `The plate has no mega.dev footer. Artifacts are branded mega.dev.`);
 	}
 

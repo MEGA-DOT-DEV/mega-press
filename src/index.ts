@@ -58,3 +58,20 @@ export {
 } from "./kernel/vocabulary.js";
 
 export { getKindModule, KIND_MODULES } from "./kinds.js";
+
+export type {
+	PressChrome,
+	PressChromePreset,
+	PressColorTheme,
+	PressFontTheme,
+	PressTheme,
+	ResolvedChrome,
+} from "./theme.js";
+export {
+	CHROME_PRESETS,
+	configurePress,
+	getPressTheme,
+	resetPressTheme,
+	resolveChrome,
+	withPressTheme,
+} from "./theme.js";

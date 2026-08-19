@@ -72,6 +72,7 @@ import {
 	snap,
 	space,
 } from "./tokens.js";
+import { resolveChrome } from "./theme.js";
 import { validate } from "./validate.js";
 
 /* --------------------------------------------------------------------------
@@ -105,10 +106,11 @@ const DEFAULT_RATIO = {
  * @param {string} spec.frame       'landscape' | 'portrait' | 'square'
  * @param {string} [spec.layout]    'stacked' | 'split' | 'full-bleed' | 'centred'
  * @param {string} [spec.ratio]     a ratio step: 1/3, 2/5, 1/2, 3/5, 2/3
- * @param {string} spec.kicker      small utility label, upper left
- * @param {string} spec.number      frame number, upper right
- * @param {string} spec.title       the single claim this frame makes
+ * @param {string} [spec.kicker]    small utility label, upper left
+ * @param {string} [spec.number]    frame number, upper right
+ * @param {string} [spec.title]     optional claim; hosts may keep it and not paint it
  * @param {string} [spec.lead]      one line of explanation under the title
+ * @param {string} [spec.footnote]  optional source line, right of the brand
  * @param {Function} spec.build     (toolkit) => node
  * @param {Function} [spec.aside]   (toolkit) => node, the attachment column
  * @param {object} [spec.background] { type: 'field' | 'image' | 'band', ... }
@@ -119,7 +121,8 @@ export function definePlate(spec) {
 	return { ...spec, __press: true };
 }
 
-export function buildPlate(spec, { validateNow = true } = {}) {
+export function buildPlate(spec, { validateNow = true, chrome: chromeOpt } = {}) {
+	const chrome = resolveChrome(chromeOpt);
 	const frame = FRAME[spec.frame || "landscape"];
 	if (!frame) {
 		throw new PressError(
@@ -155,41 +158,49 @@ export function buildPlate(spec, { validateNow = true } = {}) {
 
 	const centred = layout === "centred";
 
-	/* Kicker/number are optional. Never pass '' into text() — TEXT_MISSING. */
+	/* Chase chrome is host-level. Spec may carry a title the article already stated;
+     resolveChrome decides whether it paints. Never pass '' into text() — TEXT_MISSING. */
+	const kickerText = chrome.kicker && spec.kicker && String(spec.kicker).trim();
+	const numberText = chrome.number && spec.number != null && String(spec.number).trim();
+	const titleText = chrome.title && spec.title && String(spec.title).trim();
+	const leadText = chrome.lead && spec.lead && String(spec.lead).trim();
+	const footnoteText = chrome.footnote && spec.footnote && String(spec.footnote).trim();
+	const showBrand = chrome.brand;
+
 	const kickerLine =
-		(spec.kicker && String(spec.kicker).trim()) || spec.number
+		kickerText || numberText
 			? row({
 					gap: 3,
 					align: "baseline",
 					children: [
-						spec.kicker && String(spec.kicker).trim()
-							? text(String(spec.kicker).trim(), "utility", { color: COLOR.quiet, grow: true })
+						kickerText
+							? text(kickerText, "utility", { color: COLOR.quiet, grow: true })
 							: null,
-						spec.number
-							? text(String(spec.number), "utility", { color: COLOR.red, align: "right" })
+						numberText
+							? text(numberText, "utility", { color: COLOR.red, align: "right" })
 							: null,
 					].filter(Boolean),
 				})
 			: null;
 
-	const header = stack({
-		gap: 3,
-		children: [
-			kickerLine,
-			text(spec.title, "display", {
-				color: COLOR.text,
-				floorRole: "head",
-				isTitle: true,
-				...(centred ? { align: "center" } : {}),
-			}),
-			spec.lead && String(spec.lead).trim()
-				? text(String(spec.lead).trim(), "body", {
-						color: COLOR.muted,
-						...(centred ? { align: "center" } : {}),
-					})
-				: null,
-		].filter(Boolean),
-	});
+	const headerChildren = [
+		kickerLine,
+		titleText
+			? text(titleText, "display", {
+					color: COLOR.text,
+					floorRole: "head",
+					isTitle: true,
+					...(centred ? { align: "center" } : {}),
+				})
+			: null,
+		leadText
+			? text(leadText, "body", {
+					color: COLOR.muted,
+					...(centred ? { align: "center" } : {}),
+				})
+			: null,
+	].filter(Boolean);
+	const header = headerChildren.length ? stack({ gap: 3, children: headerChildren }) : null;
 
 	/* ---- footer ---------------------------------------------------------
      Always present, always inside the safe area. A frame whose content
@@ -241,40 +252,39 @@ export function buildPlate(spec, { validateNow = true } = {}) {
      Now the brand holds its measured width and the footnote takes the slack.
      A footnote too long for what is left is refused rather than wrapped, since
      a two line footer is the same defect one step later. */
-	const brandWidth = snap(measure("mega.dev", "brand"));
+	const brandWidth = showBrand ? snap(measure("mega.dev", "brand")) : 0;
 
 	/* Checked here rather than left to the generic line-budget refusal, because
      that one advises widening the column and the footer's measure is the safe
      area. There is nothing to widen. The only move is a shorter footnote. */
-	if (spec.footnote) {
-		const room = safe.w - brandWidth - space(3);
-		const want = measure(spec.footnote, "utility");
+	if (footnoteText) {
+		const room = safe.w - brandWidth - (showBrand ? space(3) : 0);
+		const want = measure(footnoteText, "utility");
 		if (want > room) {
 			throw new PressError(
 				"FOOTNOTE_TOO_LONG",
-				`the footnote "${spec.footnote}" measures ${Math.ceil(want)}px and the footer has ` +
-					`${Math.floor(room)}px beside the brand. Shorten it by about ` +
-					`${Math.ceil((want - room) / (want / spec.footnote.length))} characters. ` +
+				`the footnote "${footnoteText}" measures ${Math.ceil(want)}px and the footer has ` +
+					`${Math.floor(room)}px${showBrand ? " beside the brand" : ""}. Shorten it by about ` +
+					`${Math.ceil((want - room) / (want / footnoteText.length))} characters. ` +
 					`The footer is one line and the brand does not move.`,
 			);
 		}
 	}
 
-	const footer = row({
-		gap: 3,
-		align: "baseline",
-		children: [
-			text("mega.dev", "brand", { color: COLOR.red, width: brandWidth }),
-			spec.footnote
-				? text(spec.footnote, "utility", {
-						color: COLOR.quiet,
-						align: "right",
-						grow: true,
-						maxLines: 1,
-					})
-				: null,
-		],
-	});
+	const footerChildren = [
+		showBrand ? text("mega.dev", "brand", { color: COLOR.red, width: brandWidth }) : null,
+		footnoteText
+			? text(footnoteText, "utility", {
+					color: COLOR.quiet,
+					align: "right",
+					grow: true,
+					maxLines: 1,
+				})
+			: null,
+	].filter(Boolean);
+	const footer = footerChildren.length
+		? row({ gap: 3, align: "baseline", children: footerChildren })
+		: null;
 
 	/* ---- body and aside -------------------------------------------------- */
 
@@ -322,9 +332,9 @@ export function buildPlate(spec, { validateNow = true } = {}) {
 
 	/* The readout rides with the footer as one chase block, so every layout
      places it correctly without knowing it exists. */
-	const footerBlock = readout
+	const footerBlock = readout && footer
 		? stack({ gap: 2, chase: true, children: [readout, footer] })
-		: footer;
+		: (footer ?? readout ?? null);
 
 	if (readout) {
 		footerBlock.press = {
@@ -360,14 +370,16 @@ export function buildPlate(spec, { validateNow = true } = {}) {
 
 	// Pin the footer to the bottom of the safe area. The body is elastic; the
 	// brand is not. Doing this after the solve keeps the measure pass honest.
-	const footerShift = safe.bottom - footer.rect.bottom;
-	if (footerShift > 0) shift(footer, 0, footerShift);
+	if (footer) {
+		const footerShift = safe.bottom - footer.rect.bottom;
+		if (footerShift > 0) shift(footer, 0, footerShift);
+	}
 
 	/* Which zone a node belongs to. The validator reads these, because two of
      the invariants mean different things for the chase and for content that
      is deliberately running past the safe area. */
-	markZone(header, { chase: true });
-	markZone(footer, { chase: true });
+	if (header) markZone(header, { chase: true });
+	if (footer) markZone(footer, { chase: true });
 	if (layout === "full-bleed") markZone(bodySlot, { bleed: true });
 
 	/* ---- connect ---------------------------------------------------------
@@ -398,10 +410,10 @@ export function buildPlate(spec, { validateNow = true } = {}) {
 	}
 
 	const regions = {
-		header: header.rect,
+		header: header ? header.rect : null,
 		body: bodySlot ? bodySlot.rect : null,
 		aside: asideSlot ? asideSlot.rect : null,
-		footer: footer.rect,
+		footer: footer ? footer.rect : null,
 	};
 
 	const plate = {
@@ -419,7 +431,8 @@ export function buildPlate(spec, { validateNow = true } = {}) {
 		rules,
 		background: resolveBackground(spec, { frame, page, regions }),
 		field: spec.field || null,
-		marks: spec.marks === false ? null : { inset: 40, arm: 70 },
+		marks: chrome.marks === false || spec.marks === false ? null : { inset: 40, arm: 70 },
+		chrome,
 		spec,
 	};
 
@@ -452,7 +465,7 @@ const COMPOSE = {
 			band = row({ gap: GUTTER, align: "start", children: [bodySlot, asideSlot] });
 		}
 
-		const root = stack({ gap, children: [header, band, footer] });
+		const root = stack({ gap, children: [header, band, footer].filter(Boolean) });
 		solve(root, safe, ctx);
 		return { root, bodySlot, asideSlot };
 	},
@@ -479,14 +492,19 @@ const COMPOSE = {
 			band = row({
 				gap: GUTTER,
 				align,
-				children: columns(stack({ gap, grow: true, children: [header, bodySlot] }), asideSlot),
+				children: columns(
+					stack({ gap, grow: true, children: [header, bodySlot].filter(Boolean) }),
+					asideSlot,
+				),
 			});
-		} else {
+		} else if (header) {
 			header.width = track;
 			band = row({ gap: GUTTER, align, children: columns(header, bodySlot) });
+		} else {
+			band = bodySlot;
 		}
 
-		const root = stack({ gap, children: [band, footer] });
+		const root = stack({ gap, children: [band, footer].filter(Boolean) });
 		solve(root, safe, ctx);
 		return { root, bodySlot, asideSlot };
 	},
@@ -507,13 +525,14 @@ const COMPOSE = {
 		const top = h < page.h ? snap((page.h - h) / 2) : 0;
 		solve(bodySlot, new Rect(page.x, top, page.w, h), ctx);
 
-		const chase = stack({ gap, children: [header, footer] });
-		solve(chase, safe, ctx);
+		const chaseKids = [header, footer].filter(Boolean);
+		const chase = chaseKids.length ? stack({ gap, children: chaseKids }) : null;
+		if (chase) solve(chase, safe, ctx);
 
 		// Not solved itself: its two halves were solved into different rects, which
 		// is the whole point of the composition. It exists so the renderer and the
 		// validator still walk one tree.
-		const root = stack({ gap, children: [bodySlot, chase] });
+		const root = stack({ gap, children: [bodySlot, chase].filter(Boolean) });
 		root.rect = page;
 		return { root, bodySlot, asideSlot: null };
 	},
@@ -535,12 +554,15 @@ const COMPOSE = {
 	 */
 	centred({ header, footer, body, safe, gap, track, ctx }) {
 		const bodySlot = { ...body, grow: true };
-		const block = stack({ gap, children: [header, bodySlot] });
+		const block = stack({ gap, children: [header, bodySlot].filter(Boolean) });
 		const x = safe.x + snap((safe.w - track) / 2);
 
 		// The footer is solved at its own height, at the bottom of the safe area.
-		const fh = measureNode(footer, safe.w).h;
-		solve(footer, new Rect(safe.x, safe.bottom - fh, safe.w, fh), ctx);
+		let fh = 0;
+		if (footer) {
+			fh = measureNode(footer, safe.w).h;
+			solve(footer, new Rect(safe.x, safe.bottom - fh, safe.w, fh), ctx);
+		}
 
 		/* Header and body centre together, as one block.
        Two earlier attempts were both wrong in instructive ways. Holding the
@@ -551,13 +573,13 @@ const COMPOSE = {
        This layout exists for a statement plate, and a statement sits in the
        middle of its frame. The kicker travels with the block it introduces. */
 		const from = safe.y;
-		const to = safe.bottom - fh - space(gap);
+		const to = safe.bottom - fh - (footer ? space(gap) : 0);
 		const bh = measureNode(block, track).h;
 		const slack = to - from - bh;
 		const top = slack > 0 ? snap(from + slack / 2) : from;
 		solve(block, new Rect(x, top, track, bh), ctx);
 
-		const root = stack({ gap, children: [block, footer] });
+		const root = stack({ gap, children: [block, footer].filter(Boolean) });
 		root.rect = safe;
 		return { root, bodySlot, asideSlot: null };
 	},

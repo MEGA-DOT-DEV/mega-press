@@ -36,6 +36,8 @@ Exit codes: `0` the plate locked, `1` it was refused, `2` the tool failed.
 }
 ```
 
+`title` is optional. `kicker`, `number`, and `footnote` are optional chase chrome — omit them. Do not invent a source line or SPECIMEN. The host decides whether a title paints; you may still write one as the claim.
+
 Start with `press kinds`. Then `press schema` for the two or three kinds that
 fit. Then write JSON and `press check`. Do not invent a kind. Do not fill
 missing slots with demo copy — the lock will refuse, and that is the point.

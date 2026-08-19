@@ -31,7 +31,8 @@ export type PlatePlan = {
 	readonly kind: PlatePlanKind;
 	readonly id: string;
 	readonly kicker?: string;
-	readonly title: string;
+	readonly number?: string;
+	readonly title?: string;
 	readonly lead?: string;
 	readonly footnote?: string;
 	/** railSteps */
@@ -91,11 +92,12 @@ export type ArtifactPlan = PlatePlan;
 export const PLATE_PLAN_JSON_SCHEMA: Record<string, unknown> = {
 	type: "object",
 	additionalProperties: false,
-	required: ["kind", "id", "title"],
+	required: ["kind", "id"],
 	properties: {
 		kind: { type: "string", enum: [...PLATE_PLAN_KINDS] },
 		id: { type: "string", minLength: 2, maxLength: 64 },
 		kicker: { type: "string", maxLength: 48 },
+		number: { type: "string", maxLength: 8 },
 		title: { type: "string", minLength: 8, maxLength: 120 },
 		lead: { type: "string", maxLength: 160 },
 		footnote: { type: "string", maxLength: 36 },
@@ -225,8 +227,10 @@ export function parsePlatePlan(raw: unknown): PlatePlan | null {
 	if (!isRecord(raw)) return null;
 	const kind = String(raw.kind ?? "");
 	if (!(PLATE_PLAN_KINDS as readonly string[]).includes(kind)) return null;
-	const title = String(raw.title ?? "").trim();
-	if (title.length < 4) return null;
+	if (raw.title != null && raw.title !== "") {
+		const title = String(raw.title).trim();
+		if (title.length < 4) return null;
+	}
 	return raw as unknown as PlatePlan;
 }
 

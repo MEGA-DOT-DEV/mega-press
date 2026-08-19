@@ -249,12 +249,12 @@ A plate is a fixed frame of **evidence that teaches**, not decoration and not a 
 If the surrounding prose were hidden, a good plate would still carry the concept.
 
 ## What "good" means
-- The title is one claim the figure proves or organizes.
+- A title, when present, is one claim the figure proves or organizes. It is optional; hosts may keep it and not paint it.
+- kicker, number, and footnote are optional chase chrome. Omit them. Do not invent SPECIMEN.
 - The body holds about **four to six information units** (a step, card, metric row, checklist row, or table row counts as one).
 - Empty half-frames are a failure: if the body is thin, add units or choose a denser component — do not ship a one-line figure.
 - Prefer concrete nouns, named checks, real tradeoffs, and numbers with units.
-- Do not invent statistics. Use SPECIMEN only when illustrating a shape; say so in footnote.
-- footnote is short (under ~36 characters): "SOURCE: …" or "SPECIMEN".
+- Do not invent statistics.
 
 ## Placement
 Emit 1 or 2 plate blocks mixed into the prose (after the claim they support).
@@ -264,10 +264,7 @@ Never first. Never last before the path blocks.
 {"t":"plate","spec":{
   "id":"unique-slug",
   "frame":"landscape",
-  "kicker":"SECTION / ASPECT",
   "title":"The one claim this frame makes.",
-  "lead":"optional orientation line",
-  "footnote":"SPECIMEN",
   "body":{ "type":"railSteps", "items":[ ... ] }
 }}
 

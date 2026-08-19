@@ -259,20 +259,20 @@ export function normalizePlateSpec(raw: unknown): Record<string, unknown> {
 	}
 
 	if (spec.title == null || String(spec.title).trim() === "") {
-		if (typeof spec.claim === "string") spec.title = spec.claim;
-		else if (typeof spec.heading === "string") spec.title = spec.heading;
+		if (typeof spec.claim === "string" && spec.claim.trim()) spec.title = spec.claim;
+		else if (typeof spec.heading === "string" && spec.heading.trim()) spec.title = spec.heading;
+		else delete spec.title;
 	}
 
 	if (spec.id == null || String(spec.id).trim() === "") {
 		spec.id = `plate-${Date.now().toString(36)}`;
 	}
 
-	// Footer brand needs room
+	// Footnote is authored chrome. Empty or missing stays absent — never invent SPECIMEN.
 	if (typeof spec.footnote === "string") {
 		const f = spec.footnote.trim();
-		spec.footnote = f.length > 36 ? "SPECIMEN" : f || "SPECIMEN";
-	} else {
-		spec.footnote = "SPECIMEN";
+		if (f) spec.footnote = f;
+		else delete spec.footnote;
 	}
 
 	if (spec.body == null) {
@@ -319,13 +319,10 @@ export function normalizePlateSpec(raw: unknown): Record<string, unknown> {
 	if (spec.body != null) spec.body = normalizeNode(spec.body);
 
 	// Drop empty optional chrome — press text() refuses "" (TEXT_MISSING).
-	for (const key of ["kicker", "lead", "number"] as const) {
+	for (const key of ["kicker", "lead", "number", "footnote", "title"] as const) {
 		const v = spec[key];
 		if (v === undefined || v === null) continue;
 		if (typeof v === "string" && v.trim() === "") delete spec[key];
-	}
-	if (typeof spec.footnote === "string" && spec.footnote.trim() === "") {
-		spec.footnote = "SPECIMEN";
 	}
 
 	return stripDashes(spec) as Record<string, unknown>;

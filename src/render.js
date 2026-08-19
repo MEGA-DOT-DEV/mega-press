@@ -20,7 +20,7 @@ import { cellCanvas, resolve } from "./screen.js";
 import { COLOR, FAMILY, lineHeight, STROKE, type } from "./tokens.js";
 
 const NS_STYLE = `
-.press-plate { position: relative; overflow: hidden; background: ${COLOR.page}; }
+.press-plate { position: relative; overflow: hidden; }
 .press-plate canvas { position: absolute; inset: 0; display: block; pointer-events: none; }
 .press-ground { position: absolute; pointer-events: none; }
 .press-dom { position: absolute; inset: 0; }
@@ -49,6 +49,7 @@ export function mount(plate, host, { dpr = 2, field = null, pixelSize = 4 } = {}
 	root.className = "press-plate";
 	root.style.width = `${frame.w}px`;
 	root.style.height = `${frame.h}px`;
+	root.style.background = COLOR.page;
 
 	// 0. the ground the plate declares, behind everything, always full bleed.
 	//
@@ -173,17 +174,12 @@ const PICTURE = {
 };
 
 /**
- * A background src is resolved against the lab root, not against whichever
- * document happens to be mounting the plate.
- *
- * The lab mounts plates from `/graphics-lab/index.html` and the test pages
- * mount them from `/graphics-lab/build/`, so a src written relative to the
- * document silently resolves to two different files depending on who is
- * looking at it, and the one that 404s does not fail, it just prints an empty
- * ground. Anchoring to the module's own URL makes one path correct everywhere.
+ * Background srcs stay as written. Bundlers treat `new URL("../", import.meta.url)`
+ * as a static asset and refuse the directory, which broke Next/Vite consumers.
+ * Absolute and protocol-relative URLs already work; relative ones are
+ * document-relative. The image kind is withheld from the catalog.
  */
-const LAB_ROOT = new URL("../", import.meta.url);
-const resolveSrc = (src) => (/^([a-z]+:|\/\/|\/)/i.test(src) ? src : new URL(src, LAB_ROOT).href);
+const resolveSrc = (src) => src;
 
 function paintPicture(doc, root, plate, pixelSize) {
 	const { frame, background } = plate;

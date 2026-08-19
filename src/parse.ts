@@ -13,7 +13,7 @@ export type ParseResult = ParseOk | ParseFail;
 const isRecord = (v: unknown): v is Record<string, unknown> =>
 	typeof v === "object" && v !== null && !Array.isArray(v);
 
-/** Strict parse. Unknown kinds and missing title/kind refuse. */
+/** Strict parse. Unknown kinds refuse. Title is optional. */
 export function parseArtifact(json: unknown): ParseResult {
 	if (!isRecord(json)) {
 		return {
@@ -28,15 +28,22 @@ export function parseArtifact(json: unknown): ParseResult {
 			errors: [{ code: "UNKNOWN_KIND", message: `unknown artifact kind "${kind}"` }],
 		};
 	}
-	const title = String(json.title ?? "").trim();
-	if (title.length < 4) {
+	const title = typeof json.title === "string" ? json.title.trim() : "";
+	if (json.title != null && json.title !== "" && title.length < 4) {
 		return {
 			ok: false,
-			errors: [{ code: "BAD_TITLE", message: "title must be at least 4 characters" }],
+			errors: [{ code: "BAD_TITLE", message: "title must be at least 4 characters when present" }],
 		};
 	}
 	const id = String(json.id ?? `plan-${kind}`)
 		.replace(/[^a-zA-Z0-9_-]/g, "-")
 		.slice(0, 64);
-	return { ok: true, plan: { ...(json as unknown as ArtifactPlan), kind: kind as ArtifactPlan["kind"], id, title } };
+	const plan = {
+		...(json as unknown as ArtifactPlan),
+		kind: kind as ArtifactPlan["kind"],
+		id,
+	};
+	if (title) return { ok: true, plan: { ...plan, title } };
+	const { title: _omit, ...rest } = plan;
+	return { ok: true, plan: rest as ArtifactPlan };
 }

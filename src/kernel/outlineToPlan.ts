@@ -84,7 +84,6 @@ export const outlineToPlatePlan = (input: {
 		kind: input.kind,
 		id,
 		title: input.title,
-		footnote: "SPECIMEN" as const,
 		...(input.kicker ? { kicker: input.kicker } : {}),
 	};
 

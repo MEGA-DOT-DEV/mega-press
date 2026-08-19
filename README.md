@@ -47,4 +47,6 @@ pnpm example   # local fixtures via mountArtifact — no /lab/*
 
 `src/index.ts` is the contract: `ARTIFACT_KINDS`, `parseArtifact`, `buildArtifact`, `mountArtifact`, `outlineToArtifact`, and the agent catalog (`listArtifactModules`, `getArtifactModuleSchema`, `artifactCatalogPromptBlock`).
 
-Plate geometry, fonts, and CSS live in this package. Do not fork a second visual stack in a consumer.
+Host theme (not artifact JSON): `configurePress({ chrome, color, fonts })` and `mountArtifact(el, spec, { chrome: "embed" })`. `embed` keeps a title on the spec and does not paint it — use that when the figure sits under an article heading.
+
+Plate geometry, fonts, and CSS live in this package. Do not fork a second visual stack in a consumer. Colour overrides must still clear the contrast lock.

@@ -16,9 +16,9 @@
  *   {
  *     "id": "01-migration-sequence",
  *     "frame": "landscape",              // landscape | portrait | square
- *     "kicker": "MIGRATION / SEQUENCE",
- *     "number": "01",
- *     "title": "Structure first. Parity second. Launch last.",
+ *     "kicker": "optional utility label above the title",
+ *     "number": "optional frame number, upper right",
+ *     "title": "optional claim; hosts may keep it and not paint it",
  *     "lead": "optional single line under the title",
  *     "footnote": "optional, prints right of the mega.dev footer",
  *     "gap": 4,                          // optional root rhythm, space step
@@ -158,8 +158,6 @@ export function compileSpec(spec) {
 		throw new SpecError("a spec must be a JSON object.");
 	}
 	if (!spec.id) throw new SpecError('a spec needs an "id". It becomes the PNG filename.');
-	if (!spec.title)
-		throw new SpecError('a spec needs a "title". Every frame states exactly one claim.');
 	if (!spec.body) throw new SpecError('a spec needs a "body".');
 
 	const unknown = Object.keys(spec).filter((k) => !PLATE_FIELDS.has(k));

@@ -167,8 +167,8 @@ export const lockPlate = (raw: unknown): LockResult => {
 	}
 
 	const title = spec.title;
-	if (typeof title !== "string" || !title.trim()) {
-		errors.push({ code: "BAD_SPEC", message: "title required (the one claim)" });
+	if (title !== undefined && title !== null && (typeof title !== "string" || !title.trim())) {
+		errors.push({ code: "BAD_SPEC", message: "title must be a non-empty string when present" });
 	}
 
 	if (!("body" in spec) || spec.body === undefined) {

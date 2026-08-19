@@ -31,12 +31,12 @@ const fail = (code: string, message: string): CompileFail => ({
 const plateBase = (plan: ArtifactPlan): Record<string, unknown> => ({
 	id: plan.id || `plate-${plan.kind}`,
 	frame: "landscape" as const,
-	title: plan.title,
-	footnote:
-		typeof plan.footnote === "string" && plan.footnote.trim().length > 0
-			? plan.footnote.trim().slice(0, 36)
-			: "SPECIMEN",
+	...(plan.title ? { title: plan.title } : {}),
+	...(typeof plan.footnote === "string" && plan.footnote.trim().length > 0
+		? { footnote: plan.footnote.trim().slice(0, 36) }
+		: {}),
 	...(plan.kicker ? { kicker: plan.kicker } : {}),
+	...(plan.number ? { number: plan.number } : {}),
 	...(plan.lead ? { lead: plan.lead } : {}),
 });
 

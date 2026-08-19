@@ -163,8 +163,7 @@ describe("author plate admissibility", () => {
 		const withoutFootnote = validPlate();
 		const { footnote: _footnote, ...spec } = withoutFootnote.spec;
 		expect(validateAuthorPlate({ ...withoutFootnote, spec })).toMatchObject({
-			ok: false,
-			error: { code: "PRESS_NORMALIZATION" },
+			ok: true,
 		});
 	});
 

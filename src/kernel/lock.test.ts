@@ -30,6 +30,22 @@ describe("lockPlate", () => {
 		if (result.ok) expect(result.spec.kicker).toBeUndefined();
 	});
 
+	it("locks without title, kicker, number, or footnote",
+		() => {
+			const result = lockPlate({
+				id: "bare",
+				body: { type: "note", content: "Body copy with real text." },
+			});
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.spec.title).toBeUndefined();
+				expect(result.spec.footnote).toBeUndefined();
+				expect(result.spec.kicker).toBeUndefined();
+				expect(result.spec.number).toBeUndefined();
+			}
+		},
+	);
+
 	it("refuses nested empty strings that would hit press text()", () => {
 		const result = lockPlate({
 			id: "empty-name",

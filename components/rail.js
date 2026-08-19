@@ -14,6 +14,7 @@
 
 import { rail as deriveRail } from "../src/connect.js";
 import { marker, row, stack, text } from "../src/solve.js";
+import { resolveChrome } from "../src/theme.js";
 import { COLOR, STROKE, space } from "../src/tokens.js";
 
 /**
@@ -27,7 +28,7 @@ export function railSteps({
 	markerSize = space(2),
 	gap = 4, // between steps
 	markerGap = 3, // from the dot to its text
-	numbered = true,
+	numbered = resolveChrome().numbered,
 	accent = COLOR.red,
 	quiet = COLOR.black2,
 } = {}) {

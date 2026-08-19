@@ -72,8 +72,11 @@ export const validateAuthorPlate = (value: unknown): AuthorPlateValidation => {
 	}
 	const id = value.spec.id;
 	const title = value.spec.title;
-	if (typeof id !== "string" || !id.trim() || typeof title !== "string" || !title.trim()) {
-		return invalid("BAD_SPEC", "plate id and title are required");
+	if (typeof id !== "string" || !id.trim()) {
+		return invalid("BAD_SPEC", "plate id is required");
+	}
+	if (title !== undefined && title !== null && (typeof title !== "string" || !title.trim())) {
+		return invalid("BAD_SPEC", "plate title must be a non-empty string when present");
 	}
 	const body = value.spec.body;
 	if (!isRecord(body) || typeof body.type !== "string" || !body.type.trim()) {
