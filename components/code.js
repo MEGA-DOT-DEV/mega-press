@@ -70,14 +70,21 @@ const codeLine = (line, accent, index) => {
 };
 
 /**
- * @param {object} spec
- * @param {string} spec.code     the snippet, lines separated by \n, drawn verbatim
- * @param {string} [spec.label]  small mono caption above the block (a filename,
- *                               a tool name, "01 value_set"), quiet by default
- * @param {number[]} [spec.accentLines] 1-based line numbers drawn in the accent
- * @param {number} [spec.gap]    scale step between label and block
+ * The bordered block itself, reusable by any component that carries a
+ * verbatim snippet (the `code` figure, a transcript event's call shape).
+ *
+ * `unit` is the caller's claim about information density: a standalone code
+ * figure is one unit; a block inside an event whose row is already a unit
+ * must not count twice.
+ *
+ * @param {string} source          lines separated by \n, drawn verbatim
+ * @param {object} [opts]
+ * @param {number[]} [opts.accentLines] 1-based line numbers drawn in the accent
+ * @param {boolean} [opts.accent]  accent the border: the one block the claim is about
+ * @param {boolean} [opts.unit]    count the block as an information unit
+ * @param {number} [opts.pad]      scale step inside the border
  */
-export function code({ code: source, label, accentLines = [], gap = 2 } = {}) {
+export function codeBlock(source, { accentLines = [], accent = false, unit = false, pad = 4 } = {}) {
 	if (typeof source !== "string" || !source.trim()) {
 		throw new PressError(
 			"CODE_MISSING",
@@ -111,15 +118,27 @@ export function code({ code: source, label, accentLines = [], gap = 2 } = {}) {
 		line.trim().length === 0 ? blank(space(3)) : codeLine(line, accented.has(i + 1), i),
 	);
 
-	const block = box({
-		pad: 4,
+	return box({
+		pad,
 		border: true,
-		borderColor: COLOR.black2,
+		borderColor: accent ? COLOR.red : COLOR.black2,
 		fill: COLOR.panel,
 		gap: 1,
-		unit: true,
+		unit,
 		children: body,
 	});
+}
+
+/**
+ * @param {object} spec
+ * @param {string} spec.code     the snippet, lines separated by \n, drawn verbatim
+ * @param {string} [spec.label]  small mono caption above the block (a filename,
+ *                               a tool name, "01 value_set"), quiet by default
+ * @param {number[]} [spec.accentLines] 1-based line numbers drawn in the accent
+ * @param {number} [spec.gap]    scale step between label and block
+ */
+export function code({ code: source, label, accentLines = [], gap = 2 } = {}) {
+	const block = codeBlock(source, { accentLines, unit: true });
 
 	if (!label) return block;
 

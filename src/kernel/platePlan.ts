@@ -98,11 +98,13 @@ export type PlatePlan = {
 		readonly title: string;
 		readonly detail?: string;
 	}[];
-	/** timelineVertical — labelled events top to bottom */
+	/** timelineVertical — labelled events top to bottom, optionally with a verbatim block */
 	readonly events?: readonly {
 		readonly at: string;
 		readonly title: string;
 		readonly detail?: string;
+		readonly code?: string;
+		readonly accent?: boolean;
 	}[];
 	/** graph */
 	readonly dir?: "x" | "y";
@@ -284,6 +286,8 @@ export const PLATE_PLAN_JSON_SCHEMA: Record<string, unknown> = {
 					at: { type: "string", maxLength: 16 },
 					title: { type: "string" },
 					detail: { type: "string" },
+					code: { type: "string", maxLength: 600 },
+					accent: { type: "boolean" },
 				},
 			},
 		},

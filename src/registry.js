@@ -214,16 +214,27 @@ const SEQUENCE = [
 	def("timelineVertical", {
 		fn: timelineVertical,
 		summary: "Dated stops top to bottom, the date in its own derived column.",
+		use: "an event log or transcript; an event may carry the verbatim call shape it is about",
 		params: {
 			items: {
 				type: ITEMS,
 				required: true,
 				min: 2,
-				of: { date: "string (required)", title: "string (required)", detail: "string" },
+				of: {
+					date: "string (required)",
+					title: "string (required)",
+					detail: "string",
+					code: "string, \\n-separated verbatim block under the event, 2 to 8 lines",
+					accent: "boolean, the one event the claim is about",
+				},
 			},
 			activeTo: { type: "number", default: -1 },
 			gap: { type: GAP, default: 4 },
 		},
+		notes: [
+			"An item's code block is painted verbatim by the code component's line painter: indentation kept, a too-wide line refused by name, never wrapped.",
+			"accent fills the item's marker, colours its label, and accents its block's border.",
+		],
 		example: {
 			type: "timelineVertical",
 			items: [

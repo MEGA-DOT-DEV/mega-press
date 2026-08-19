@@ -518,13 +518,28 @@ const MODULES: readonly ArtifactModuleSchema[] = [
 							},
 							title: { type: "string" },
 							detail: { type: "string", minLength: 16 },
+							code: {
+								type: "string",
+								maxLength: 600,
+								description:
+									"Optional verbatim block under the event: the call shape, payload, or result; \\n line breaks, 2 to 8 lines, never wrapped",
+							},
+							accent: {
+								type: "boolean",
+								description: "true on the one event the claim is about",
+							},
 						},
 					},
 				},
 			},
 		},
-		density: ["3–6 events", "detail clauses on most events", "actor labels short and repeated verbatim"],
-		outlineHint: "Each line: ACTOR | Title | detail clause.",
+		density: [
+			"3–6 events",
+			"detail clauses or a verbatim code block on most events",
+			"actor labels short and repeated verbatim",
+			"at most one accented event",
+		],
+		outlineHint: "Each line: ACTOR | Title | detail clause. Follow a line with indented lines to attach them as that event's code block.",
 		exampleOutline: [
 			"USER | Asks in plain language | How did last week's campaign perform?",
 			"AGENT | Picks a tool from the shared schema | get_campaign_stats with range last_week.",

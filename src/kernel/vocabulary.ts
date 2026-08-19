@@ -250,10 +250,16 @@ export const COMPONENT_GUIDE: Record<string, { readonly use: string; readonly ex
 			},
 		},
 		timelineVertical: {
-			use: "an event log or transcript read top to bottom, the label (actor, stage, or date) in its own column",
+			use: "an event log or transcript read top to bottom, the label (actor, stage, or date) in its own column; an event may carry a verbatim code block (the call, payload, or result the event is about) and accent: true on the one event the claim is about",
 			example: {
 				type: "timelineVertical",
 				items: [
+					{
+						date: "MCP",
+						title: "Publishes one tool schema",
+						code: '{\n  "tools": ["send_email", "get_campaign_stats", "list_audiences"]\n}',
+						accent: true,
+					},
 					{
 						date: "USER",
 						title: "Asks in plain language",
@@ -262,12 +268,7 @@ export const COMPONENT_GUIDE: Record<string, { readonly use: string; readonly ex
 					{
 						date: "AGENT",
 						title: "Picks a tool from the shared schema",
-						detail: "get_campaign_stats with range last_week.",
-					},
-					{
-						date: "TOOL",
-						title: "Returns the numbers",
-						detail: "128,400 impressions, 3,210 clicks, 142 conversions.",
+						code: '{\n  "tool": "get_campaign_stats",\n  "arguments": { "range": "last_week" }\n}',
 					},
 					{
 						date: "AGENT",
@@ -383,7 +384,7 @@ Compose two nodes with {"type":"stack","gap":3,"children":[...]} when one claim 
 4. No components: ${WITHHELD_COMPONENTS.join(", ")}.
 5. Only these body types: ${ALLOWED_COMPONENTS.join(", ")}.
 6. Never invent types (callout, infobox, alert). Use note with content.
-7. note = {type, content}. compare = before/after {label, title, items[]}. railSteps/railFlow items = {name, detail}. checklist items = {text, ok}. timeline/timelineVertical items = {date, title, detail?} (date is the short label column: an actor, stage, or date). graph = nodes {key, title, detail?} + edges {from, to}. derivation steps = {expr, note} (note required after the first step). code = {code, label?, accentLines?} (code is one string with \\n line breaks, 2 to 14 lines, drawn verbatim; a line too wide for the frame refuses instead of wrapping).
+7. note = {type, content}. compare = before/after {label, title, items[]}. railSteps/railFlow items = {name, detail}. checklist items = {text, ok}. timeline/timelineVertical items = {date, title, detail?} (date is the short label column: an actor, stage, or date). A timelineVertical item may add code (a verbatim block, 2 to 8 lines with \\n breaks) and accent: true on the one event the claim is about. graph = nodes {key, title, detail?} + edges {from, to}. derivation steps = {expr, note} (note required after the first step). code = {code, label?, accentLines?} (code is one string with \\n line breaks, 2 to 14 lines, drawn verbatim; a line too wide for the frame refuses instead of wrapping).
 
 ## Choose the component by what the content is
   process / method / loop          railSteps

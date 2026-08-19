@@ -254,12 +254,14 @@ export const assessPlatePedagogy = (spec: Record<string, unknown>): readonly Ped
 			});
 		}
 		const detailed = items.filter(
-			(it) => isRecord(it) && String(it.detail ?? "").trim().length >= 16,
+			(it) =>
+				isRecord(it) &&
+				(String(it.detail ?? "").trim().length >= 16 || String(it.code ?? "").trim().length > 0),
 		);
 		if (detailed.length < 2) {
 			errors.push({
 				code: "PLATE_THIN",
-				message: `${type} needs detail clauses on most stops, not bare titles.`,
+				message: `${type} needs detail clauses (or a verbatim block) on most stops, not bare titles.`,
 			});
 		}
 	}

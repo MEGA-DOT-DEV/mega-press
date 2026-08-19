@@ -28,6 +28,7 @@
 
 import { rail as deriveRail } from "../src/connect.js";
 import { custom, marker, row, stack, text } from "../src/solve.js";
+import { codeBlock } from "./code.js";
 import { measure } from "../src/text.js";
 import { COLOR, FAMILY, lineHeight, STROKE, snap, space, type, typeSize } from "../src/tokens.js";
 
@@ -438,6 +439,12 @@ export function schedule({ items, markerSize = space(2), accent = COLOR.red } = 
  * The same sequence read top to bottom, with the date in its own column. The
  * column is as wide as the widest date, so every title starts on one vertical
  * and the rail runs between the two columns rather than beside one of them.
+ *
+ * An item may carry `code`: the verbatim call shape, payload, or result that
+ * the event *is*. A transcript that says "the agent picks a tool" without
+ * showing the pick is prose wearing a diagram's clothes; the block under the
+ * title is the evidence. `accent: true` on an item fills its marker, colours
+ * its label, and accents its block's border: the one event the claim is about.
  * ------------------------------------------------------------------------ */
 
 export function timelineVertical({
@@ -456,10 +463,11 @@ export function timelineVertical({
 	const markers = [];
 
 	const rows = items.map((item, i) => {
+		const active = i <= activeTo || Boolean(item.accent);
 		const dot = marker({
 			size: markerSize,
-			fill: i <= activeTo ? accent : quiet,
-			ring: i > activeTo,
+			fill: active ? accent : quiet,
+			ring: !active,
 			alignTo: "list",
 		});
 		markers.push(dot);
@@ -470,17 +478,20 @@ export function timelineVertical({
 			unit: true,
 			children: [
 				text(item.date, "utility", {
-					color: i <= activeTo ? accent : COLOR.quiet,
+					color: active ? accent : COLOR.quiet,
 					width: dateWidth,
 				}),
 				dot,
 				stack({
-					gap: 1,
+					gap: item.code ? 2 : 1,
 					grow: true,
 					children: [
 						text(item.title, "list", { color: COLOR.text }),
 						item.detail
 							? text(item.detail, "body", { color: COLOR.muted, commentary: true })
+							: null,
+						item.code
+							? codeBlock(item.code, { accent: Boolean(item.accent), pad: 3 })
 							: null,
 					],
 				}),

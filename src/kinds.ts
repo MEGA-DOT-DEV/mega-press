@@ -461,16 +461,47 @@ const timelineVertical: KindModule = {
 						maxLength: STRING_CAPS.detail.max,
 						description: STRING_CAPS.detail.description,
 					},
+					code: {
+						type: "string",
+						maxLength: STRING_CAPS.snippet.max,
+						description:
+							"Optional verbatim block under the event: the call shape, payload, or result the event is about; \\n line breaks, 2 to 8 lines, never wrapped",
+					},
+					accent: {
+						type: "boolean",
+						description: "true on the one event the claim is about",
+					},
 				},
 			}),
 		},
 	},
 	compile(plan) {
 		const items = (plan.events ?? [])
-			.map(stopToItem)
+			.map((e) => {
+				const base = stopToItem(e);
+				if (!base) return null;
+				const source = typeof e.code === "string" ? e.code.replace(/\t/g, "  ") : "";
+				const codeLines = source
+					.split("\n")
+					.filter((l, i, all) => l.trim().length > 0 || (i > 0 && i < all.length - 1));
+				return {
+					...base,
+					...(codeLines.filter((l) => l.trim()).length >= 2
+						? { code: codeLines.join("\n") }
+						: {}),
+					...(e.accent ? { accent: true } : {}),
+				};
+			})
 			.filter((s): s is NonNullable<typeof s> => s != null);
 		const counted = countFail("timelineVertical", "events", items.length);
 		if (counted) return counted;
+		const bloated = items.find((i) => i.code && i.code.split("\n").length > 8);
+		if (bloated) {
+			return fail(
+				"EVENT_CODE_TOO_LONG",
+				`event "${bloated.date}" carries ${bloated.code?.split("\n").length} code lines; 8 is the cap inside a transcript. Use the code kind for a standalone block.`,
+			);
+		}
 		return finish(plan, { type: "timelineVertical", items });
 	},
 };

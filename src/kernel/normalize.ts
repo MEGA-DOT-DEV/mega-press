@@ -184,6 +184,7 @@ function normalizeNode(node: unknown): unknown {
 				const d = row.body ?? row.description;
 				if (d != null) row.detail = d;
 			}
+			if (row.code == null && row.snippet != null) row.code = row.snippet;
 			delete row.at;
 			delete row.label;
 			delete row.actor;
@@ -191,6 +192,7 @@ function normalizeNode(node: unknown): unknown {
 			delete row.name;
 			delete row.body;
 			delete row.description;
+			delete row.snippet;
 			return row;
 		});
 	}

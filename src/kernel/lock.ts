@@ -153,6 +153,22 @@ const validateNode = (node: unknown, path: string, errors: PressError[], depth: 
 					code: "STOP_INCOMPLETE",
 					message: `${path}.items[${i}]: ${type} stops need date + title`,
 				});
+				return;
+			}
+			if (item.code === undefined) return;
+			if (type === "timeline") {
+				errors.push({
+					code: "STOP_CODE_UNSUPPORTED",
+					message: `${path}.items[${i}]: a horizontal timeline has no room for a code block; use timelineVertical`,
+				});
+				return;
+			}
+			const lines = String(item.code).split("\n");
+			if (lines.filter((l) => l.trim()).length < 2 || lines.length > 8) {
+				errors.push({
+					code: "EVENT_CODE_LINES",
+					message: `${path}.items[${i}]: an event's code block needs 2 to 8 verbatim lines`,
+				});
 			}
 		});
 	}
