@@ -71,6 +71,7 @@ import {
 	STROKE,
 	snap,
 	space,
+	UNIT,
 } from "./tokens.js";
 import { resolveChrome } from "./theme.js";
 import { validate } from "./validate.js";
@@ -251,8 +252,11 @@ export function buildPlate(spec, { validateNow = true, chrome: chromeOpt } = {})
 
      Now the brand holds its measured width and the footnote takes the slack.
      A footnote too long for what is left is refused rather than wrapped, since
-     a two line footer is the same defect one step later. */
-	const brandWidth = showBrand ? snap(measure("mega.dev", "brand")) : 0;
+     a two line footer is the same defect one step later.
+
+     Width is ceiled onto the unit grid, never rounded down. `snap()` can drop
+     up to 2px; with brand tracking that last pixel is the "v" in mega.dev. */
+	const brandWidth = showBrand ? Math.ceil(measure("mega.dev", "brand") / UNIT) * UNIT : 0;
 
 	/* Checked here rather than left to the generic line-budget refusal, because
      that one advises widening the column and the footer's measure is the safe
@@ -272,7 +276,9 @@ export function buildPlate(spec, { validateNow = true, chrome: chromeOpt } = {})
 	}
 
 	const footerChildren = [
-		showBrand ? text("mega.dev", "brand", { color: COLOR.red, width: brandWidth }) : null,
+		showBrand
+			? text("mega.dev", "brand", { color: COLOR.red, width: brandWidth, maxLines: 1 })
+			: null,
 		footnoteText
 			? text(footnoteText, "utility", {
 					color: COLOR.quiet,

@@ -88,6 +88,15 @@ describe("press theme", () => {
 		expect(COLOR.red).toBe("#ff0000");
 	});
 
+	it("keeps the mega.dev brand on one line", () => {
+		const plate = buildPlate(compileSpec(railSpec));
+		const brand = textsOf(plate).find((n) => n.text === "mega.dev") as
+			| { _block?: { lines: string[] } }
+			| undefined;
+		expect(brand).toBeTruthy();
+		expect(brand?._block?.lines).toEqual(["mega.dev"]);
+	});
+
 	it("does not invent SPECIMEN when footnote is omitted", () => {
 		const parsed = parseArtifact({
 			kind: "railSteps",
