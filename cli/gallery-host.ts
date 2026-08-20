@@ -1,5 +1,10 @@
 import { frameSize } from "../src/kernel/lock.ts";
 import { ensurePressFonts, mountArtifact } from "../src/mount.ts";
+import pressFontCss from "../src/fonts.css?inline";
+import { providePressFontCss } from "../src/mount.ts";
+
+// Inline the faces so a strict-CSP host (an artifact page) still registers them.
+providePressFontCss(pressFontCss);
 
 type GalleryEntry = {
 	readonly kind: string;

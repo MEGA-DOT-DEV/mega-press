@@ -17,19 +17,62 @@ const MEASURE_FACES = [
 	'400 26px "Geist Sans"',
 ] as const;
 
-const injectFontsOnce = (doc: Document): void => {
-	if (doc.getElementById(FONT_STYLE_ID)) return;
-	const href = new URL("./fonts.css", import.meta.url).href;
-	const link = doc.createElement("link");
-	link.id = FONT_STYLE_ID;
-	link.rel = "stylesheet";
-	link.href = href;
-	doc.head.appendChild(link);
+/**
+ * Hosts that bundle the face CSS (the CLI's render and gallery pages) hand its
+ * TEXT over before mounting, and injection becomes an inline <style>. This is
+ * not an optimisation: a sandboxed host (an artifact page, a strict-CSP embed)
+ * refuses a data: stylesheet LINK, the faces never register, fonts.load()
+ * resolves against an empty set, and the plate paints in a fallback mono whose
+ * advances disagree with the baked table, glyphs colliding run against run.
+ * Inline style text survives every such sandbox.
+ */
+let providedFontCss: string | null = null;
+
+export function providePressFontCss(css: string): void {
+	if (typeof css === "string" && css.trim()) providedFontCss = css;
+}
+
+const fontInjection = new WeakMap<Document, Promise<void>>();
+
+/**
+ * Inject the faces exactly once per document and resolve only when the
+ * stylesheet has PARSED. fonts.load() consults the FontFaceSet as it is at
+ * call time: loading before the @font-face rules register resolves empty and
+ * successful, which is the silent-fallback failure this whole system exists
+ * to refuse.
+ */
+const injectFontsOnce = (doc: Document): Promise<void> => {
+	const pending = fontInjection.get(doc);
+	if (pending) return pending;
+	const done = new Promise<void>((resolve) => {
+		if (doc.getElementById(FONT_STYLE_ID)) {
+			resolve();
+			return;
+		}
+		if (providedFontCss) {
+			const style = doc.createElement("style");
+			style.id = FONT_STYLE_ID;
+			style.textContent = providedFontCss;
+			doc.head.appendChild(style);
+			resolve();
+			return;
+		}
+		const href = new URL("./fonts.css", import.meta.url).href;
+		const link = doc.createElement("link");
+		link.id = FONT_STYLE_ID;
+		link.rel = "stylesheet";
+		link.href = href;
+		link.onload = () => resolve();
+		link.onerror = () => resolve();
+		doc.head.appendChild(link);
+	});
+	fontInjection.set(doc, done);
+	return done;
 };
 
 /** Inject faces and wait until paint will see them. Measure is table-backed. */
 export async function ensurePressFonts(doc: Document = document): Promise<void> {
-	injectFontsOnce(doc);
+	await injectFontsOnce(doc);
 	const fonts = doc.fonts;
 	if (!fonts) return;
 	await Promise.all(MEASURE_FACES.map((face) => fonts.load(face).catch(() => undefined)));

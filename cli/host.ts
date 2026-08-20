@@ -1,5 +1,10 @@
 import { frameSize } from "../src/kernel/lock.ts";
 import { mountArtifact } from "../src/mount.ts";
+import pressFontCss from "../src/fonts.css?inline";
+import { providePressFontCss } from "../src/mount.ts";
+
+// Inline the faces so a strict-CSP host (an artifact page) still registers them.
+providePressFontCss(pressFontCss);
 
 function loadSpec(): Record<string, unknown> {
 	const baked = (globalThis as { __PRESS_SPEC__?: Record<string, unknown> }).__PRESS_SPEC__;
