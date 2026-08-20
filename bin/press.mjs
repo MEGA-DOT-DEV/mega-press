@@ -51,7 +51,17 @@ press  @mega/press, from the command line
 
 Exit codes: 0 success, 1 the plate did not lock, 2 the tool failed.
 
-A spec is JSON: { "id", "kind", "title", …slots }. Start with \`press kinds\`.
+A spec is JSON: { "id", "kind", "title", …slots }. Start with \`press kinds\`,
+then \`press schema <kind>\` for the two or three kinds that fit, then write
+the spec and \`press check\` it.
+
+Rules the lock cannot check for you:
+  · \`title\` is optional and, when present, is the claim — one sentence.
+    The host decides whether it paints.
+  · \`kicker\`, \`number\`, \`footnote\` are host chrome. Omit them. Never
+    invent a source line or SPECIMEN.
+  · Do not invent a kind, and do not pad thin slots with demo copy — the
+    lock refuses thin plates on purpose. Fix the content or change kinds.
 `;
 
 const out = (human, data) => {
@@ -124,14 +134,46 @@ function lockPlan(api, json) {
 }
 
 function printErrors(errors) {
-	return errors.map((e) => `${e.code}: ${e.message}`).join("\n");
+	return errors
+		.map((e) => {
+			const hint = e.code === "UNKNOWN_KIND" ? " — run `press kinds` for the catalog" : "";
+			return `${e.code}: ${e.message}${hint}`;
+		})
+		.join("\n");
 }
 
 function cmdKinds(api) {
 	const kinds = api.listArtifactModules();
 	if (JSON_OUT) return out(null, { ok: true, kinds });
-	const lines = kinds.map((k) => `${k.id.padEnd(12)} ${k.use}`);
-	out(`\n${lines.join("\n")}\n`);
+	const pad = Math.max(...kinds.map((k) => k.id.length)) + 2;
+	const lines = kinds.map((k) =>
+		[
+			`${k.id.padEnd(pad)}${k.use}`,
+			`${" ".repeat(pad)}pick when: ${k.pickWhen}`,
+			`${" ".repeat(pad)}holds: ${k.units}`,
+		].join("\n"),
+	);
+	out(
+		`\n${lines.join("\n\n")}\n\n` +
+			`Pick the two or three kinds that fit and read \`press schema <kind>\` — it\n` +
+			`carries the density rules and bans for each. Do not invent a kind, and do\n` +
+			`not pad thin slots with demo copy; the lock refuses thin plates on purpose.\n\n` +
+			`Spec envelope: { "id", "kind", "title"?, …slots }. \`title\` is the claim;\n` +
+			`the host decides whether it paints. \`kicker\`, \`number\`, \`footnote\` are\n` +
+			`host chrome — omit them; never invent a source line or SPECIMEN.\n`,
+	);
+}
+
+function printSchema(schema) {
+	const list = (label, items) => `${label}:\n${items.map((x) => `  · ${x}`).join("\n")}`;
+	return [
+		`${schema.id}  ${schema.use}`,
+		`pick when: ${schema.pickWhen}`,
+		`holds: ${schema.units}`,
+		list("density", schema.density),
+		list("bans", schema.bans),
+		`slots:\n${JSON.stringify(schema.slots, null, 2)}`,
+	].join("\n\n");
 }
 
 function cmdSchema(api) {
@@ -139,7 +181,7 @@ function cmdSchema(api) {
 	if (!id) {
 		const all = api.listArtifactModules().map((k) => api.getArtifactModuleSchema(k.id));
 		if (JSON_OUT) return out(null, { ok: true, schemas: all });
-		out(all.map((s) => `${s.id}\n  ${s.use}\n  slots: ${JSON.stringify(s.slots)}`).join("\n\n"));
+		out(all.map((s) => printSchema(s)).join("\n\n────\n\n"));
 		return;
 	}
 	const schema = api.getArtifactModuleSchema(id);
@@ -147,12 +189,12 @@ function cmdSchema(api) {
 		if (JSON_OUT) {
 			out(null, { ok: false, errors: [{ code: "UNKNOWN_KIND", message: `unknown kind "${id}"` }] });
 		} else {
-			console.error(`\n  unknown kind "${id}"\n`);
+			console.error(`\n  unknown kind "${id}" — run \`press kinds\` for the catalog\n`);
 		}
 		process.exit(1);
 	}
 	if (JSON_OUT) return out(null, { ok: true, schema });
-	out(`${schema.id}  ${schema.use}\n\n${JSON.stringify(schema.slots, null, 2)}\n`);
+	out(`${printSchema(schema)}\n`);
 }
 
 function printWarnings(warnings) {
