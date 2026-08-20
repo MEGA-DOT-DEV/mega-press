@@ -40,6 +40,9 @@ const TYPE_ALIASES: Record<string, string> = {
 	flows: "compareFlows",
 	dualflow: "compareFlows",
 	sidebyside: "compareFlows",
+	sets: "compareSets",
+	tagcompare: "compareSets",
+	scopecompare: "compareSets",
 	roadmap: "timeline",
 	diagram: "graph",
 	flowchart: "graph",
@@ -335,6 +338,43 @@ function normalizeNode(node: unknown): unknown {
 			delete s.body;
 			delete s.events;
 			delete s.stops;
+			out[key] = s;
+		}
+	}
+
+	if (type === "compareSets") {
+		for (const key of ["left", "right"] as const) {
+			const side = out[key];
+			if (!isRecord(side)) continue;
+			const s: Record<string, unknown> = { ...side };
+			if (s.label == null && s.name != null) s.label = String(s.name);
+			if (typeof s.label === "string") s.label = s.label.toUpperCase();
+			if (s.title == null) {
+				const t = s.claim ?? s.heading;
+				if (t != null) s.title = String(t);
+			}
+			if (s.intro == null) {
+				const i = s.lead ?? s.description ?? s.body;
+				if (i != null) s.intro = i;
+			}
+			if (s.tags == null) {
+				const alt = s.items ?? s.chips ?? s.pills;
+				if (Array.isArray(alt)) s.tags = alt;
+			}
+			// A plain string tag is shorthand for a quiet one, the same coercion a
+			// transcript chip takes: one drawn contract, one spelling in the IR.
+			if (Array.isArray(s.tags)) {
+				s.tags = s.tags.map((t) => (typeof t === "string" ? { text: t } : t));
+			}
+			delete s.name;
+			delete s.claim;
+			delete s.heading;
+			delete s.lead;
+			delete s.description;
+			delete s.body;
+			delete s.items;
+			delete s.chips;
+			delete s.pills;
 			out[key] = s;
 		}
 	}

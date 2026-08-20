@@ -10,6 +10,7 @@ export type ArtifactModuleId =
 	| "railSteps"
 	| "compare"
 	| "compareFlows"
+	| "compareSets"
 	| "metrics"
 	| "cards"
 	| "checklist"
@@ -267,6 +268,114 @@ const MODULES: readonly ArtifactModuleSchema[] = [
 			"One-sided flows (use timelineVertical)",
 			"Sides with fewer than two events",
 			"The same events on both sides",
+		],
+	},
+	{
+		id: "compareSets",
+		title: "Contrasted sets",
+		use: "Two labelled panels side by side, each one claim and a set of short tags; the sizes of the two sets are part of the lesson.",
+		pickWhen:
+			"The contrast is between two collections rather than two sequences, and the size of the set is the argument (a scope expanding, a surface widening, a boundary moving). Use compareFlows when each side is read top to bottom in order; use compare when each side is a few prose lines.",
+		units: "2 sides × {label, title, intro?, 1–8 tags}; each panel is one unit",
+		slots: {
+			type: "object",
+			required: ["left", "right"],
+			properties: {
+				left: {
+					type: "object",
+					required: ["label", "title", "tags"],
+					properties: {
+						label: {
+							type: "string",
+							maxLength: STRING_CAPS.flowLabel.max,
+							description: "Caps mono label naming the side (INITIAL SCOPE, FINAL SCOPE)",
+						},
+						title: {
+							type: "string",
+							maxLength: STRING_CAPS.setTitle.max,
+							description: "The side's claim, drawn in head type",
+						},
+						intro: {
+							type: "string",
+							maxLength: STRING_CAPS.detail.max,
+							description: "Optional one or two sentences framing the claim",
+						},
+						tags: {
+							type: "array",
+							minItems: ITEM_BOUNDS.compareSets.tags.min,
+							maxItems: ITEM_BOUNDS.compareSets.tags.max,
+							description:
+								"Short mono pills in a stretched two-column grid; the count against the other side is the point",
+							items: {
+								type: "object",
+								required: ["text"],
+								properties: {
+									text: {
+										type: "string",
+										maxLength: STRING_CAPS.tag.max,
+										description: STRING_CAPS.tag.description,
+									},
+									accent: { type: "boolean", description: "true on the one tag the claim is about" },
+								},
+							},
+						},
+					},
+				},
+				right: {
+					type: "object",
+					required: ["label", "title", "tags"],
+					properties: {
+						label: { type: "string", maxLength: STRING_CAPS.flowLabel.max },
+						title: { type: "string", maxLength: STRING_CAPS.setTitle.max },
+						intro: { type: "string", maxLength: STRING_CAPS.detail.max },
+						tags: {
+							type: "array",
+							minItems: ITEM_BOUNDS.compareSets.tags.min,
+							maxItems: ITEM_BOUNDS.compareSets.tags.max,
+							items: {
+								type: "object",
+								required: ["text"],
+								properties: {
+									text: { type: "string", maxLength: STRING_CAPS.tag.max },
+									accent: { type: "boolean" },
+								},
+							},
+						},
+					},
+				},
+				accentSide: {
+					type: "string",
+					enum: ["left", "right", "none"],
+					description: "Which panel takes the accent border and ground; right when absent",
+				},
+			},
+		},
+		density: [
+			"1–8 tags per side, and the counts should differ — cardinality is the argument",
+			"label and title on both sides; an intro on the side that needs framing",
+			"at most one accented tag per side",
+			"tags are short mono labels, never clauses — a sentence belongs in the intro",
+		],
+		outlineHint:
+			"Tag lines LEFT: or RIGHT:; the first tagged line is label, title; following lines are tags, one per line, [accent] marking the chosen one.",
+		exampleOutline: [
+			"LEFT: INITIAL SCOPE, One integration, built by hand.",
+			"LEFT: webhook",
+			"LEFT: sheets",
+			"RIGHT: FINAL SCOPE, Every surface the agent can reach.",
+			"RIGHT: webhook",
+			"RIGHT: sheets",
+			"RIGHT: email",
+			"RIGHT: calendar",
+			"RIGHT: storage",
+			"RIGHT: search [accent]",
+		],
+		bans: [
+			"One-sided sets (use cards)",
+			"Tags that are full clauses",
+			"More than eight tags (that is a table)",
+			"Identical tag sets on both sides",
+			"An ordered process (use railSteps or compareFlows)",
 		],
 	},
 	{

@@ -22,6 +22,7 @@ export const PLATE_PLAN_KINDS = [
 	"timeline",
 	"timelineVertical",
 	"compareFlows",
+	"compareSets",
 	"railFlow",
 	"graph",
 	"derivation",
@@ -122,11 +123,19 @@ export type PlatePlan = {
 		/** Short mono pills under the event; a plain string is shorthand for a quiet chip. */
 		readonly chips?: readonly (string | { readonly text: string; readonly accent?: boolean })[];
 	}[];
-	/** compareFlows — two labelled columns, each its own vertical transcript */
+	/**
+	 * compareFlows — two labelled columns, each its own vertical transcript
+	 * (label + events). compareSets — two labelled panels, each a claim plus a
+	 * roster of tags (label + title + tags).
+	 */
 	readonly left?: {
 		readonly label: string;
 		readonly intro?: string;
-		readonly events: readonly {
+		/** compareSets — the panel's claim, drawn in head type */
+		readonly title?: string;
+		/** compareSets — 1..8 short mono tags; a plain string is a quiet tag */
+		readonly tags?: readonly (string | { readonly text: string; readonly accent?: boolean })[];
+		readonly events?: readonly {
 			readonly at: string;
 			readonly title: string;
 			readonly detail?: string;
@@ -138,7 +147,9 @@ export type PlatePlan = {
 	readonly right?: {
 		readonly label: string;
 		readonly intro?: string;
-		readonly events: readonly {
+		readonly title?: string;
+		readonly tags?: readonly (string | { readonly text: string; readonly accent?: boolean })[];
+		readonly events?: readonly {
 			readonly at: string;
 			readonly title: string;
 			readonly detail?: string;
@@ -147,6 +158,8 @@ export type PlatePlan = {
 			readonly chips?: readonly (string | { readonly text: string; readonly accent?: boolean })[];
 		}[];
 	};
+	/** compareSets — which panel takes the accent border and ground; right when absent */
+	readonly accentSide?: "left" | "right" | "none";
 	/** graph */
 	readonly dir?: "x" | "y";
 	readonly nodes?: readonly {
@@ -402,10 +415,30 @@ export const PLATE_PLAN_JSON_SCHEMA: Record<string, unknown> = {
 		left: {
 			type: "object",
 			additionalProperties: false,
-			required: ["label", "events"],
+			required: ["label"],
 			properties: {
 				label: { type: "string", maxLength: 40 },
 				intro: { type: "string", maxLength: 250 },
+				title: { type: "string", maxLength: 60 },
+				tags: {
+					type: "array",
+					minItems: 1,
+					maxItems: 8,
+					items: {
+						anyOf: [
+							{ type: "string", maxLength: 32 },
+							{
+								type: "object",
+								additionalProperties: false,
+								required: ["text"],
+								properties: {
+									text: { type: "string", maxLength: 32 },
+									accent: { type: "boolean" },
+								},
+							},
+						],
+					},
+				},
 				events: {
 					type: "array",
 					minItems: 2,
@@ -447,10 +480,30 @@ export const PLATE_PLAN_JSON_SCHEMA: Record<string, unknown> = {
 		right: {
 			type: "object",
 			additionalProperties: false,
-			required: ["label", "events"],
+			required: ["label"],
 			properties: {
 				label: { type: "string", maxLength: 40 },
 				intro: { type: "string", maxLength: 250 },
+				title: { type: "string", maxLength: 60 },
+				tags: {
+					type: "array",
+					minItems: 1,
+					maxItems: 8,
+					items: {
+						anyOf: [
+							{ type: "string", maxLength: 32 },
+							{
+								type: "object",
+								additionalProperties: false,
+								required: ["text"],
+								properties: {
+									text: { type: "string", maxLength: 32 },
+									accent: { type: "boolean" },
+								},
+							},
+						],
+					},
+				},
 				events: {
 					type: "array",
 					minItems: 2,
@@ -489,6 +542,7 @@ export const PLATE_PLAN_JSON_SCHEMA: Record<string, unknown> = {
 				},
 			},
 		},
+		accentSide: { type: "string", enum: ["left", "right", "none"] },
 		dir: { type: "string", enum: ["x", "y"] },
 		nodes: {
 			type: "array",

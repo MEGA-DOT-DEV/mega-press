@@ -706,6 +706,137 @@ const compareFlows: KindModule = {
 	},
 };
 
+const setSideSchema = {
+	type: "object",
+	required: ["label", "title", "tags"],
+	properties: {
+		label: {
+			type: "string",
+			maxLength: STRING_CAPS.flowLabel.max,
+			description: "Small caps mono label naming the side (INITIAL SCOPE, FINAL SCOPE)",
+		},
+		title: {
+			type: "string",
+			maxLength: STRING_CAPS.setTitle.max,
+			description: "The side's claim, drawn in head type",
+		},
+		intro: {
+			type: "string",
+			maxLength: STRING_CAPS.detail.max,
+			description: "Optional one or two sentences framing the claim",
+		},
+		tags: arraySchema(ITEM_BOUNDS.compareSets.tags, {
+			type: "object",
+			required: ["text"],
+			properties: {
+				text: {
+					type: "string",
+					maxLength: STRING_CAPS.tag.max,
+					description: STRING_CAPS.tag.description,
+				},
+				accent: { type: "boolean", description: "true on the one tag the claim is about" },
+			},
+		}),
+	},
+} as const;
+
+type SetPlanTag = string | { readonly text?: string; readonly accent?: boolean };
+
+const compareSets: KindModule = {
+	id: "compareSets",
+	slotsSchema: {
+		type: "object",
+		required: ["left", "right"],
+		properties: {
+			left: setSideSchema,
+			right: setSideSchema,
+			accentSide: {
+				type: "string",
+				enum: ["left", "right", "none"],
+				description: "Which panel takes the accent border and ground; right when absent",
+			},
+		},
+	},
+	compile(plan) {
+		const sides = [
+			["left", plan.left],
+			["right", plan.right],
+		] as const;
+		const compiled: { label: string; title: string; intro?: string; tags: { text: string; accent?: boolean }[] }[] =
+			[];
+		for (const [name, side] of sides) {
+			const label = String(side?.label ?? "")
+				.trim()
+				.toUpperCase();
+			const claim = String(side?.title ?? "").trim();
+			if (!side || !label || !claim) {
+				return fail(
+					"SETS_SIDE_MISSING",
+					`compareSets needs a ${name} side with a label and a title; an unlabelled panel cannot be told from its neighbour, and the contrast is the claim`,
+				);
+			}
+			if (label.length > STRING_CAPS.flowLabel.max) {
+				return fail(
+					STRING_CAPS.flowLabel.code,
+					`the ${name} label is ${label.length} characters; ${STRING_CAPS.flowLabel.max} is the cap`,
+				);
+			}
+			if (claim.length > STRING_CAPS.setTitle.max) {
+				return fail(
+					STRING_CAPS.setTitle.code,
+					`the ${name} title is ${claim.length} characters; ${STRING_CAPS.setTitle.max} is the cap`,
+				);
+			}
+			const rawTags = (side.tags ?? []) as readonly SetPlanTag[];
+			const tags: { text: string; accent?: boolean }[] = [];
+			for (const raw of rawTags) {
+				const item = typeof raw === "string" ? { text: raw } : raw;
+				const text = String(item?.text ?? "").trim();
+				if (!text) {
+					return fail(
+						"TAG_TEXT_MISSING",
+						`compareSets ${name} side: a tag has no text; a bordered pill with nothing in it prints as furniture — omit it`,
+					);
+				}
+				if (text.length > STRING_CAPS.tag.max) {
+					return fail(
+						STRING_CAPS.tag.code,
+						`compareSets ${name} tag "${text.slice(0, 40)}" is ${text.length} characters; ${STRING_CAPS.tag.max} is the cap — a sentence belongs in the intro`,
+					);
+				}
+				tags.push({ text, ...(item && typeof item === "object" && item.accent ? { accent: true } : {}) });
+			}
+			const counted = countFail("compareSets", "tags", tags.length);
+			if (counted) return counted;
+			const intro = String(side.intro ?? "").trim();
+			compiled.push({ label, title: claim, ...(intro ? { intro } : {}), tags });
+		}
+		const setKey = (tags: readonly { text: string }[]) =>
+			tags
+				.map((t) => t.text.toLowerCase())
+				.sort()
+				.join(" ");
+		const [leftSide, rightSide] = compiled as [
+			(typeof compiled)[number],
+			(typeof compiled)[number],
+		];
+		if (setKey(leftSide.tags) === setKey(rightSide.tags)) {
+			return fail(
+				"SETS_NO_CONTRAST",
+				"compareSets has the same tags on both sides; if the sets match, there is nothing to compare",
+			);
+		}
+		const accentSide =
+			plan.accentSide === "left" || plan.accentSide === "none" ? plan.accentSide : "right";
+		return finish(plan, {
+			type: "compareSets",
+			left: leftSide,
+			right: rightSide,
+			...(accentSide !== "right" ? { accentSide } : {}),
+		});
+	},
+};
+
 const railFlow: KindModule = {
 	id: "railFlow",
 	slotsSchema: {
@@ -1158,6 +1289,7 @@ export const KIND_MODULES: readonly KindModule[] = [
 	timeline,
 	timelineVertical,
 	compareFlows,
+	compareSets,
 	railFlow,
 	graph,
 	derivation,

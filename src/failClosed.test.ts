@@ -35,6 +35,7 @@ describe("fail-closed kinds", () => {
 		["code", "CODE_MISSING"],
 		["tree", "TREE_TOO_SHALLOW"],
 		["codeSteps", "CODESTEPS_TOO_FEW"],
+		["compareSets", "SETS_SIDE_MISSING"],
 	] as const)("%s refuses empty slots with %s", (kind, code) => {
 		const result = buildArtifact(thin(kind));
 		expect(result.ok).toBe(false);
@@ -108,6 +109,46 @@ describe("fail-closed kinds", () => {
 		expect(result.ok).toBe(false);
 		if (result.ok) throw new Error("expected fail");
 		expect(result.errors.some((e) => e.code === "CHIP_TOO_LONG")).toBe(true);
+	});
+
+	it("compareSets with identical tag sets uses SETS_NO_CONTRAST", () => {
+		const result = buildArtifact(
+			thin("compareSets", {
+				left: {
+					label: "BEFORE",
+					title: "The same set, twice.",
+					tags: [{ text: "webhook" }, { text: "sheets" }],
+				},
+				right: {
+					label: "AFTER",
+					title: "Nothing actually changed.",
+					tags: [{ text: "sheets" }, { text: "webhook" }],
+				},
+			}),
+		);
+		expect(result.ok).toBe(false);
+		if (result.ok) throw new Error("expected fail");
+		expect(result.errors.some((e) => e.code === "SETS_NO_CONTRAST")).toBe(true);
+	});
+
+	it("compareSets with equal counts and no intro is PLATE_THIN", () => {
+		const result = buildArtifact(
+			thin("compareSets", {
+				left: {
+					label: "CHAT",
+					title: "Two things it can do.",
+					tags: [{ text: "read" }, { text: "answer" }],
+				},
+				right: {
+					label: "AGENT",
+					title: "Two different things it can do.",
+					tags: [{ text: "plan" }, { text: "act" }],
+				},
+			}),
+		);
+		expect(result.ok).toBe(false);
+		if (result.ok) throw new Error("expected fail");
+		expect(result.errors.some((e) => e.code === "PLATE_THIN")).toBe(true);
 	});
 
 	it("derivation with an unnoted later step uses DERIVATION_NOTE_MISSING", () => {

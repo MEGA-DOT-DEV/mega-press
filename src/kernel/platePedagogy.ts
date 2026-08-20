@@ -295,6 +295,27 @@ export const assessPlatePedagogy = (spec: Record<string, unknown>): readonly Ped
 		}
 	}
 
+	if (type === "compareSets") {
+		const left = isRecord(body.left) ? (body.left as Record<string, unknown>) : null;
+		const right = isRecord(body.right) ? (body.right as Record<string, unknown>) : null;
+		const leftTags = left && Array.isArray(left.tags) ? left.tags : [];
+		const rightTags = right && Array.isArray(right.tags) ? right.tags : [];
+		const hasIntro = (side: Record<string, unknown> | null) =>
+			side != null && String(side.intro ?? "").trim().length >= 16;
+		if (
+			leftTags.length > 0 &&
+			leftTags.length === rightTags.length &&
+			!hasIntro(left) &&
+			!hasIntro(right)
+		) {
+			errors.push({
+				code: "PLATE_THIN",
+				message:
+					"compareSets with equal tag counts and no intro is a compare wearing a different border; the size of the set is the argument. Add an intro framing why the sets differ, or use compare.",
+			});
+		}
+	}
+
 	if (type === "railFlow") {
 		const items = Array.isArray(body.items) ? body.items : [];
 		if (items.length < 3) {

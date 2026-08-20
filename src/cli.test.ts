@@ -35,6 +35,7 @@ describe("press cli", () => {
 			"railSteps",
 			"compare",
 			"compareFlows",
+			"compareSets",
 			"metrics",
 			"cards",
 			"checklist",
@@ -156,10 +157,11 @@ describe("press cli", () => {
 		expect(existsSync(dest)).toBe(true);
 		const body = JSON.parse(r.stdout);
 		expect(body.ok).toBe(true);
-		expect(body.kinds).toBe(21);
+		expect(body.kinds).toBe(22);
 		const html = readFileSync(dest, "utf8");
 		expect(html).toContain("__PRESS_GALLERY__");
 		expect(html).toContain("compareFlows");
+		expect(html).toContain("compareSets");
 		expect(html).toContain("codeSteps");
 		expect(html).toContain("pressReady");
 	}, 90_000);

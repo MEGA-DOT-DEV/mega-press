@@ -34,6 +34,7 @@ export const ALLOWED_COMPONENTS = [
 	"code",
 	"tree",
 	"codeSteps",
+	"compareSets",
 ] as const;
 
 export type AllowedComponent = (typeof ALLOWED_COMPONENTS)[number];
@@ -415,6 +416,30 @@ export const COMPONENT_GUIDE: Record<string, { readonly use: string; readonly ex
 				],
 			},
 		},
+		compareSets: {
+			use: "two labelled panels side by side, each one claim plus a roster of short mono tags stretched to a shared column measure; the cardinality of the two sets is the lesson (two tags against six shows a scope expanding), so the roster is top-anchored and the sparse panel's empty ground is the argument",
+			example: {
+				type: "compareSets",
+				left: {
+					label: "INITIAL SCOPE",
+					title: "One integration, built by hand.",
+					tags: [{ text: "webhook" }, { text: "sheets" }],
+				},
+				right: {
+					label: "FINAL SCOPE",
+					title: "Every surface the agent can reach.",
+					intro: "The same loop, five capabilities wider.",
+					tags: [
+						{ text: "webhook" },
+						{ text: "sheets" },
+						{ text: "email" },
+						{ text: "calendar" },
+						{ text: "storage" },
+						{ text: "search", accent: true },
+					],
+				},
+			},
+		},
 	};
 
 export const platesPromptSection = (): string => {
@@ -462,7 +487,7 @@ Compose two nodes with {"type":"stack","gap":3,"children":[...]} when one claim 
 4. No components: ${WITHHELD_COMPONENTS.join(", ")}.
 5. Only these body types: ${ALLOWED_COMPONENTS.join(", ")}.
 6. Never invent types (callout, infobox, alert). Use note with content.
-7. note = {type, content}. compare = before/after {label, title, items[]}. compareFlows = left/right {label, intro?, items[]} (each side a labelled vertical transcript; items shaped like timelineVertical items, 2 to 6 per side). railSteps/railFlow items = {name, detail}. checklist items = {text, ok}. timeline/timelineVertical items = {date, title, detail?, accent?} (date is the short label column: an actor, stage, or date; accent: true marks the one stop the claim is about). A timeline node may add label (small caps mono above the rail naming the run); stack two labelled timelines to contrast two runs. A timelineVertical item may add code (a verbatim block, 2 to 8 lines with \\n breaks) and chips (1 to 6 short mono pills {text, accent?}, 32 chars max, drawn under the detail or code). graph = nodes {key, title, detail?} + edges {from, to}. derivation steps = {expr, note} (note required after the first step). code = {code, label?, accentLines?} (code is one string with \\n line breaks, 2 to 14 lines, drawn verbatim; a line too wide for the frame refuses instead of wrapping). tree = {root: {name, detail?}, branches: [{name, items?, children?}]} (2 to 4 branches, children one level deeper at most, six drawn rows total root included; items are short mono tokens on the node's own line and a row never wraps). codeSteps = {steps: [{label, caption?, code}]} (2 or 3 numbered steps in a meaningful order, each code block 2 to 10 verbatim lines).
+7. note = {type, content}. compare = before/after {label, title, items[]}. compareFlows = left/right {label, intro?, items[]} (each side a labelled vertical transcript; items shaped like timelineVertical items, 2 to 6 per side). railSteps/railFlow items = {name, detail}. checklist items = {text, ok}. timeline/timelineVertical items = {date, title, detail?, accent?} (date is the short label column: an actor, stage, or date; accent: true marks the one stop the claim is about). A timeline node may add label (small caps mono above the rail naming the run); stack two labelled timelines to contrast two runs. A timelineVertical item may add code (a verbatim block, 2 to 8 lines with \\n breaks) and chips (1 to 6 short mono pills {text, accent?}, 32 chars max, drawn under the detail or code). graph = nodes {key, title, detail?} + edges {from, to}. derivation steps = {expr, note} (note required after the first step). code = {code, label?, accentLines?} (code is one string with \\n line breaks, 2 to 14 lines, drawn verbatim; a line too wide for the frame refuses instead of wrapping). tree = {root: {name, detail?}, branches: [{name, items?, children?}]} (2 to 4 branches, children one level deeper at most, six drawn rows total root included; items are short mono tokens on the node's own line and a row never wraps). codeSteps = {steps: [{label, caption?, code}]} (2 or 3 numbered steps in a meaningful order, each code block 2 to 10 verbatim lines). compareSets = left/right {label, title, intro?, tags[]} (each side a bordered panel: a caps label, a claim in head type, and 1 to 8 short mono tags {text, accent?} in a stretched grid; the tag counts differing is the point, and accentSide picks the red panel, right by default).
 
 ## Choose the component by what the content is
   process / method / loop          railSteps
@@ -485,6 +510,7 @@ Compose two nodes with {"type":"stack","gap":3,"children":[...]} when one claim 
   verbatim snippet or JSON         code
   a capability or file hierarchy   tree
   a numbered code walkthrough in blocks   codeSteps
+  two sets of named things, sizes contrasted   compareSets
 
 ## Density examples (match this richness, not stub cards)
 - compare: each side has a title AND 2–4 concrete items
@@ -499,6 +525,7 @@ Compose two nodes with {"type":"stack","gap":3,"children":[...]} when one claim 
 - code: 4–12 verbatim lines, short enough to fit the frame unwrapped, with a label naming the source
 - tree: a root plus 4–5 named rows below it, most branches or children carrying 2–4 short items
 - codeSteps: 2–3 steps, each with a label, usually a caption, and a 2–8 line verbatim block
+- compareSets: each side has a caps label, a claim in head type, and 1–8 short tags; the counts differ, and an intro frames the side that needs it
 
 ## Vocabulary JSON
 ${JSON.stringify(vocab)}

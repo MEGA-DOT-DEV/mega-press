@@ -213,6 +213,30 @@ const codeStepsPlan: ArtifactPlan = {
 	],
 };
 
+const compareSetsPlan: ArtifactPlan = {
+	kind: "compareSets",
+	id: "scope-expansion-sets",
+	title: "The same loop, five capabilities wider.",
+	left: {
+		label: "INITIAL SCOPE",
+		title: "One integration, built by hand.",
+		tags: [{ text: "webhook" }, { text: "sheets" }],
+	},
+	right: {
+		label: "FINAL SCOPE",
+		title: "Every surface the agent can reach.",
+		intro: "The loop did not change; the capability layer did.",
+		tags: [
+			{ text: "webhook" },
+			{ text: "sheets" },
+			{ text: "email" },
+			{ text: "calendar" },
+			{ text: "storage" },
+			{ text: "search", accent: true },
+		],
+	},
+};
+
 describe("valid-plan snapshots", () => {
 	it("railSteps compile stays stable", () => {
 		const result = buildArtifact(rail);
@@ -286,6 +310,13 @@ describe("valid-plan snapshots", () => {
 
 	it("tree compile stays stable", () => {
 		const result = buildArtifact(treePlan);
+		expect(result.ok).toBe(true);
+		if (!result.ok) throw new Error("expected ok");
+		expect(result.spec).toMatchSnapshot();
+	});
+
+	it("compareSets compile stays stable", () => {
+		const result = buildArtifact(compareSetsPlan);
 		expect(result.ok).toBe(true);
 		if (!result.ok) throw new Error("expected ok");
 		expect(result.spec).toMatchSnapshot();

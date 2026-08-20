@@ -1,0 +1,24 @@
+{
+	"kind": "compareSets",
+	"id": "exemplar-compareSets",
+	"title": "The same loop, five capabilities wider.",
+	"left": {
+		"label": "INITIAL SCOPE",
+		"title": "One integration, built by hand.",
+		"intro": "A webhook and a sheet, wired once for one task, growing only when someone rewires them.",
+		"tags": [{ "text": "webhook" }, { "text": "sheets" }]
+	},
+	"right": {
+		"label": "FINAL SCOPE",
+		"title": "Every surface the agent can reach.",
+		"intro": "The loop did not change; the capability layer did, and each addition was one registration.",
+		"tags": [
+			{ "text": "webhook" },
+			{ "text": "sheets" },
+			{ "text": "email" },
+			{ "text": "calendar" },
+			{ "text": "storage" },
+			{ "text": "search", "accent": true }
+		]
+	}
+}

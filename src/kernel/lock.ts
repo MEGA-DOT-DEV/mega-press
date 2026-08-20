@@ -264,6 +264,61 @@ const validateNode = (node: unknown, path: string, errors: PressError[], depth: 
 		}
 	}
 
+	if (type === "compareSets") {
+		const tagKeys: string[] = [];
+		for (const key of ["left", "right"] as const) {
+			const side = node[key];
+			if (
+				!isRecord(side) ||
+				!String(side.label ?? "").trim() ||
+				!String(side.title ?? "").trim()
+			) {
+				errors.push({
+					code: "SETS_SIDE_MISSING",
+					message: `${path}: compareSets needs a ${key} side with a non-empty label and title`,
+				});
+				continue;
+			}
+			const tags = Array.isArray(side.tags) ? side.tags : [];
+			if (tags.length < 1) {
+				errors.push({
+					code: "SETS_TAGS_TOO_FEW",
+					message: `${path}.${key}: a set needs at least 1 tag (got ${tags.length})`,
+				});
+			} else if (tags.length > 8) {
+				errors.push({
+					code: "SETS_TAGS_TOO_MANY",
+					message: `${path}.${key}: ${tags.length} tags; 8 is the cap — above that it is a table, not a set`,
+				});
+			}
+			const texts: string[] = [];
+			tags.forEach((tag, j) => {
+				const text = isRecord(tag)
+					? String(tag.text ?? "").trim()
+					: String(tag ?? "").trim();
+				if (!text) {
+					errors.push({
+						code: "TAG_TEXT_MISSING",
+						message: `${path}.${key}.tags[${j}]: every tag needs non-empty text`,
+					});
+				} else if (text.length > 32) {
+					errors.push({
+						code: "TAG_TOO_LONG",
+						message: `${path}.${key}.tags[${j}]: "${text.slice(0, 40)}" is ${text.length} characters; a tag is one short mono label, 32 max`,
+					});
+				}
+				texts.push(text.toLowerCase());
+			});
+			tagKeys.push(texts.sort().join(" "));
+		}
+		if (tagKeys.length === 2 && tagKeys[0] === tagKeys[1] && tagKeys[0]) {
+			errors.push({
+				code: "SETS_NO_CONTRAST",
+				message: `${path}: the same tags on both sides; if the sets match, there is nothing to compare`,
+			});
+		}
+	}
+
 	if (type === "graph") {
 		const nodes = Array.isArray(node.nodes) ? node.nodes : [];
 		const edges = Array.isArray(node.edges) ? node.edges : [];

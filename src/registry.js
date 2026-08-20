@@ -25,6 +25,7 @@ import { code, codeSteps } from "../components/code.js";
 import { derivation } from "../components/reasoning.js";
 import { tree } from "../components/tree.js";
 import { compareFlows } from "../components/flows.js";
+import { compareSets } from "../components/sets.js";
 import { checklist, compare, layers, quote } from "../components/structure.js";
 import { table } from "../components/table.js";
 import { schedule, swimlanes, timeline, timelineVertical } from "../components/timeline.js";
@@ -416,6 +417,46 @@ const STRUCTURE = [
 					{ date: "USER", title: "Asks weeks later" },
 					{ date: "AGENT", title: "Reads the same name back" },
 				],
+			},
+		},
+	}),
+
+	def("compareSets", {
+		fn: compareSets,
+		summary: "Two labelled panels, each one claim and a roster of short tags.",
+		use: "contrasting two collections where the size of the set is the argument: a scope expanding, a surface widening, a boundary moving",
+		params: {
+			left: {
+				type: "{label, title, intro?, tags[]}",
+				required: true,
+				of: {
+					label: "string (required), caps mono name of the side (uppercased)",
+					title: "string (required), the side's claim, drawn in head type",
+					intro: "string, one or two body sentences framing the claim",
+					tags: "1 to 8 short mono pills: {text, accent?} or plain strings, 32 chars max",
+				},
+			},
+			right: { type: "{label, title, intro?, tags[]}", required: true },
+			accentSide: { type: "'left' | 'right' | 'none'", default: "right" },
+			gap: { type: GAP, default: 5 },
+		},
+		notes: [
+			"The panels are the bordered boxes compare draws, on the same house gutter; the accented side takes the red border and accent ground.",
+			"Tags draw through the same chip painter transcript events use, stretched to a shared column measure so the reader counts rows; the roster is top-anchored and the sparse panel's empty ground is the argument.",
+			"Two units, one per panel — the reader takes the contrast in as two strokes, not one stroke per tag.",
+			"Identical tag sets on both sides refuse: if the sets match, there is nothing to compare.",
+		],
+		example: {
+			type: "compareSets",
+			left: {
+				label: "INITIAL SCOPE",
+				title: "One integration, built by hand.",
+				tags: ["webhook", "sheets"],
+			},
+			right: {
+				label: "FINAL SCOPE",
+				title: "Every surface the agent can reach.",
+				tags: ["webhook", "sheets", "email", "calendar", "storage", { text: "search", accent: true }],
 			},
 		},
 	}),

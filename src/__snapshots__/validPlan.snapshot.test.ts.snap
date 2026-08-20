@@ -138,6 +138,55 @@ exports[`valid-plan snapshots > compareFlows compile stays stable 1`] = `
 }
 `;
 
+exports[`valid-plan snapshots > compareSets compile stays stable 1`] = `
+{
+  "body": {
+    "left": {
+      "label": "INITIAL SCOPE",
+      "tags": [
+        {
+          "text": "webhook",
+        },
+        {
+          "text": "sheets",
+        },
+      ],
+      "title": "One integration, built by hand.",
+    },
+    "right": {
+      "intro": "The loop did not change; the capability layer did.",
+      "label": "FINAL SCOPE",
+      "tags": [
+        {
+          "text": "webhook",
+        },
+        {
+          "text": "sheets",
+        },
+        {
+          "text": "email",
+        },
+        {
+          "text": "calendar",
+        },
+        {
+          "text": "storage",
+        },
+        {
+          "accent": true,
+          "text": "search",
+        },
+      ],
+      "title": "Every surface the agent can reach.",
+    },
+    "type": "compareSets",
+  },
+  "frame": "landscape",
+  "id": "scope-expansion-sets",
+  "title": "The same loop, five capabilities wider.",
+}
+`;
+
 exports[`valid-plan snapshots > derivation compile stays stable 1`] = `
 {
   "body": {

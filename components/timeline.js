@@ -28,6 +28,7 @@
 
 import { rail as deriveRail } from "../src/connect.js";
 import { custom, marker, row, stack, text } from "../src/solve.js";
+import { chipsRow } from "./chips.js";
 import { codeBlock } from "./code.js";
 import { measure } from "../src/text.js";
 import {
@@ -148,91 +149,10 @@ function refuseUnread(item, read, who) {
  * Chips
  *
  * Small bordered mono pills under a transcript event: an error rate, a
- * capability shortlist, a result quality. A chip is one short label, never a
- * sentence, so it is a single painted line inside a border that hugs it.
- *
- * A box() cannot draw one: box measures to the width it is given, so a row of
- * boxes is a row of full-width panels. A chip is therefore a custom node that
- * reports its own measured width, exactly as a code line reports its own
- * measured overflow, and it paints with the same mono face, tracking and
- * middle baseline codeLine uses so the two verbatim voices cannot drift apart.
- *
- * `accent: true` borders and inks the chip in the accent: the one capability
- * that was chosen, the one badge the claim is about. The rest stay quiet.
+ * capability shortlist, a result quality. The pill lives in
+ * components/chips.js — one painter, shared with the compareSets roster grid —
+ * and this file consumes the validated hug-width row.
  * ------------------------------------------------------------------------ */
-
-const CHIP_ROLE = "utility";
-const CHIP_MAX_CHARS = 32;
-const CHIP_MAX_COUNT = 6;
-
-function chip({ text: label, accent = false }) {
-	const pad = space(1);
-	const tracking = type(CHIP_ROLE).tracking * typeSize(CHIP_ROLE);
-	const w = Math.ceil(measure(label, CHIP_ROLE)) + 2 * pad;
-	const h = lineHeight(CHIP_ROLE) + 2 * pad;
-	return custom({
-		measure: () => ({ w, h }),
-		paint: (ctx, rect, C) => {
-			ctx.fillStyle = C.panel;
-			ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
-			ctx.strokeStyle = accent ? C.red : C.black2;
-			ctx.lineWidth = STROKE.divider;
-			ctx.strokeRect(rect.x + 0.5, rect.y + 0.5, rect.w - 1, rect.h - 1);
-
-			ctx.fillStyle = accent ? C.red : C.muted;
-			ctx.font = `400 ${typeSize(CHIP_ROLE)}px ${FAMILY.mono}`;
-			ctx.textAlign = "left";
-			ctx.textBaseline = "middle";
-			if ("letterSpacing" in ctx) ctx.letterSpacing = `${tracking}px`;
-			ctx.fillText(label, rect.x + pad, rect.cy);
-			if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
-		},
-	});
-}
-
-/**
- * Validate an event's chips and build the row, or return null when there are
- * none. Refusals are by name, because a chip silently dropped or silently
- * truncated is the accepted-and-not-drawn defect this file keeps refusing.
- */
-function chipsRow(chips, where) {
-	if (chips === undefined || chips === null) return null;
-	if (!Array.isArray(chips)) {
-		throw new PressError(
-			"CHIPS_NOT_A_LIST",
-			`${where}: chips must be an array of { text, accent? }.`,
-		);
-	}
-	if (chips.length === 0) return null;
-	if (chips.length > CHIP_MAX_COUNT) {
-		throw new PressError(
-			"CHIPS_TOO_MANY",
-			`${where} carries ${chips.length} chips and ${CHIP_MAX_COUNT} is the cap. ` +
-				`A shortlist longer than that is a table, not a row of pills.`,
-		);
-	}
-	const cleaned = chips.map((c, i) => {
-		const item = typeof c === "string" ? { text: c } : c;
-		const label = String(item?.text ?? "").trim();
-		if (!label) {
-			throw new PressError(
-				"CHIP_TEXT_MISSING",
-				`${where}: chip ${i + 1} has no text. A bordered pill with nothing in it prints ` +
-					`as furniture; omit the chip instead.`,
-			);
-		}
-		if (label.length > CHIP_MAX_CHARS) {
-			throw new PressError(
-				"CHIP_TOO_LONG",
-				`${where}: chip "${label.slice(0, 40)}" is ${label.length} characters and ` +
-					`${CHIP_MAX_CHARS} is the cap. A chip is one short mono label; a sentence ` +
-					`belongs in the event's detail.`,
-			);
-		}
-		return { text: label, accent: Boolean(item.accent) };
-	});
-	return row({ gap: 2, align: "start", children: cleaned.map(chip) });
-}
 
 /* --------------------------------------------------------------------------
  * timeline: evenly spaced stops

@@ -47,6 +47,14 @@ export const STRING_CAPS = {
 	},
 	/** A codeSteps header label; same measure as trackLabel/flowLabel. */
 	stepLabel: { max: 40, code: "CODESTEP_LABEL_TOO_LONG", description: sanity(40) },
+	/** One compareSets tag: the same drawn contract as a chip, under its own slot name. */
+	tag: {
+		max: 32,
+		code: "TAG_TOO_LONG",
+		description: "One short mono label, 32 characters max; a sentence belongs in the intro.",
+	},
+	/** A compareSets panel's claim, drawn in head type. */
+	setTitle: { max: 60, code: "SETS_TITLE_TOO_LONG", description: sanity(60) },
 } as const satisfies Record<string, StringCap>;
 
 export const ITEM_BOUNDS = {
@@ -204,6 +212,16 @@ export const ITEM_BOUNDS = {
 			tooFew: "CHIPS_TOO_FEW",
 			tooMany: "CHIPS_TOO_MANY",
 			label: "chips per event",
+		},
+	},
+	compareSets: {
+		/** Tags inside one panel of the two-set contrast; cardinality is the argument. */
+		tags: {
+			min: 1,
+			max: 8,
+			tooFew: "SETS_TAGS_TOO_FEW",
+			tooMany: "SETS_TAGS_TOO_MANY",
+			label: "tags per side",
 		},
 	},
 	railFlow: {
