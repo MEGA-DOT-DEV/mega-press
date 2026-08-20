@@ -13,8 +13,10 @@ Unknown kinds and thin/missing slots fail closed with named error codes. The pac
 This repo lives at `~/mega/mega-press`. Consumers (starting with mega-experience) take it as a local dependency:
 
 ```json
-"@mega/press": "file:../mega-press"
+"@mega/press": "link:../mega-press"
 ```
+
+`link:`, not `file:` — pnpm's `file:` protocol copies the package into the store at install time and goes silently stale on every press change; `link:` is a real symlink, so the sibling checkout is always live. (mega-dev is the exception: it vendors a pinned copy under `packages/press` so CI and Vercel need no private fetch — refresh is a deliberate recopy + pin bump.)
 
 Both repos must be siblings under `~/mega`. This package is private and is not published to npm.
 
