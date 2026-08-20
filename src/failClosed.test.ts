@@ -36,6 +36,8 @@ describe("fail-closed kinds", () => {
 		["tree", "TREE_TOO_SHALLOW"],
 		["codeSteps", "CODESTEPS_TOO_FEW"],
 		["compareSets", "SETS_SIDE_MISSING"],
+		["compareSpecs", "SPECCARDS_SIDE_MISSING"],
+		["converge", "CONVERGE_SOURCES_TOO_FEW"],
 	] as const)("%s refuses empty slots with %s", (kind, code) => {
 		const result = buildArtifact(thin(kind));
 		expect(result.ok).toBe(false);

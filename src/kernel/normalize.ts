@@ -43,6 +43,10 @@ const TYPE_ALIASES: Record<string, string> = {
 	sets: "compareSets",
 	tagcompare: "compareSets",
 	scopecompare: "compareSets",
+	speccards: "compareSpecs",
+	specsheet: "compareSpecs",
+	funnel: "converge",
+	persist: "converge",
 	roadmap: "timeline",
 	diagram: "graph",
 	flowchart: "graph",
@@ -376,6 +380,71 @@ function normalizeNode(node: unknown): unknown {
 			delete s.chips;
 			delete s.pills;
 			out[key] = s;
+		}
+	}
+
+	if (type === "compareSpecs") {
+		for (const key of ["left", "right"] as const) {
+			const side = out[key];
+			if (!isRecord(side)) continue;
+			const s: Record<string, unknown> = { ...side };
+			if (s.label == null && s.name != null) s.label = String(s.name);
+			if (typeof s.label === "string") s.label = s.label.toUpperCase();
+			// A specs object ({ auth: "OAuth" }) is shorthand for the row list.
+			if (s.specs != null && !Array.isArray(s.specs) && isRecord(s.specs)) {
+				s.specs = Object.entries(s.specs).map(([k, v]) => ({ key: k, value: String(v) }));
+			}
+			if (isRecord(s.flow) && isRecord(s.flow.edge)) {
+				const edge = { ...s.flow.edge };
+				const dir = String(edge.dir ?? "").toLowerCase();
+				if (dir === "outbound" || dir === "down") edge.dir = "out";
+				if (dir === "inbound" || dir === "up") edge.dir = "in";
+				s.flow = { ...s.flow, edge };
+			}
+			delete s.name;
+			out[key] = s;
+		}
+	}
+
+	if (type === "converge") {
+		if (out.sources == null && Array.isArray(out.runs)) {
+			out.sources = out.runs;
+			delete out.runs;
+		}
+		const toLineArray = (v: unknown) =>
+			typeof v === "string"
+				? v.split("\n").map((l) => l.replace(/\s+$/, "")).filter((l) => l.trim())
+				: v;
+		if (Array.isArray(out.sources)) {
+			out.sources = out.sources.map((s) => {
+				if (!isRecord(s)) return s;
+				const src = { ...s };
+				if (src.name == null) {
+					const n = src.label ?? src.title;
+					if (n != null) src.name = String(n);
+				}
+				if (src.lines == null && src.code != null) src.lines = src.code;
+				src.lines = toLineArray(src.lines);
+				delete src.label;
+				delete src.title;
+				delete src.code;
+				return src;
+			});
+		}
+		if (isRecord(out.sink)) {
+			const sink = { ...out.sink };
+			if (sink.name == null) {
+				const n = sink.label ?? sink.title;
+				if (n != null) sink.name = String(n);
+			}
+			if (Array.isArray(sink.columns)) {
+				sink.columns = sink.columns.map((c) =>
+					isRecord(c) ? { ...c, lines: toLineArray(c.lines) } : c,
+				);
+			}
+			delete sink.label;
+			delete sink.title;
+			out.sink = sink;
 		}
 	}
 

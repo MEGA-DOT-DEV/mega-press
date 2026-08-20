@@ -237,6 +237,62 @@ const compareSetsPlan: ArtifactPlan = {
 	},
 };
 
+const compareSpecsPlan: ArtifactPlan = {
+	kind: "compareSpecs",
+	id: "outbound-inbound-specs",
+	title: "Outbound reaches public servers; inbound reaches behind the firewall.",
+	left: {
+		label: "OUTBOUND",
+		title: "External MCP server",
+		call: "kody.mcp['name'].tool()",
+		flow: {
+			from: { title: "Kody", detail: "MCP client, McpClientHub" },
+			edge: { text: "Kody dials out over HTTP", dir: "out" },
+			to: { title: "MCP server", detail: "public HTTPS endpoint" },
+		},
+		specs: [
+			{ key: "reaches", value: "publicly hosted services" },
+			{ key: "auth", value: "MCP OAuth, tokens in the Hub" },
+		],
+	},
+	right: {
+		label: "INBOUND",
+		title: "Remote Connector",
+		call: "kody.remote['name'].tool()",
+		flow: {
+			from: { title: "Kody", detail: "connector session" },
+			edge: { text: "the process dials in over WebSocket", dir: "in" },
+			to: { title: "External process", detail: "local / private network" },
+		},
+		specs: [
+			{ key: "reaches", value: "behind NAT and firewalls" },
+			{ key: "auth", value: "instance id + shared secret" },
+		],
+	},
+};
+
+const convergePlan: ArtifactPlan = {
+	kind: "converge",
+	id: "worker-state-converge",
+	title: "State outlives every run that wrote it.",
+	sources: [
+		{ name: "Job run 1", tag: "WORKER", lines: 'storage.set("runCount", 1)', note: "worker ends" },
+		{
+			name: "Job run 2",
+			tag: "WORKER",
+			lines: 'storage.get("runCount")\nstorage.set("runCount", 2)',
+			note: "worker ends",
+		},
+	],
+	sink: {
+		name: "StorageRunner",
+		tag: "userId, job:daily-report",
+		intro: "One durable object, surviving every worker that touches it.",
+		columns: [{ label: "key-value", lines: 'runCount = 2\nlastIssue = "issue-987"' }],
+		takeaway: { lead: "The worker disappears. The data remains." },
+	},
+};
+
 describe("valid-plan snapshots", () => {
 	it("railSteps compile stays stable", () => {
 		const result = buildArtifact(rail);
@@ -317,6 +373,20 @@ describe("valid-plan snapshots", () => {
 
 	it("compareSets compile stays stable", () => {
 		const result = buildArtifact(compareSetsPlan);
+		expect(result.ok).toBe(true);
+		if (!result.ok) throw new Error("expected ok");
+		expect(result.spec).toMatchSnapshot();
+	});
+
+	it("compareSpecs compile stays stable", () => {
+		const result = buildArtifact(compareSpecsPlan);
+		expect(result.ok).toBe(true);
+		if (!result.ok) throw new Error("expected ok");
+		expect(result.spec).toMatchSnapshot();
+	});
+
+	it("converge compile stays stable", () => {
+		const result = buildArtifact(convergePlan);
 		expect(result.ok).toBe(true);
 		if (!result.ok) throw new Error("expected ok");
 		expect(result.spec).toMatchSnapshot();

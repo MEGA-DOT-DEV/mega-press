@@ -837,6 +837,339 @@ const compareSets: KindModule = {
 	},
 };
 
+const specFlowSchema = {
+	type: "object",
+	required: ["from", "edge", "to"],
+	properties: {
+		from: {
+			type: "object",
+			required: ["title"],
+			properties: {
+				title: { type: "string", description: "The mechanism's own node (Kody, the client)" },
+				detail: { type: "string", description: "One short mono clause under the node name" },
+			},
+		},
+		edge: {
+			type: "object",
+			required: ["text"],
+			properties: {
+				text: {
+					type: "string",
+					description: "The arrow's sentence: who dials, over what (Kody dials out over HTTP)",
+				},
+				dir: {
+					type: "string",
+					enum: ["out", "in"],
+					description: "out = the arrow points down to the reached side; in = it points up",
+				},
+			},
+		},
+		to: {
+			type: "object",
+			required: ["title"],
+			properties: {
+				title: { type: "string" },
+				detail: { type: "string" },
+			},
+		},
+	},
+} as const;
+
+const specSideSchema = {
+	type: "object",
+	required: ["label", "title", "flow", "specs"],
+	properties: {
+		label: {
+			type: "string",
+			maxLength: STRING_CAPS.flowLabel.max,
+			description: "Caps mono label naming the direction or family (OUTBOUND, INBOUND)",
+		},
+		title: {
+			type: "string",
+			maxLength: STRING_CAPS.setTitle.max,
+			description: "The mechanism's name, drawn in head type",
+		},
+		call: {
+			type: "string",
+			maxLength: 120,
+			description: "One verbatim line naming the call shape, drawn in the accent",
+		},
+		flow: specFlowSchema,
+		specs: arraySchema(ITEM_BOUNDS.compareSpecs.specs, {
+			type: "object",
+			required: ["key", "value"],
+			properties: {
+				key: {
+					type: "string",
+					maxLength: STRING_CAPS.specKey.max,
+					description: STRING_CAPS.specKey.description,
+				},
+				value: { type: "string", maxLength: 120 },
+			},
+		}),
+	},
+} as const;
+
+const compareSpecs: KindModule = {
+	id: "compareSpecs",
+	slotsSchema: {
+		type: "object",
+		required: ["left", "right"],
+		properties: {
+			left: specSideSchema,
+			right: specSideSchema,
+		},
+	},
+	compile(plan) {
+		const sides = [
+			["left", plan.left],
+			["right", plan.right],
+		] as const;
+		const compiled: Record<string, unknown>[] = [];
+		for (const [name, side] of sides) {
+			const label = String(side?.label ?? "")
+				.trim()
+				.toUpperCase();
+			const claim = String(side?.title ?? "").trim();
+			if (!side || !label || !claim) {
+				return fail(
+					"SPECCARDS_SIDE_MISSING",
+					`compareSpecs needs a ${name} side with a label and a title; an unlabelled card cannot be told from its neighbour`,
+				);
+			}
+			const flow = side.flow;
+			const fromTitle = String(flow?.from?.title ?? "").trim();
+			const toTitle = String(flow?.to?.title ?? "").trim();
+			if (!flow || !fromTitle || !toTitle) {
+				return fail(
+					"SPECCARDS_FLOW_MISSING",
+					`compareSpecs needs a flow on the ${name} side: two named nodes and the edge between them — the flow is the mechanism`,
+				);
+			}
+			const edgeText = String(flow.edge?.text ?? "").trim();
+			if (!edgeText) {
+				return fail(
+					"FLOW_EDGE_MISSING",
+					`the ${name} flow has no edge clause; the arrow's sentence (who dials, over what) is the difference the card draws`,
+				);
+			}
+			const rawSpecs = side.specs ?? [];
+			const specs: { key: string; value: string }[] = [];
+			for (const raw of rawSpecs) {
+				const key = String(raw?.key ?? "").trim();
+				const value = String(raw?.value ?? "").trim();
+				if (!key || !value) {
+					return fail(
+						"SPEC_ROW_INCOMPLETE",
+						`compareSpecs ${name} side: every spec row needs both a key and a value`,
+					);
+				}
+				if (key.length > STRING_CAPS.specKey.max) {
+					return fail(
+						STRING_CAPS.specKey.code,
+						`spec key "${key}" is ${key.length} characters; ${STRING_CAPS.specKey.max} is the cap — a key is one short mono label`,
+					);
+				}
+				specs.push({ key, value });
+			}
+			const counted = countFail("compareSpecs", "specs", specs.length);
+			if (counted) return counted;
+			const call = String(side.call ?? "").trim();
+			if (call.includes("\n")) {
+				return fail(
+					"SPECCARDS_CALL_LINES",
+					`the ${name} call shape has line breaks; a call shape is one verbatim line — a longer snippet belongs in a code figure`,
+				);
+			}
+			compiled.push({
+				label,
+				title: claim,
+				...(call ? { call } : {}),
+				flow: {
+					from: {
+						title: fromTitle,
+						...(flow.from?.detail ? { detail: String(flow.from.detail).trim() } : {}),
+					},
+					edge: { text: edgeText, dir: flow.edge?.dir === "in" ? "in" : "out" },
+					to: {
+						title: toTitle,
+						...(flow.to?.detail ? { detail: String(flow.to.detail).trim() } : {}),
+					},
+				},
+				specs,
+			});
+		}
+		return finish(plan, { type: "compareSpecs", left: compiled[0], right: compiled[1] });
+	},
+};
+
+const toLines = (value: unknown): string[] => {
+	if (value == null) return [];
+	const raw = Array.isArray(value) ? value.map(String).join("\n") : String(value);
+	return raw
+		.split("\n")
+		.map((l) => l.replace(/\s+$/, ""))
+		.filter((l) => l.trim().length > 0);
+};
+
+const converge: KindModule = {
+	id: "converge",
+	slotsSchema: {
+		type: "object",
+		required: ["sources", "sink"],
+		properties: {
+			sources: arraySchema(ITEM_BOUNDS.converge.sources, {
+				type: "object",
+				required: ["name"],
+				properties: {
+					name: {
+						type: "string",
+						maxLength: STRING_CAPS.flowLabel.max,
+						description: "The run's name (Job run 1)",
+					},
+					tag: {
+						type: "string",
+						maxLength: 16,
+						description: "Small mono tag at the card's right (WORKER)",
+					},
+					lines: {
+						type: "string",
+						maxLength: 300,
+						description:
+							"1 to 3 verbatim lines with \\n breaks: what this run did to the shared state",
+					},
+					note: {
+						type: "string",
+						maxLength: 60,
+						description: "Quiet closing clause (worker ends)",
+					},
+				},
+			}),
+			sink: {
+				type: "object",
+				required: ["name", "columns"],
+				properties: {
+					name: {
+						type: "string",
+						maxLength: STRING_CAPS.flowLabel.max,
+						description: "The durable thing every source feeds (StorageRunner)",
+					},
+					tag: {
+						type: "string",
+						maxLength: 48,
+						description: "Mono identity drawn in brackets beside the name (userId, job:daily-report)",
+					},
+					intro: {
+						type: "string",
+						maxLength: STRING_CAPS.detail.max,
+						description: "One clause saying what survives and why",
+					},
+					columns: arraySchema(ITEM_BOUNDS.converge.columns, {
+						type: "object",
+						required: ["label", "lines"],
+						properties: {
+							label: { type: "string", maxLength: STRING_CAPS.flowLabel.max },
+							lines: {
+								type: "string",
+								maxLength: 500,
+								description: "2 to 5 verbatim lines with \\n breaks: the surviving state, exactly",
+							},
+						},
+					}),
+					takeaway: {
+						type: "object",
+						required: ["lead"],
+						properties: {
+							lead: {
+								type: "string",
+								maxLength: 100,
+								description: "The sentence the figure earns, in ink (The worker disappears. The data remains.)",
+							},
+							detail: { type: "string", maxLength: 160 },
+						},
+					},
+				},
+			},
+		},
+	},
+	compile(plan) {
+		const rawSources = plan.sources ?? [];
+		const sources: Record<string, unknown>[] = [];
+		for (const raw of rawSources) {
+			const name = String(raw?.name ?? "").trim();
+			if (!name) {
+				return fail(
+					"CONVERGE_SOURCE_MISSING",
+					"every converge source needs a name; an unnamed run cannot be told from its neighbour",
+				);
+			}
+			const lines = toLines(raw.lines);
+			if (lines.length > 3) {
+				return fail(
+					"CONVERGE_SOURCE_LINES",
+					`source "${name}" carries ${lines.length} verbatim lines; 3 is the cap inside a run card`,
+				);
+			}
+			const note = String(raw.note ?? "").trim();
+			const tag = String(raw.tag ?? "").trim();
+			sources.push({
+				name,
+				...(tag ? { tag } : {}),
+				...(lines.length ? { lines } : {}),
+				...(note ? { note } : {}),
+			});
+		}
+		const counted = countFail("converge", "sources", sources.length);
+		if (counted) return counted;
+
+		const sink = plan.sink;
+		const sinkName = String(sink?.name ?? "").trim();
+		if (!sink || !sinkName) {
+			return fail(
+				"CONVERGE_SINK_MISSING",
+				"converge needs a sink with a name: the one durable thing every source feeds",
+			);
+		}
+		const rawColumns = sink.columns ?? [];
+		const columns: Record<string, unknown>[] = [];
+		for (const [i, raw] of rawColumns.entries()) {
+			const label = String(raw?.label ?? "").trim();
+			if (!label) {
+				return fail(
+					"SINK_COLUMN_LABEL_MISSING",
+					`sink column ${i + 1} has no label; an unlabelled ledger cannot say what it records`,
+				);
+			}
+			const lines = toLines(raw.lines);
+			if (lines.length < 2 || lines.length > 5) {
+				return fail(
+					"SINK_COLUMN_LINES",
+					`sink column "${label}" carries ${lines.length} lines; a ledger holds 2 to 5`,
+				);
+			}
+			columns.push({ label, lines });
+		}
+		const colCount = countFail("converge", "columns", columns.length);
+		if (colCount) return colCount;
+
+		const lead = String(sink.takeaway?.lead ?? "").trim();
+		const detail = String(sink.takeaway?.detail ?? "").trim();
+		const intro = String(sink.intro ?? "").trim();
+		const sinkTag = String(sink.tag ?? "").trim();
+		return finish(plan, {
+			type: "converge",
+			sources,
+			sink: {
+				name: sinkName,
+				...(sinkTag ? { tag: sinkTag } : {}),
+				...(intro ? { intro } : {}),
+				columns,
+				...(lead ? { takeaway: { lead, ...(detail ? { detail } : {}) } } : {}),
+			},
+		});
+	},
+};
+
 const railFlow: KindModule = {
 	id: "railFlow",
 	slotsSchema: {
@@ -1290,6 +1623,8 @@ export const KIND_MODULES: readonly KindModule[] = [
 	timelineVertical,
 	compareFlows,
 	compareSets,
+	compareSpecs,
+	converge,
 	railFlow,
 	graph,
 	derivation,

@@ -1,0 +1,80 @@
+{
+	"kind": "compareSpecs",
+	"id": "exemplar-compareSpecs",
+	"frame": "square",
+	"title": "Outbound reaches public servers; inbound reaches behind the firewall.",
+	"left": {
+		"label": "OUTBOUND",
+		"title": "External MCP server",
+		"call": "kody.mcp['name'].tool()",
+		"flow": {
+			"from": {
+				"title": "Kody",
+				"detail": "MCP client, McpClientHub"
+			},
+			"edge": {
+				"text": "Kody dials out over HTTP",
+				"dir": "out"
+			},
+			"to": {
+				"title": "MCP server",
+				"detail": "public HTTPS endpoint"
+			}
+		},
+		"specs": [
+			{
+				"key": "reaches",
+				"value": "publicly hosted services"
+			},
+			{
+				"key": "auth",
+				"value": "MCP OAuth, tokens in the Hub"
+			},
+			{
+				"key": "added via",
+				"value": "/account/mcp-servers"
+			},
+			{
+				"key": "managed by",
+				"value": "McpClientHub Durable Object"
+			}
+		]
+	},
+	"right": {
+		"label": "INBOUND",
+		"title": "Remote Connector",
+		"call": "kody.remote['name'].tool()",
+		"flow": {
+			"from": {
+				"title": "Kody",
+				"detail": "connector session"
+			},
+			"edge": {
+				"text": "the process dials in over WebSocket",
+				"dir": "in"
+			},
+			"to": {
+				"title": "External process",
+				"detail": "local / private network"
+			}
+		},
+		"specs": [
+			{
+				"key": "reaches",
+				"value": "behind NAT and firewalls"
+			},
+			{
+				"key": "auth",
+				"value": "instance id + shared secret"
+			},
+			{
+				"key": "runs where",
+				"value": "tools execute outside Kody"
+			},
+			{
+				"key": "managed by",
+				"value": "Remote Connector Session DO"
+			}
+		]
+	}
+}

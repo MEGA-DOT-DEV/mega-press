@@ -270,8 +270,12 @@ export function paintVector(ctx, plate) {
 			if (n.border) {
 				ctx.strokeStyle = n.borderColor || COLOR.black2;
 				ctx.lineWidth = STROKE.divider;
+				// A dashed border is the ephemeral voice: a panel that exists only
+				// for the duration of a run. Same weight, same colour rules.
+				if (n.borderDash) ctx.setLineDash(n.borderDash);
 				// Half-pixel offset so a 1px border lands on a pixel, not across two.
 				ctx.strokeRect(n.rect.x + 0.5, n.rect.y + 0.5, n.rect.w - 1, n.rect.h - 1);
+				if (n.borderDash) ctx.setLineDash([]);
 			}
 		}
 		if (n.kind === "marker") {

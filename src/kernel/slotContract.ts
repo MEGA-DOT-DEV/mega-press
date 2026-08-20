@@ -55,6 +55,12 @@ export const STRING_CAPS = {
 	},
 	/** A compareSets panel's claim, drawn in head type. */
 	setTitle: { max: 60, code: "SETS_TITLE_TOO_LONG", description: sanity(60) },
+	/** A compareSpecs sheet key: one short mono label; the sentence belongs in the value. */
+	specKey: {
+		max: 16,
+		code: "SPEC_KEY_TOO_LONG",
+		description: "One short mono key, 16 characters max; the sentence belongs in the value.",
+	},
 } as const satisfies Record<string, StringCap>;
 
 export const ITEM_BOUNDS = {
@@ -222,6 +228,34 @@ export const ITEM_BOUNDS = {
 			tooFew: "SETS_TAGS_TOO_FEW",
 			tooMany: "SETS_TAGS_TOO_MANY",
 			label: "tags per side",
+		},
+	},
+	converge: {
+		/** Ephemeral runs above the durable panel; the funnel is the claim. */
+		sources: {
+			min: 2,
+			max: 4,
+			tooFew: "CONVERGE_SOURCES_TOO_FEW",
+			tooMany: "CONVERGE_SOURCES_TOO_MANY",
+			label: "source runs",
+		},
+		/** Labelled ledger columns inside the sink. */
+		columns: {
+			min: 1,
+			max: 2,
+			tooFew: "SINK_COLUMNS_OFF",
+			tooMany: "SINK_COLUMNS_OFF",
+			label: "sink ledger columns",
+		},
+	},
+	compareSpecs: {
+		/** Key → value rows on one card's spec sheet. */
+		specs: {
+			min: 2,
+			max: 5,
+			tooFew: "SPECS_TOO_FEW",
+			tooMany: "SPECS_TOO_MANY",
+			label: "spec rows per side",
 		},
 	},
 	railFlow: {

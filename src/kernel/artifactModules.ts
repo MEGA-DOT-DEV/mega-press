@@ -11,6 +11,8 @@ export type ArtifactModuleId =
 	| "compare"
 	| "compareFlows"
 	| "compareSets"
+	| "compareSpecs"
+	| "converge"
 	| "metrics"
 	| "cards"
 	| "checklist"
@@ -376,6 +378,286 @@ const MODULES: readonly ArtifactModuleSchema[] = [
 			"More than eight tags (that is a table)",
 			"Identical tag sets on both sides",
 			"An ordered process (use railSteps or compareFlows)",
+		],
+	},
+	{
+		id: "compareSpecs",
+		title: "Specimen cards",
+		use: "Two labelled cards side by side, each the full anatomy of one mechanism: a call shape, a two-node flow with a labelled directional edge, and a key-to-value spec sheet.",
+		pickWhen:
+			"Two mechanisms differ in how they connect and what properties they carry (outbound vs inbound, dedicated vs shared, push vs pull). Use compare for prose bullets, compareSets when the sides are tag rosters, compareFlows when each side is a transcript in time.",
+		units: "2 cards × {label, title, call?, flow, 2–5 specs}; each card is one unit",
+		slots: {
+			type: "object",
+			required: ["left", "right"],
+			properties: {
+				left: {
+					type: "object",
+					required: ["label", "title", "flow", "specs"],
+					properties: {
+						label: {
+							type: "string",
+							maxLength: STRING_CAPS.flowLabel.max,
+							description: "Caps mono label naming the direction or family (OUTBOUND, INBOUND)",
+						},
+						title: {
+							type: "string",
+							maxLength: STRING_CAPS.setTitle.max,
+							description: "The mechanism's name, drawn in head type",
+						},
+						call: {
+							type: "string",
+							maxLength: 120,
+							description: "One verbatim line naming the call shape, drawn in the accent",
+						},
+						flow: {
+							type: "object",
+							required: ["from", "edge", "to"],
+							properties: {
+								from: {
+									type: "object",
+									required: ["title"],
+									properties: {
+										title: { type: "string", description: "The mechanism's own node" },
+										detail: { type: "string", description: "Short mono clause under the name" },
+									},
+								},
+								edge: {
+									type: "object",
+									required: ["text"],
+									properties: {
+										text: {
+											type: "string",
+											description: "The arrow's sentence: who dials, over what",
+										},
+										dir: {
+											type: "string",
+											enum: ["out", "in"],
+											description: "out = arrow points down to the reached side; in = up",
+										},
+									},
+								},
+								to: {
+									type: "object",
+									required: ["title"],
+									properties: { title: { type: "string" }, detail: { type: "string" } },
+								},
+							},
+						},
+						specs: {
+							type: "array",
+							minItems: ITEM_BOUNDS.compareSpecs.specs.min,
+							maxItems: ITEM_BOUNDS.compareSpecs.specs.max,
+							items: {
+								type: "object",
+								required: ["key", "value"],
+								properties: {
+									key: {
+										type: "string",
+										maxLength: STRING_CAPS.specKey.max,
+										description: STRING_CAPS.specKey.description,
+									},
+									value: { type: "string", maxLength: 120 },
+								},
+							},
+						},
+					},
+				},
+				right: {
+					type: "object",
+					required: ["label", "title", "flow", "specs"],
+					properties: {
+						label: { type: "string", maxLength: STRING_CAPS.flowLabel.max },
+						title: { type: "string", maxLength: STRING_CAPS.setTitle.max },
+						call: { type: "string", maxLength: 120 },
+						flow: {
+							type: "object",
+							required: ["from", "edge", "to"],
+							properties: {
+								from: {
+									type: "object",
+									required: ["title"],
+									properties: { title: { type: "string" }, detail: { type: "string" } },
+								},
+								edge: {
+									type: "object",
+									required: ["text"],
+									properties: {
+										text: { type: "string" },
+										dir: { type: "string", enum: ["out", "in"] },
+									},
+								},
+								to: {
+									type: "object",
+									required: ["title"],
+									properties: { title: { type: "string" }, detail: { type: "string" } },
+								},
+							},
+						},
+						specs: {
+							type: "array",
+							minItems: ITEM_BOUNDS.compareSpecs.specs.min,
+							maxItems: ITEM_BOUNDS.compareSpecs.specs.max,
+							items: {
+								type: "object",
+								required: ["key", "value"],
+								properties: {
+									key: { type: "string", maxLength: STRING_CAPS.specKey.max },
+									value: { type: "string", maxLength: 120 },
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		density: [
+			"both cards carry a real flow: two named nodes and an edge clause saying who dials, over what",
+			"3–5 spec rows per side, keys short mono (≤16 chars), values concrete",
+			"a call shape on both sides when the mechanisms have one",
+			"mirror the spec keys across sides where the comparison allows, so rows line up",
+		],
+		outlineHint:
+			"Tag lines LEFT: or RIGHT:; first tagged line is label, title; then CALL:, FLOW: from -> edge clause -> to, and key = value lines.",
+		exampleOutline: [
+			"LEFT: OUTBOUND, External MCP server",
+			"LEFT: CALL: kody.mcp['name'].tool()",
+			"LEFT: FLOW: Kody -> dials out over HTTP -> MCP server",
+			"LEFT: reaches = publicly hosted services",
+			"LEFT: auth = MCP OAuth, tokens in the Hub",
+			"RIGHT: INBOUND, Remote Connector",
+			"RIGHT: CALL: kody.remote['name'].tool()",
+			"RIGHT: FLOW: Kody <- dials in over WebSocket <- External process",
+			"RIGHT: reaches = behind NAT and firewalls",
+			"RIGHT: auth = instance id + shared secret",
+		],
+		bans: [
+			"Cards without a flow (use compare or compareSets)",
+			"Spec keys that are sentences",
+			"More than five spec rows (that is a table)",
+			"One-sided cards",
+		],
+	},
+	{
+		id: "converge",
+		title: "Funnel to durable state",
+		use: "Two to four ephemeral runs in dashed cards above one accent panel they all feed; straight arrows drop from each run into the durable state it left behind.",
+		pickWhen:
+			"The lesson is persistence across transient executions: workers that end while their writes survive, runs sharing one object, state accreting across restarts. Use graph when the relationships branch; use timeline when the order of runs is the point.",
+		units: "2–4 sources (one unit each) + 1 sink (one unit)",
+		slots: {
+			type: "object",
+			required: ["sources", "sink"],
+			properties: {
+				sources: {
+					type: "array",
+					minItems: ITEM_BOUNDS.converge.sources.min,
+					maxItems: ITEM_BOUNDS.converge.sources.max,
+					items: {
+						type: "object",
+						required: ["name"],
+						properties: {
+							name: {
+								type: "string",
+								maxLength: STRING_CAPS.flowLabel.max,
+								description: "The run's name (Job run 1)",
+							},
+							tag: {
+								type: "string",
+								maxLength: 16,
+								description: "Small mono tag at the card's right (WORKER)",
+							},
+							lines: {
+								type: "string",
+								maxLength: 300,
+								description:
+									"1 to 3 verbatim lines with \\n breaks: what this run did to the shared state",
+							},
+							note: {
+								type: "string",
+								maxLength: 60,
+								description: "Quiet closing clause (worker ends)",
+							},
+						},
+					},
+				},
+				sink: {
+					type: "object",
+					required: ["name", "columns"],
+					properties: {
+						name: {
+							type: "string",
+							maxLength: STRING_CAPS.flowLabel.max,
+							description: "The durable thing every source feeds (StorageRunner)",
+						},
+						tag: {
+							type: "string",
+							maxLength: 48,
+							description:
+								"Mono identity drawn in brackets beside the name (userId, job:daily-report)",
+						},
+						intro: {
+							type: "string",
+							maxLength: STRING_CAPS.detail.max,
+							description: "One clause saying what survives and why",
+						},
+						columns: {
+							type: "array",
+							minItems: ITEM_BOUNDS.converge.columns.min,
+							maxItems: ITEM_BOUNDS.converge.columns.max,
+							items: {
+								type: "object",
+								required: ["label", "lines"],
+								properties: {
+									label: { type: "string", maxLength: STRING_CAPS.flowLabel.max },
+									lines: {
+										type: "string",
+										maxLength: 500,
+										description:
+											"2 to 5 verbatim lines with \\n breaks: the surviving state, exactly",
+									},
+								},
+							},
+						},
+						takeaway: {
+							type: "object",
+							required: ["lead"],
+							properties: {
+								lead: {
+									type: "string",
+									maxLength: 100,
+									description: "The sentence the figure earns, centred in ink",
+								},
+								detail: { type: "string", maxLength: 160 },
+							},
+						},
+					},
+				},
+			},
+		},
+		density: [
+			"every source carries 1–3 verbatim lines (the write it made) and usually an end note",
+			"the sink's ledgers hold the exact surviving state, 2–5 lines per column",
+			"a takeaway lead on most plates — the sentence the funnel exists to earn",
+			"source runs should visibly accrete (set 1, then get/set 2, then get/set 3)",
+		],
+		outlineHint:
+			"RUN: name | tag lines then indented verbatim; SINK: name [tag] then column labels with verbatim lines; TAKEAWAY: the closing sentence.",
+		exampleOutline: [
+			"RUN: Job run 1 | WORKER",
+			'  storage.set("runCount", 1)',
+			"RUN: Job run 2 | WORKER",
+			'  storage.get("runCount")',
+			'  storage.set("runCount", 2)',
+			"SINK: StorageRunner [userId, job:daily-report]",
+			"  key-value: runCount = 2, lastIssue = issue-987",
+			"TAKEAWAY: The worker disappears. The data remains.",
+		],
+		bans: [
+			"A single source (a box over a box is not a funnel)",
+			"Sources with no verbatim state on any run",
+			"Sink ledgers past five lines (that is a table)",
+			"Using it for branching architecture (use graph)",
 		],
 	},
 	{

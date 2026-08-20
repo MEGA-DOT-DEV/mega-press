@@ -319,6 +319,129 @@ const validateNode = (node: unknown, path: string, errors: PressError[], depth: 
 		}
 	}
 
+	if (type === "compareSpecs") {
+		for (const key of ["left", "right"] as const) {
+			const side = node[key];
+			if (
+				!isRecord(side) ||
+				!String(side.label ?? "").trim() ||
+				!String(side.title ?? "").trim()
+			) {
+				errors.push({
+					code: "SPECCARDS_SIDE_MISSING",
+					message: `${path}: compareSpecs needs a ${key} side with a non-empty label and title`,
+				});
+				continue;
+			}
+			const flow = side.flow;
+			const from = isRecord(flow) && isRecord(flow.from) ? flow.from : null;
+			const to = isRecord(flow) && isRecord(flow.to) ? flow.to : null;
+			if (!from || !to || !String(from.title ?? "").trim() || !String(to.title ?? "").trim()) {
+				errors.push({
+					code: "SPECCARDS_FLOW_MISSING",
+					message: `${path}.${key}: a spec card needs a flow of two named nodes`,
+				});
+			} else if (
+				!isRecord((flow as Record<string, unknown>).edge) ||
+				!String((flow as { edge?: { text?: unknown } }).edge?.text ?? "").trim()
+			) {
+				errors.push({
+					code: "FLOW_EDGE_MISSING",
+					message: `${path}.${key}: the flow's edge needs a clause saying who dials, over what`,
+				});
+			}
+			const specs = Array.isArray(side.specs) ? side.specs : [];
+			if (specs.length < 2) {
+				errors.push({
+					code: "SPECS_TOO_FEW",
+					message: `${path}.${key}: a spec sheet needs at least 2 rows (got ${specs.length})`,
+				});
+			} else if (specs.length > 5) {
+				errors.push({
+					code: "SPECS_TOO_MANY",
+					message: `${path}.${key}: ${specs.length} spec rows; 5 is the cap — a longer sheet is a table`,
+				});
+			}
+			specs.forEach((spec, j) => {
+				const k = isRecord(spec) ? String(spec.key ?? "").trim() : "";
+				const v = isRecord(spec) ? String(spec.value ?? "").trim() : "";
+				if (!k || !v) {
+					errors.push({
+						code: "SPEC_ROW_INCOMPLETE",
+						message: `${path}.${key}.specs[${j}]: every spec row needs a key and a value`,
+					});
+				} else if (k.length > 16) {
+					errors.push({
+						code: "SPEC_KEY_TOO_LONG",
+						message: `${path}.${key}.specs[${j}]: key "${k}" is ${k.length} characters; 16 is the cap`,
+					});
+				}
+			});
+		}
+	}
+
+	if (type === "converge") {
+		const sources = Array.isArray(node.sources) ? node.sources : [];
+		if (sources.length < 2) {
+			errors.push({
+				code: "CONVERGE_SOURCES_TOO_FEW",
+				message: `${path}: converge needs at least 2 source runs (got ${sources.length}); the funnel is the claim`,
+			});
+		} else if (sources.length > 4) {
+			errors.push({
+				code: "CONVERGE_SOURCES_TOO_MANY",
+				message: `${path}: ${sources.length} source runs; 4 is the cap`,
+			});
+		}
+		sources.forEach((s, i) => {
+			if (!isRecord(s) || !String(s.name ?? "").trim()) {
+				errors.push({
+					code: "CONVERGE_SOURCE_MISSING",
+					message: `${path}.sources[${i}]: every run needs a name`,
+				});
+				return;
+			}
+			const lines = Array.isArray(s.lines) ? s.lines : [];
+			if (lines.length > 3) {
+				errors.push({
+					code: "CONVERGE_SOURCE_LINES",
+					message: `${path}.sources[${i}]: ${lines.length} verbatim lines; 3 is the cap inside a run card`,
+				});
+			}
+		});
+		const sink = node.sink;
+		if (!isRecord(sink) || !String(sink.name ?? "").trim()) {
+			errors.push({
+				code: "CONVERGE_SINK_MISSING",
+				message: `${path}: converge needs a sink with a name — the durable thing every source feeds`,
+			});
+		} else {
+			const columns = Array.isArray(sink.columns) ? sink.columns : [];
+			if (columns.length < 1 || columns.length > 2) {
+				errors.push({
+					code: "SINK_COLUMNS_OFF",
+					message: `${path}.sink: 1 or 2 labelled ledger columns (got ${columns.length})`,
+				});
+			}
+			columns.forEach((c, i) => {
+				if (!isRecord(c) || !String(c.label ?? "").trim()) {
+					errors.push({
+						code: "SINK_COLUMN_LABEL_MISSING",
+						message: `${path}.sink.columns[${i}]: every ledger needs a label`,
+					});
+					return;
+				}
+				const lines = Array.isArray(c.lines) ? c.lines : [];
+				if (lines.length < 2 || lines.length > 5) {
+					errors.push({
+						code: "SINK_COLUMN_LINES",
+						message: `${path}.sink.columns[${i}]: ${lines.length} lines; a ledger holds 2 to 5`,
+					});
+				}
+			});
+		}
+	}
+
 	if (type === "graph") {
 		const nodes = Array.isArray(node.nodes) ? node.nodes : [];
 		const edges = Array.isArray(node.edges) ? node.edges : [];

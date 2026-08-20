@@ -89,6 +89,32 @@ const codeLine = (line, accent, index, lang) => {
 };
 
 /**
+ * Bare verbatim lines, no border: for components whose panel already draws
+ * the frame (a converge source card, a spec card's call shape) and whose
+ * mono runs must still be the one codeLine voice — same face, same syntax
+ * inks, same refusal when a line cannot fit unwrapped.
+ *
+ * @param {string | string[]} source  lines, or one \n-joined string
+ * @param {object} [opts]
+ * @param {number[]} [opts.accentLines] 1-based line numbers drawn in the accent
+ * @param {"js" | "json" | "none" | "auto"} [opts.lang]
+ */
+export function verbatimLines(source, { accentLines = [], lang = "auto" } = {}) {
+	const raw = Array.isArray(source) ? source.join("\n") : String(source ?? "");
+	const lines = raw.replace(/\t/g, "  ").split("\n");
+	while (lines.length && !lines[0].trim()) lines.shift();
+	while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
+	const accented = new Set(accentLines.map(Number));
+	const resolvedLang =
+		lang === "js" || lang === "json" || lang === "none" ? lang : detectLang(raw);
+	return lines.map((line, i) =>
+		line.trim().length === 0
+			? blank(space(3))
+			: codeLine(line, accented.has(i + 1), i, resolvedLang),
+	);
+}
+
+/**
  * The bordered block itself, reusable by any component that carries a
  * verbatim snippet (the `code` figure, a transcript event's call shape).
  *

@@ -1,0 +1,45 @@
+{
+	"kind": "converge",
+	"id": "exemplar-converge",
+	"frame": "square",
+	"title": "State outlives every run that wrote it.",
+	"sources": [
+		{
+			"name": "Job run 1",
+			"tag": "WORKER",
+			"lines": "storage.set(\"runCount\", 1)",
+			"note": "worker ends"
+		},
+		{
+			"name": "Job run 2",
+			"tag": "WORKER",
+			"lines": "storage.get(\"runCount\")\nstorage.set(\"runCount\", 2)",
+			"note": "worker ends"
+		},
+		{
+			"name": "Job run 3",
+			"tag": "WORKER",
+			"lines": "storage.get(\"runCount\")\nstorage.set(\"runCount\", 3)",
+			"note": "worker ends"
+		}
+	],
+	"sink": {
+		"name": "StorageRunner",
+		"tag": "userId, job:daily-report",
+		"intro": "One durable object, resolved by user and storage id, surviving every worker that touches it.",
+		"columns": [
+			{
+				"label": "key-value",
+				"lines": "runCount = 3\nlastProcessedIssueId = \"issue-987\"\nsyncProgress = \"1500/1500\""
+			},
+			{
+				"label": "report_history",
+				"lines": "report-001 success 1200\nreport-002 failed 350\nreport-003 success 1500"
+			}
+		],
+		"takeaway": {
+			"lead": "The worker disappears. The data remains.",
+			"detail": "The next execution with the same identity continues from the same state."
+		}
+	}
+}

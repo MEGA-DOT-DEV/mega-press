@@ -35,6 +35,8 @@ export const ALLOWED_COMPONENTS = [
 	"tree",
 	"codeSteps",
 	"compareSets",
+	"compareSpecs",
+	"converge",
 ] as const;
 
 export type AllowedComponent = (typeof ALLOWED_COMPONENTS)[number];
@@ -440,6 +442,57 @@ export const COMPONENT_GUIDE: Record<string, { readonly use: string; readonly ex
 				},
 			},
 		},
+		compareSpecs: {
+			use: "two specimen cards side by side, each the full anatomy of one mechanism: a caps label, a claim in head type, one accent verbatim call shape, a two-node flow whose labelled arrow says who dials over what (dir out = down, in = up), and a key-to-value spec sheet under a rule; one key column measure spans both cards so the eye compares values",
+			example: {
+				type: "compareSpecs",
+				left: {
+					label: "OUTBOUND",
+					title: "External MCP server",
+					call: "kody.mcp['name'].tool()",
+					flow: {
+						from: { title: "Kody", detail: "MCP client" },
+						edge: { text: "Kody dials out over HTTP", dir: "out" },
+						to: { title: "MCP server", detail: "public HTTPS endpoint" },
+					},
+					specs: [
+						{ key: "reaches", value: "publicly hosted services" },
+						{ key: "auth", value: "MCP OAuth, tokens in the Hub" },
+					],
+				},
+				right: {
+					label: "INBOUND",
+					title: "Remote Connector",
+					call: "kody.remote['name'].tool()",
+					flow: {
+						from: { title: "Kody", detail: "connector session" },
+						edge: { text: "the process dials in over WebSocket", dir: "in" },
+						to: { title: "External process", detail: "local / private network" },
+					},
+					specs: [
+						{ key: "reaches", value: "behind NAT and firewalls" },
+						{ key: "auth", value: "instance id + shared secret" },
+					],
+				},
+			},
+		},
+		converge: {
+			use: "2 to 4 ephemeral runs in dash-bordered cards above one accent-bordered durable panel they all feed; each run drops a straight red arrow into the panel, which holds 1 or 2 labelled ledger columns of verbatim state and an optional centred takeaway — the figure for state that outlives every execution that wrote it",
+			example: {
+				type: "converge",
+				sources: [
+					{ name: "Job run 1", tag: "WORKER", lines: ['storage.set("runCount", 1)'], note: "worker ends" },
+					{ name: "Job run 2", tag: "WORKER", lines: ['storage.get("runCount")', 'storage.set("runCount", 2)'], note: "worker ends" },
+				],
+				sink: {
+					name: "StorageRunner",
+					tag: "userId, job:daily-report",
+					intro: "one durable object, surviving every worker that touches it",
+					columns: [{ label: "key-value", lines: ["runCount = 2", 'lastIssue = "issue-987"'] }],
+					takeaway: { lead: "The worker disappears. The data remains." },
+				},
+			},
+		},
 	};
 
 export const platesPromptSection = (): string => {
@@ -487,7 +540,7 @@ Compose two nodes with {"type":"stack","gap":3,"children":[...]} when one claim 
 4. No components: ${WITHHELD_COMPONENTS.join(", ")}.
 5. Only these body types: ${ALLOWED_COMPONENTS.join(", ")}.
 6. Never invent types (callout, infobox, alert). Use note with content.
-7. note = {type, content}. compare = before/after {label, title, items[]}. compareFlows = left/right {label, intro?, items[]} (each side a labelled vertical transcript; items shaped like timelineVertical items, 2 to 6 per side). railSteps/railFlow items = {name, detail}. checklist items = {text, ok}. timeline/timelineVertical items = {date, title, detail?, accent?} (date is the short label column: an actor, stage, or date; accent: true marks the one stop the claim is about). A timeline node may add label (small caps mono above the rail naming the run); stack two labelled timelines to contrast two runs. A timelineVertical item may add code (a verbatim block, 2 to 8 lines with \\n breaks) and chips (1 to 6 short mono pills {text, accent?}, 32 chars max, drawn under the detail or code). graph = nodes {key, title, detail?} + edges {from, to}. derivation steps = {expr, note} (note required after the first step). code = {code, label?, accentLines?} (code is one string with \\n line breaks, 2 to 14 lines, drawn verbatim; a line too wide for the frame refuses instead of wrapping). tree = {root: {name, detail?}, branches: [{name, items?, children?}]} (2 to 4 branches, children one level deeper at most, six drawn rows total root included; items are short mono tokens on the node's own line and a row never wraps). codeSteps = {steps: [{label, caption?, code}]} (2 or 3 numbered steps in a meaningful order, each code block 2 to 10 verbatim lines). compareSets = left/right {label, title, intro?, tags[]} (each side a bordered panel: a caps label, a claim in head type, and 1 to 8 short mono tags {text, accent?} in a stretched grid; the tag counts differing is the point, and accentSide picks the red panel, right by default).
+7. note = {type, content}. compare = before/after {label, title, items[]}. compareFlows = left/right {label, intro?, items[]} (each side a labelled vertical transcript; items shaped like timelineVertical items, 2 to 6 per side). railSteps/railFlow items = {name, detail}. checklist items = {text, ok}. timeline/timelineVertical items = {date, title, detail?, accent?} (date is the short label column: an actor, stage, or date; accent: true marks the one stop the claim is about). A timeline node may add label (small caps mono above the rail naming the run); stack two labelled timelines to contrast two runs. A timelineVertical item may add code (a verbatim block, 2 to 8 lines with \\n breaks) and chips (1 to 6 short mono pills {text, accent?}, 32 chars max, drawn under the detail or code). graph = nodes {key, title, detail?} + edges {from, to}. derivation steps = {expr, note} (note required after the first step). code = {code, label?, accentLines?} (code is one string with \\n line breaks, 2 to 14 lines, drawn verbatim; a line too wide for the frame refuses instead of wrapping). tree = {root: {name, detail?}, branches: [{name, items?, children?}]} (2 to 4 branches, children one level deeper at most, six drawn rows total root included; items are short mono tokens on the node's own line and a row never wraps). codeSteps = {steps: [{label, caption?, code}]} (2 or 3 numbered steps in a meaningful order, each code block 2 to 10 verbatim lines). compareSets = left/right {label, title, intro?, tags[]} (each side a bordered panel: a caps label, a claim in head type, and 1 to 8 short mono tags {text, accent?} in a stretched grid; the tag counts differing is the point, and accentSide picks the red panel, right by default). compareSpecs = left/right {label, title, call?, flow: {from {title, detail?}, edge {text, dir: out|in}, to {title, detail?}}, specs: 2 to 5 {key ≤16 chars, value}} (two specimen cards: the call shape draws in the accent, the flow's arrow points down for out and up for in, and one key column measure spans both sheets). converge = sources: 2 to 4 {name, tag?, lines?, note?} + sink {name, tag?, intro?, columns: 1 to 2 {label, lines: 2 to 5 verbatim}, takeaway? {lead, detail?}} (dashed run cards funnel straight red arrows into one red-bordered durable panel; lines are verbatim with \\n breaks).
 
 ## Choose the component by what the content is
   process / method / loop          railSteps
@@ -511,6 +564,8 @@ Compose two nodes with {"type":"stack","gap":3,"children":[...]} when one claim 
   a capability or file hierarchy   tree
   a numbered code walkthrough in blocks   codeSteps
   two sets of named things, sizes contrasted   compareSets
+  two mechanisms, anatomy + properties each    compareSpecs
+  many runs feeding one durable state          converge
 
 ## Density examples (match this richness, not stub cards)
 - compare: each side has a title AND 2–4 concrete items
@@ -526,6 +581,8 @@ Compose two nodes with {"type":"stack","gap":3,"children":[...]} when one claim 
 - tree: a root plus 4–5 named rows below it, most branches or children carrying 2–4 short items
 - codeSteps: 2–3 steps, each with a label, usually a caption, and a 2–8 line verbatim block
 - compareSets: each side has a caps label, a claim in head type, and 1–8 short tags; the counts differ, and an intro frames the side that needs it
+- compareSpecs: each card has a label, a title, usually a call shape, a two-node flow with a real edge clause, and 3–5 spec rows
+- converge: each run carries 1–3 verbatim lines and an end note; the sink's ledgers hold the exact surviving state and the takeaway lands the claim
 
 ## Vocabulary JSON
 ${JSON.stringify(vocab)}

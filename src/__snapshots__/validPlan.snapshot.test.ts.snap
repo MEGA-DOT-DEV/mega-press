@@ -187,6 +187,122 @@ exports[`valid-plan snapshots > compareSets compile stays stable 1`] = `
 }
 `;
 
+exports[`valid-plan snapshots > compareSpecs compile stays stable 1`] = `
+{
+  "body": {
+    "left": {
+      "call": "kody.mcp['name'].tool()",
+      "flow": {
+        "edge": {
+          "dir": "out",
+          "text": "Kody dials out over HTTP",
+        },
+        "from": {
+          "detail": "MCP client, McpClientHub",
+          "title": "Kody",
+        },
+        "to": {
+          "detail": "public HTTPS endpoint",
+          "title": "MCP server",
+        },
+      },
+      "label": "OUTBOUND",
+      "specs": [
+        {
+          "key": "reaches",
+          "value": "publicly hosted services",
+        },
+        {
+          "key": "auth",
+          "value": "MCP OAuth, tokens in the Hub",
+        },
+      ],
+      "title": "External MCP server",
+    },
+    "right": {
+      "call": "kody.remote['name'].tool()",
+      "flow": {
+        "edge": {
+          "dir": "in",
+          "text": "the process dials in over WebSocket",
+        },
+        "from": {
+          "detail": "connector session",
+          "title": "Kody",
+        },
+        "to": {
+          "detail": "local / private network",
+          "title": "External process",
+        },
+      },
+      "label": "INBOUND",
+      "specs": [
+        {
+          "key": "reaches",
+          "value": "behind NAT and firewalls",
+        },
+        {
+          "key": "auth",
+          "value": "instance id + shared secret",
+        },
+      ],
+      "title": "Remote Connector",
+    },
+    "type": "compareSpecs",
+  },
+  "frame": "landscape",
+  "id": "outbound-inbound-specs",
+  "title": "Outbound reaches public servers; inbound reaches behind the firewall.",
+}
+`;
+
+exports[`valid-plan snapshots > converge compile stays stable 1`] = `
+{
+  "body": {
+    "sink": {
+      "columns": [
+        {
+          "label": "key-value",
+          "lines": [
+            "runCount = 2",
+            "lastIssue = "issue-987"",
+          ],
+        },
+      ],
+      "intro": "One durable object, surviving every worker that touches it.",
+      "name": "StorageRunner",
+      "tag": "userId, job:daily-report",
+      "takeaway": {
+        "lead": "The worker disappears. The data remains.",
+      },
+    },
+    "sources": [
+      {
+        "lines": [
+          "storage.set("runCount", 1)",
+        ],
+        "name": "Job run 1",
+        "note": "worker ends",
+        "tag": "WORKER",
+      },
+      {
+        "lines": [
+          "storage.get("runCount")",
+          "storage.set("runCount", 2)",
+        ],
+        "name": "Job run 2",
+        "note": "worker ends",
+        "tag": "WORKER",
+      },
+    ],
+    "type": "converge",
+  },
+  "frame": "landscape",
+  "id": "worker-state-converge",
+  "title": "State outlives every run that wrote it.",
+}
+`;
+
 exports[`valid-plan snapshots > derivation compile stays stable 1`] = `
 {
   "body": {

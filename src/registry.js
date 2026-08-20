@@ -24,8 +24,10 @@ import { railFlow, railSteps } from "../components/rail.js";
 import { code, codeSteps } from "../components/code.js";
 import { derivation } from "../components/reasoning.js";
 import { tree } from "../components/tree.js";
+import { converge } from "../components/converge.js";
 import { compareFlows } from "../components/flows.js";
 import { compareSets } from "../components/sets.js";
+import { compareSpecs } from "../components/specs.js";
 import { checklist, compare, layers, quote } from "../components/structure.js";
 import { table } from "../components/table.js";
 import { schedule, swimlanes, timeline, timelineVertical } from "../components/timeline.js";
@@ -457,6 +459,112 @@ const STRUCTURE = [
 				label: "FINAL SCOPE",
 				title: "Every surface the agent can reach.",
 				tags: ["webhook", "sheets", "email", "calendar", "storage", { text: "search", accent: true }],
+			},
+		},
+	}),
+
+	def("compareSpecs", {
+		fn: compareSpecs,
+		summary: "Two specimen cards: call shape, two-node flow, spec sheet.",
+		use: "contrasting two mechanisms by their anatomy and properties: outbound vs inbound, dedicated vs shared, push vs pull",
+		params: {
+			left: {
+				type: "{label, title, call?, flow, specs[]}",
+				required: true,
+				of: {
+					label: "string (required), caps mono name of the direction or family (uppercased)",
+					title: "string (required), the mechanism's name, drawn in head type",
+					call: "string, one verbatim line naming the call shape, drawn in the accent",
+					flow: "{from {title, detail?}, edge {text, dir: 'out' | 'in'}, to {title, detail?}} — the mechanism itself",
+					specs: "2 to 5 rows {key ≤16 mono chars, value}",
+				},
+			},
+			right: { type: "{label, title, call?, flow, specs[]}", required: true },
+			gap: { type: GAP, default: 5 },
+		},
+		notes: [
+			"The accent is structural and the same on both sides: the call shape and the first flow node carry it, because they are the claim's mechanism.",
+			"The edge arrow draws with the house arrowhead, down for out and up for in, its clause beside it in the mono voice.",
+			"One key column measure spans both cards, from the widest key anywhere, so the two sheets align and the eye compares values.",
+		],
+		example: {
+			type: "compareSpecs",
+			left: {
+				label: "OUTBOUND",
+				title: "External MCP server",
+				call: "kody.mcp['name'].tool()",
+				flow: {
+					from: { title: "Kody", detail: "MCP client" },
+					edge: { text: "Kody dials out over HTTP", dir: "out" },
+					to: { title: "MCP server", detail: "public HTTPS endpoint" },
+				},
+				specs: [
+					{ key: "reaches", value: "publicly hosted services" },
+					{ key: "auth", value: "MCP OAuth, tokens in the Hub" },
+				],
+			},
+			right: {
+				label: "INBOUND",
+				title: "Remote Connector",
+				call: "kody.remote['name'].tool()",
+				flow: {
+					from: { title: "Kody", detail: "connector session" },
+					edge: { text: "the process dials in over WebSocket", dir: "in" },
+					to: { title: "External process", detail: "local / private network" },
+				},
+				specs: [
+					{ key: "reaches", value: "behind NAT and firewalls" },
+					{ key: "auth", value: "instance id + shared secret" },
+				],
+			},
+		},
+	}),
+
+	def("converge", {
+		fn: converge,
+		summary: "Ephemeral runs funnel straight arrows into one durable panel.",
+		use: "state that outlives every execution that wrote it: many runs, one surviving object; the funnel is the claim",
+		params: {
+			sources: {
+				type: ITEMS,
+				required: true,
+				min: 2,
+				of: {
+					name: "string (required), the run's name (Job run 1)",
+					tag: "string, small mono tag at the card's right (WORKER)",
+					lines: "1 to 3 verbatim lines, string with \\n breaks or array",
+					note: "string, quiet closing clause (worker ends)",
+				},
+			},
+			sink: {
+				type: "{name, tag?, intro?, columns[], takeaway?}",
+				required: true,
+				of: {
+					name: "string (required), the durable thing every source feeds",
+					tag: "string, mono identity drawn in brackets beside the name",
+					intro: "string, one clause saying what survives and why",
+					columns: "1 or 2 of {label, lines: 2 to 5 verbatim lines}",
+					takeaway: "{lead, detail?} — centred, the sentence the figure earns",
+				},
+			},
+			gap: { type: GAP, default: 4 },
+		},
+		notes: [
+			"Source cards draw with dashed borders: the ephemeral voice, a panel that exists only for the duration of a run.",
+			"Each source drops a straight red connector into the sink directly below itself, derived from placed rects at connect time.",
+			"The sink is the accent panel: red border, accent ground, ledger columns in the codeLine voice so the state reads exactly.",
+		],
+		example: {
+			type: "converge",
+			sources: [
+				{ name: "Job run 1", tag: "WORKER", lines: ['storage.set("runCount", 1)'], note: "worker ends" },
+				{ name: "Job run 2", tag: "WORKER", lines: ['storage.get("runCount")'], note: "worker ends" },
+			],
+			sink: {
+				name: "StorageRunner",
+				tag: "userId, job:daily-report",
+				columns: [{ label: "key-value", lines: ["runCount = 2", 'lastIssue = "issue-987"'] }],
+				takeaway: { lead: "The worker disappears. The data remains." },
 			},
 		},
 	}),

@@ -316,6 +316,20 @@ export const assessPlatePedagogy = (spec: Record<string, unknown>): readonly Ped
 		}
 	}
 
+	if (type === "converge") {
+		const sources = Array.isArray(body.sources) ? body.sources : [];
+		const withState = sources.filter(
+			(s) => isRecord(s) && Array.isArray(s.lines) && s.lines.length > 0,
+		);
+		if (sources.length > 0 && withState.length === 0) {
+			errors.push({
+				code: "PLATE_THIN",
+				message:
+					"converge sources carry no verbatim lines; a funnel of empty runs shows nothing surviving. Give each run the line it wrote, or use graph.",
+			});
+		}
+	}
+
 	if (type === "railFlow") {
 		const items = Array.isArray(body.items) ? body.items : [];
 		if (items.length < 3) {

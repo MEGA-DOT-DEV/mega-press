@@ -23,6 +23,8 @@ export const PLATE_PLAN_KINDS = [
 	"timelineVertical",
 	"compareFlows",
 	"compareSets",
+	"compareSpecs",
+	"converge",
 	"railFlow",
 	"graph",
 	"derivation",
@@ -126,15 +128,27 @@ export type PlatePlan = {
 	/**
 	 * compareFlows — two labelled columns, each its own vertical transcript
 	 * (label + events). compareSets — two labelled panels, each a claim plus a
-	 * roster of tags (label + title + tags).
+	 * roster of tags (label + title + tags). compareSpecs — two specimen
+	 * cards, each a call shape, a two-node flow, and a spec sheet
+	 * (label + title + flow + specs).
 	 */
 	readonly left?: {
 		readonly label: string;
 		readonly intro?: string;
-		/** compareSets — the panel's claim, drawn in head type */
+		/** compareSets / compareSpecs — the card's claim, drawn in head type */
 		readonly title?: string;
 		/** compareSets — 1..8 short mono tags; a plain string is a quiet tag */
 		readonly tags?: readonly (string | { readonly text: string; readonly accent?: boolean })[];
+		/** compareSpecs — one verbatim line naming the call shape */
+		readonly call?: string;
+		/** compareSpecs — two named nodes and the labelled edge between them */
+		readonly flow?: {
+			readonly from: { readonly title: string; readonly detail?: string };
+			readonly edge: { readonly text: string; readonly dir?: "out" | "in" };
+			readonly to: { readonly title: string; readonly detail?: string };
+		};
+		/** compareSpecs — 2..5 key → value rows under the flow */
+		readonly specs?: readonly { readonly key: string; readonly value: string }[];
 		readonly events?: readonly {
 			readonly at: string;
 			readonly title: string;
@@ -149,6 +163,13 @@ export type PlatePlan = {
 		readonly intro?: string;
 		readonly title?: string;
 		readonly tags?: readonly (string | { readonly text: string; readonly accent?: boolean })[];
+		readonly call?: string;
+		readonly flow?: {
+			readonly from: { readonly title: string; readonly detail?: string };
+			readonly edge: { readonly text: string; readonly dir?: "out" | "in" };
+			readonly to: { readonly title: string; readonly detail?: string };
+		};
+		readonly specs?: readonly { readonly key: string; readonly value: string }[];
 		readonly events?: readonly {
 			readonly at: string;
 			readonly title: string;
@@ -160,6 +181,24 @@ export type PlatePlan = {
 	};
 	/** compareSets — which panel takes the accent border and ground; right when absent */
 	readonly accentSide?: "left" | "right" | "none";
+	/** converge — 2..4 ephemeral runs above the durable panel they all feed */
+	readonly sources?: readonly {
+		readonly name: string;
+		readonly tag?: string;
+		readonly lines?: string | readonly string[];
+		readonly note?: string;
+	}[];
+	/** converge — the one durable panel: name, ledgers of surviving state, takeaway */
+	readonly sink?: {
+		readonly name: string;
+		readonly tag?: string;
+		readonly intro?: string;
+		readonly columns: readonly {
+			readonly label: string;
+			readonly lines: string | readonly string[];
+		}[];
+		readonly takeaway?: { readonly lead: string; readonly detail?: string };
+	};
 	/** graph */
 	readonly dir?: "x" | "y";
 	readonly nodes?: readonly {
@@ -439,6 +478,46 @@ export const PLATE_PLAN_JSON_SCHEMA: Record<string, unknown> = {
 						],
 					},
 				},
+				call: { type: "string", maxLength: 120 },
+				flow: {
+					type: "object",
+					additionalProperties: false,
+					required: ["from", "edge", "to"],
+					properties: {
+						from: {
+							type: "object",
+							additionalProperties: false,
+							required: ["title"],
+							properties: { title: { type: "string" }, detail: { type: "string" } },
+						},
+						edge: {
+							type: "object",
+							additionalProperties: false,
+							required: ["text"],
+							properties: { text: { type: "string" }, dir: { type: "string", enum: ["out", "in"] } },
+						},
+						to: {
+							type: "object",
+							additionalProperties: false,
+							required: ["title"],
+							properties: { title: { type: "string" }, detail: { type: "string" } },
+						},
+					},
+				},
+				specs: {
+					type: "array",
+					minItems: 2,
+					maxItems: 5,
+					items: {
+						type: "object",
+						additionalProperties: false,
+						required: ["key", "value"],
+						properties: {
+							key: { type: "string", maxLength: 16 },
+							value: { type: "string", maxLength: 120 },
+						},
+					},
+				},
 				events: {
 					type: "array",
 					minItems: 2,
@@ -504,6 +583,46 @@ export const PLATE_PLAN_JSON_SCHEMA: Record<string, unknown> = {
 						],
 					},
 				},
+				call: { type: "string", maxLength: 120 },
+				flow: {
+					type: "object",
+					additionalProperties: false,
+					required: ["from", "edge", "to"],
+					properties: {
+						from: {
+							type: "object",
+							additionalProperties: false,
+							required: ["title"],
+							properties: { title: { type: "string" }, detail: { type: "string" } },
+						},
+						edge: {
+							type: "object",
+							additionalProperties: false,
+							required: ["text"],
+							properties: { text: { type: "string" }, dir: { type: "string", enum: ["out", "in"] } },
+						},
+						to: {
+							type: "object",
+							additionalProperties: false,
+							required: ["title"],
+							properties: { title: { type: "string" }, detail: { type: "string" } },
+						},
+					},
+				},
+				specs: {
+					type: "array",
+					minItems: 2,
+					maxItems: 5,
+					items: {
+						type: "object",
+						additionalProperties: false,
+						required: ["key", "value"],
+						properties: {
+							key: { type: "string", maxLength: 16 },
+							value: { type: "string", maxLength: 120 },
+						},
+					},
+				},
 				events: {
 					type: "array",
 					minItems: 2,
@@ -543,6 +662,65 @@ export const PLATE_PLAN_JSON_SCHEMA: Record<string, unknown> = {
 			},
 		},
 		accentSide: { type: "string", enum: ["left", "right", "none"] },
+		sources: {
+			type: "array",
+			minItems: 2,
+			maxItems: 4,
+			items: {
+				type: "object",
+				additionalProperties: false,
+				required: ["name"],
+				properties: {
+					name: { type: "string", maxLength: 40 },
+					tag: { type: "string", maxLength: 16 },
+					lines: {
+						anyOf: [
+							{ type: "string", maxLength: 300 },
+							{ type: "array", maxItems: 3, items: { type: "string", maxLength: 100 } },
+						],
+					},
+					note: { type: "string", maxLength: 60 },
+				},
+			},
+		},
+		sink: {
+			type: "object",
+			additionalProperties: false,
+			required: ["name", "columns"],
+			properties: {
+				name: { type: "string", maxLength: 40 },
+				tag: { type: "string", maxLength: 48 },
+				intro: { type: "string", maxLength: 200 },
+				columns: {
+					type: "array",
+					minItems: 1,
+					maxItems: 2,
+					items: {
+						type: "object",
+						additionalProperties: false,
+						required: ["label", "lines"],
+						properties: {
+							label: { type: "string", maxLength: 40 },
+							lines: {
+								anyOf: [
+									{ type: "string", maxLength: 500 },
+									{ type: "array", minItems: 2, maxItems: 5, items: { type: "string", maxLength: 100 } },
+								],
+							},
+						},
+					},
+				},
+				takeaway: {
+					type: "object",
+					additionalProperties: false,
+					required: ["lead"],
+					properties: {
+						lead: { type: "string", maxLength: 100 },
+						detail: { type: "string", maxLength: 160 },
+					},
+				},
+			},
+		},
 		dir: { type: "string", enum: ["x", "y"] },
 		nodes: {
 			type: "array",
