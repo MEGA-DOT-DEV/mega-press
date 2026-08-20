@@ -1,7 +1,7 @@
 /**
  * Headless solve + validate. No DOM. Consumes the baked metrics table.
- * Accommodation (taller frames) lives here so a lock is an enumerable state
- * that validate() re-checks, never a silent mutation.
+ * Frame selection (the smallest frame that fits) lives here so a lock is an
+ * enumerable state that validate() re-checks, never a silent mutation.
  */
 import { buildPlate } from "./plate.js";
 import { compileSpec } from "./spec.js";
@@ -47,20 +47,25 @@ export function evaluateSpec(spec) {
 }
 
 /**
- * Evaluate, then climb landscape → square → portrait on geometric overflow.
- * Success records `steppedFrom` when the frame changed. Every attempt is a
- * full re-validate. No truncation, no off-scale values.
+ * Frames are earned, not declared. The ladder is walked smallest-first —
+ * landscape, square, portrait — and the plate locks on the shortest frame
+ * whose content fits, because every taller frame holds the same content with
+ * more dead ground under it. A spec frame is a hint, not a coordinate: when
+ * the walk lands on a different frame, `steppedFrom` records the hint, in
+ * both directions — a tall rail steps up off landscape exactly as before,
+ * and a two-block square steps down to the landscape it actually fills.
+ * Every attempt is a full re-validate. No truncation, no off-scale values.
+ * A host that needs an exact aspect calls evaluateSpec directly.
  */
 export function proveArtifact(spec) {
-	const start = FRAME_LADDER.includes(spec.frame) ? spec.frame : "landscape";
-	const from = FRAME_LADDER.indexOf(start);
+	const asked = FRAME_LADDER.includes(spec.frame) ? spec.frame : "landscape";
 	let last = null;
-	for (let i = from; i < FRAME_LADDER.length; i++) {
+	for (let i = 0; i < FRAME_LADDER.length; i++) {
 		const frame = FRAME_LADDER[i];
 		const candidate =
-			i === from
+			frame === asked
 				? { ...spec, frame }
-				: { ...spec, frame, steppedFrom: spec.steppedFrom ?? start };
+				: { ...spec, frame, steppedFrom: spec.steppedFrom ?? asked };
 		const result = evaluateSpec(candidate);
 		last = result;
 		if (result.ok) {

@@ -381,6 +381,42 @@ export function buildPlate(spec, { validateNow = true, chrome: chromeOpt } = {})
 		if (footerShift > 0) shift(footer, 0, footerShift);
 	}
 
+	/* ---- distribute --------------------------------------------------------
+	   The solver packs the body under the header and leaves every spare pixel
+	   pooled at the bottom, which reads as an abandoned frame rather than a
+	   composed one. The chase stays anchored — header at the top, footer
+	   pinned to the safe bottom — and the body takes a measured share of the
+	   slack above it (38%, just above the optical centre), so a short plate
+	   presents its ground deliberately instead of trailing off.
+
+	   `fill` records how much of the safe height the packed content used,
+	   measured before the shift, and the validator reads it: a plate under
+	   the composed floor still locks, but says so by name. Only the stacked
+	   layout distributes — centred already centres, full-bleed owns the whole
+	   frame, and split anchors both columns to the title line. */
+	let fill = null;
+	if (layout === "stacked" && bodySlot) {
+		const parts = [bodySlot, asideSlot].filter(Boolean);
+		const drawn = parts
+			.flatMap((p) => flatten(p))
+			.filter((n) => n.rect && n.kind !== "stack" && n.kind !== "grid");
+		if (drawn.length) {
+			const usedBottom = Math.max(...drawn.map((n) => n.rect.bottom));
+			fill = (usedBottom - safe.y) / safe.h;
+			const footTops = footerBlock
+				? flatten(footerBlock)
+						.filter((n) => n.rect && n.kind !== "stack")
+						.map((n) => n.rect.top)
+				: [];
+			const floor = footTops.length ? Math.min(...footTops) - space(gap) : safe.bottom;
+			const slack = floor - usedBottom;
+			if (slack > 0) {
+				const dy = snap(slack * 0.38);
+				if (dy > 0) for (const p of parts) shift(p, 0, dy);
+			}
+		}
+	}
+
 	/* Which zone a node belongs to. The validator reads these, because two of
      the invariants mean different things for the chase and for content that
      is deliberately running past the safe area. */
@@ -429,6 +465,7 @@ export function buildPlate(spec, { validateNow = true, chrome: chromeOpt } = {})
 		page,
 		layout,
 		ratio: spec.ratio || DEFAULT_RATIO[layout],
+		fill,
 		regions,
 		root,
 		nodes: flatten(root),

@@ -33,6 +33,9 @@ import {
 	UNIT_BUDGET_RULED,
 } from "./tokens.js";
 
+/** Share of the safe height content must use before the plate reads composed. */
+const FILL_FLOOR = 0.55;
+
 export class Report {
 	constructor() {
 		this.errors = [];
@@ -116,26 +119,49 @@ export function validate(plate) {
         pushed past the bottom edge turns a single "this frame carries too
         much" into a wall of consequences, and the author then fixes the last
         line instead of the cause. */
+	/* Overflow counts everything: a footer the stack pushed past the safe
+	   bottom is exactly as overflowed as a body line there. Slack does not
+	   count the chase: the footer is *pinned* to the safe bottom whenever it
+	   fits, so including it would read every plate as one line from overflow
+	   and the fill measures would be noise. */
 	const held = painted.filter((n) => !n.bleed);
-	const contentBottom = held.length ? Math.max(...held.map((n) => n.rect.bottom)) : safe.bottom;
-	const overflow = contentBottom - safe.bottom;
+	const bodyHeld = held.filter((n) => !n.chase);
+	const overflowBottom = held.length ? Math.max(...held.map((n) => n.rect.bottom)) : safe.bottom;
+	const contentBottom = bodyHeld.length
+		? Math.max(...bodyHeld.map((n) => n.rect.bottom))
+		: safe.bottom;
+	const overflow = overflowBottom - safe.bottom;
 	const bodyLine = lineHeight("body");
 	if (overflow > 0.5) {
 		const aboutLines = Math.max(1, Math.ceil(overflow / bodyLine));
 		r.error(
 			"CONTENT_OVERFLOW",
 			`The plate runs about ${aboutLines} line${aboutLines === 1 ? "" : "s"} past the safe area ` +
-				`(${Math.ceil(overflow)}px; content ends at ${contentBottom.toFixed(0)}, safe ends at ${safe.bottom}). ` +
+				`(${Math.ceil(overflow)}px; content ends at ${overflowBottom.toFixed(0)}, safe ends at ${safe.bottom}). ` +
 				`Remove one information unit, a lead line, or a note.`,
-			{ overflow, contentBottom, safeBottom: safe.bottom, aboutLines },
+			{ overflow, contentBottom: overflowBottom, safeBottom: safe.bottom, aboutLines },
 		);
 	} else {
 		const slack = safe.bottom - contentBottom;
-		if (held.length && slack <= bodyLine + 0.5) {
+		if (bodyHeld.length && slack <= bodyLine + 0.5) {
 			r.warn(
 				"NEAR_OVERFLOW",
 				`Content sits ${Math.ceil(Math.max(0, slack))}px from the safe bottom (within one line).`,
 				{ slack, safeBottom: safe.bottom, contentBottom },
+			);
+		}
+		/* The composed floor. Fitting is necessary, not sufficient: content
+		   that uses a third of the shortest frame reads as an abandoned plate
+		   even after its ground is distributed. This warns rather than refuses
+		   — a four-row ledger is legitimately short — but it says so by name,
+		   so the author ships the airy plate on purpose or adds substance. */
+		if (typeof plate.fill === "number" && bodyHeld.length && plate.fill < FILL_FLOOR) {
+			r.warn(
+				"PLATE_SPARSE",
+				`Content fills ${Math.round(plate.fill * 100)}% of the safe height; under ` +
+					`${Math.round(FILL_FLOOR * 100)}% the frame reads as empty rather than airy. ` +
+					`Add an information unit, detail clauses, or a lead — or ship the ground deliberately.`,
+				{ fill: plate.fill },
 			);
 		}
 	}
