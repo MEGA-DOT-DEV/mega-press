@@ -152,6 +152,22 @@ export const ITEM_BOUNDS = {
 			label: "segments",
 		},
 	},
+	lineChart: {
+		series: {
+			min: 1,
+			max: 3,
+			tooFew: "LINE_SERIES_TOO_FEW",
+			tooMany: "LINE_SERIES_TOO_MANY",
+			label: "series",
+		},
+		points: {
+			min: 3,
+			max: 12,
+			tooFew: "LINE_POINTS_TOO_FEW",
+			tooMany: "LINE_POINTS_TOO_MANY",
+			label: "points per series",
+		},
+	},
 	quadrant: {
 		quadrants: {
 			min: 4,

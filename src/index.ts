@@ -2,7 +2,15 @@
  * @mega/press public contract.
  * parseArtifact → buildArtifact → mountArtifact.
  */
-export type { ArtifactKind, ArtifactPlan, PlatePlan, PlatePlanKind } from "./kernel/platePlan.js";
+export type {
+	ArtifactKind,
+	ArtifactPlan,
+	LineChartAxisPlan,
+	LineChartPointPlan,
+	LineChartSeriesPlan,
+	PlatePlan,
+	PlatePlanKind,
+} from "./kernel/platePlan.js";
 export {
 	ARTIFACT_JSON_SCHEMA,
 	ARTIFACT_KINDS,

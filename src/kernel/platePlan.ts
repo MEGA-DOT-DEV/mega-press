@@ -17,6 +17,7 @@ export const PLATE_PLAN_KINDS = [
 	"hero",
 	"bars",
 	"segments",
+	"lineChart",
 	"quadrant",
 	"quote",
 	"timeline",
@@ -34,6 +35,27 @@ export const PLATE_PLAN_KINDS = [
 ] as const;
 
 export type PlatePlanKind = (typeof PLATE_PLAN_KINDS)[number];
+
+export type LineChartAxisPlan = {
+	readonly label: string;
+	readonly format?: "number" | "currency" | "percent";
+	readonly min?: number;
+	readonly max?: number;
+	readonly reverse?: boolean;
+	readonly ticks?: number;
+};
+
+export type LineChartPointPlan = {
+	readonly x: number;
+	readonly y: number;
+	readonly label?: string;
+};
+
+export type LineChartSeriesPlan = {
+	readonly label?: string;
+	readonly accent?: boolean;
+	readonly points: readonly LineChartPointPlan[];
+};
 
 /** Public names. */
 export const ARTIFACT_KINDS = PLATE_PLAN_KINDS;
@@ -91,6 +113,10 @@ export type PlatePlan = {
 	readonly segmentUnit?: string;
 	readonly segmentTotal?: number;
 	readonly segments?: readonly { readonly label: string; readonly value: number }[];
+	/** lineChart — shared numeric axes and one to three series */
+	readonly xAxis?: LineChartAxisPlan;
+	readonly yAxis?: LineChartAxisPlan;
+	readonly series?: readonly LineChartSeriesPlan[];
 	/** quadrant — cells TL TR BL BR */
 	readonly xLabel?: string;
 	readonly yLabel?: string;
@@ -370,6 +396,61 @@ export const PLATE_PLAN_JSON_SCHEMA: Record<string, unknown> = {
 		note: { type: "string", minLength: 20, maxLength: 280 },
 		heroValue: { type: "string" },
 		heroCaption: { type: "string" },
+		xAxis: {
+			type: "object",
+			additionalProperties: false,
+			required: ["label"],
+			properties: {
+				label: { type: "string", minLength: 1, maxLength: 40 },
+				format: { type: "string", enum: ["number", "currency", "percent"] },
+				min: { type: "number" },
+				max: { type: "number" },
+				reverse: { type: "boolean" },
+				ticks: { type: "integer", minimum: 3, maximum: 7 },
+			},
+		},
+		yAxis: {
+			type: "object",
+			additionalProperties: false,
+			required: ["label"],
+			properties: {
+				label: { type: "string", minLength: 1, maxLength: 40 },
+				format: { type: "string", enum: ["number", "currency", "percent"] },
+				min: { type: "number" },
+				max: { type: "number" },
+				reverse: { type: "boolean" },
+				ticks: { type: "integer", minimum: 3, maximum: 7 },
+			},
+		},
+		series: {
+			type: "array",
+			minItems: 1,
+			maxItems: 3,
+			items: {
+				type: "object",
+				additionalProperties: false,
+				required: ["points"],
+				properties: {
+					label: { type: "string", maxLength: 40 },
+					accent: { type: "boolean" },
+					points: {
+						type: "array",
+						minItems: 3,
+						maxItems: 12,
+						items: {
+							type: "object",
+							additionalProperties: false,
+							required: ["x", "y"],
+							properties: {
+								x: { type: "number" },
+								y: { type: "number" },
+								label: { type: "string", maxLength: 32 },
+							},
+						},
+					},
+				},
+			},
+		},
 		stops: {
 			type: "array",
 			minItems: 3,

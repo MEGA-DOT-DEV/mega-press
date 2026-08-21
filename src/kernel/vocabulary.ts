@@ -23,6 +23,7 @@ export const ALLOWED_COMPONENTS = [
 	"table",
 	"bars",
 	"segments",
+	"lineChart",
 	"quadrant",
 	"stack",
 	"row",
@@ -222,6 +223,24 @@ export const COMPONENT_GUIDE: Record<string, { readonly use: string; readonly ex
 					{ label: "Read", value: 55 },
 					{ label: "Draft", value: 30 },
 					{ label: "Write gated", value: 15 },
+				],
+			},
+		},
+		lineChart: {
+			use: "numeric series plotted on shared x and y axes; distance between observations carries meaning",
+			example: {
+				type: "lineChart",
+				xAxis: { label: "COST", format: "currency", min: 0, max: 4 },
+				yAxis: { label: "SCORE", format: "percent", min: 0, max: 100 },
+				series: [
+					{
+						label: "Luna",
+						points: [
+							{ x: 0.1, y: 15, label: "LOW" },
+							{ x: 1.0, y: 45, label: "HIGH" },
+							{ x: 2.0, y: 50, label: "MAX" },
+						],
+					},
 				],
 			},
 		},

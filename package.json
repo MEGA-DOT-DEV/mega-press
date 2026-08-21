@@ -45,5 +45,8 @@
 	},
 	"engines": {
 		"node": ">=22"
+	},
+	"dependencies": {
+		"chart.js": "^4.5.1"
 	}
 }
