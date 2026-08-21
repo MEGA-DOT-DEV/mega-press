@@ -196,6 +196,88 @@ const validateNode = (node: unknown, path: string, errors: PressError[], depth: 
 		}
 	}
 
+	if (type === "lineChart") {
+		const axis = (key: "xAxis" | "yAxis") => {
+			const value = node[key];
+			if (!isRecord(value) || !String(value.label ?? "").trim()) {
+				errors.push({
+					code: "LINE_AXIS_LABEL_MISSING",
+					message: `${path}.${key}: lineChart axes need a non-empty label`,
+				});
+				return;
+			}
+			const format = String(value.format ?? "number");
+			if (!["number", "currency", "percent"].includes(format)) {
+				errors.push({
+					code: "LINE_AXIS_FORMAT",
+					message: `${path}.${key}: format must be number, currency, or percent`,
+				});
+			}
+			const min = value.min === undefined ? undefined : Number(value.min);
+			const max = value.max === undefined ? undefined : Number(value.max);
+			if (
+				(min !== undefined && !Number.isFinite(min)) ||
+				(max !== undefined && !Number.isFinite(max)) ||
+				(min !== undefined && max !== undefined && min >= max)
+			) {
+				errors.push({
+					code: "LINE_AXIS_DOMAIN",
+					message: `${path}.${key}: min and max must be finite, with min below max`,
+				});
+			}
+		};
+		axis("xAxis");
+		axis("yAxis");
+
+		const series = Array.isArray(node.series) ? node.series : [];
+		if (series.length < 1) {
+			errors.push({ code: "LINE_SERIES_TOO_FEW", message: `${path}: lineChart needs at least one series` });
+		} else if (series.length > 3) {
+			errors.push({ code: "LINE_SERIES_TOO_MANY", message: `${path}: lineChart supports at most three series` });
+		}
+		let accents = 0;
+		series.forEach((item, i) => {
+			if (!isRecord(item)) {
+				errors.push({
+					code: "LINE_SERIES_LABEL_MISSING",
+					message: `${path}.series[${i}]: every series needs a data object`,
+				});
+				return;
+			}
+			if (series.length > 1 && !String(item.label ?? "").trim()) {
+				errors.push({
+					code: "LINE_SERIES_LABEL_MISSING",
+					message: `${path}.series[${i}]: compared series need labels`,
+				});
+				return;
+			}
+			if (item.accent) accents += 1;
+			const points = Array.isArray(item.points) ? item.points : [];
+			if (points.length < 3) {
+				errors.push({
+					code: "LINE_POINTS_TOO_FEW",
+					message: `${path}.series[${i}]: a line needs at least three points`,
+				});
+			} else if (points.length > 12) {
+				errors.push({
+					code: "LINE_POINTS_TOO_MANY",
+					message: `${path}.series[${i}]: twelve points is the cap`,
+				});
+			}
+			points.forEach((point, j) => {
+				if (!isRecord(point) || !Number.isFinite(Number(point.x)) || !Number.isFinite(Number(point.y))) {
+					errors.push({
+						code: "LINE_POINT_INVALID",
+						message: `${path}.series[${i}].points[${j}]: finite x and y numbers required`,
+					});
+				}
+			});
+		});
+		if (accents > 1) {
+			errors.push({ code: "LINE_MULTIPLE_ACCENTS", message: `${path}: lineChart accents one series at most` });
+		}
+	}
+
 	if (type === "stack" || type === "row") {
 		const children = node.children;
 		if (!Array.isArray(children) || children.length === 0) {

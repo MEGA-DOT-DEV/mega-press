@@ -45,6 +45,7 @@ describe("press cli", () => {
 			"layers",
 			"bars",
 			"segments",
+			"lineChart",
 			"quadrant",
 			"timeline",
 			"timelineVertical",
@@ -159,7 +160,7 @@ describe("press cli", () => {
 		expect(existsSync(dest)).toBe(true);
 		const body = JSON.parse(r.stdout);
 		expect(body.ok).toBe(true);
-		expect(body.kinds).toBe(24);
+		expect(body.kinds).toBe(25);
 		const html = readFileSync(dest, "utf8");
 		expect(html).toContain("__PRESS_GALLERY__");
 		expect(html).toContain("compareFlows");

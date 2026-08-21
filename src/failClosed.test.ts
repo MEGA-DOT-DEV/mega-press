@@ -24,6 +24,7 @@ describe("fail-closed kinds", () => {
 		["hero", "HERO_VALUE_MISSING"],
 		["bars", "BARS_TOO_FEW"],
 		["segments", "SEGMENTS_TOO_FEW"],
+		["lineChart", "LINE_SERIES_TOO_FEW"],
 		["quadrant", "QUADRANTS_MISSING"],
 		["quote", "QUOTE_TEXT_MISSING"],
 		["note", "NOTE_MISSING"],

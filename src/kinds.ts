@@ -341,6 +341,180 @@ const segments: KindModule = {
 	},
 };
 
+const lineChart: KindModule = {
+	id: "lineChart",
+	slotsSchema: {
+		type: "object",
+		required: ["xAxis", "yAxis", "series"],
+		properties: {
+			xAxis: {
+				type: "object",
+				required: ["label"],
+				properties: {
+					label: { type: "string", maxLength: 40 },
+					format: { type: "string", enum: ["number", "currency", "percent"] },
+					min: { type: "number" },
+					max: { type: "number" },
+					reverse: { type: "boolean" },
+					ticks: { type: "integer", minimum: 3, maximum: 7 },
+				},
+			},
+			yAxis: {
+				type: "object",
+				required: ["label"],
+				properties: {
+					label: { type: "string", maxLength: 40 },
+					format: { type: "string", enum: ["number", "currency", "percent"] },
+					min: { type: "number" },
+					max: { type: "number" },
+					reverse: { type: "boolean" },
+					ticks: { type: "integer", minimum: 3, maximum: 7 },
+				},
+			},
+			series: arraySchema(ITEM_BOUNDS.lineChart.series, {
+				type: "object",
+				required: ["points"],
+				properties: {
+					label: { type: "string", maxLength: 40 },
+					accent: { type: "boolean" },
+					points: arraySchema(ITEM_BOUNDS.lineChart.points, {
+						type: "object",
+						required: ["x", "y"],
+						properties: {
+							x: { type: "number" },
+							y: { type: "number" },
+							label: { type: "string", maxLength: STRING_CAPS.tag.max },
+						},
+					}),
+				},
+			}),
+		},
+	},
+	compile(plan) {
+		const rawSeries = plan.series ?? [];
+		const seriesCount = countFail("lineChart", "series", rawSeries.length);
+		if (seriesCount) return seriesCount;
+
+		const compiled: Record<string, unknown>[] = [];
+		let accentCount = 0;
+		for (const [seriesIndex, raw] of rawSeries.entries()) {
+			const label = String(raw?.label ?? "").trim();
+			if (rawSeries.length > 1 && !label) {
+				return fail(
+					"LINE_SERIES_LABEL_MISSING",
+					`lineChart series ${seriesIndex + 1} needs a label naming the line`,
+				);
+			}
+			if (label.length > 40) {
+				return fail(
+					"LINE_SERIES_LABEL_TOO_LONG",
+					`lineChart series label "${label.slice(0, 40)}" is ${label.length} characters; 40 is the cap`,
+				);
+			}
+			const rawPoints = raw?.points ?? [];
+			const pointCount = countFail("lineChart", "points", rawPoints.length);
+			if (pointCount) return pointCount;
+			const points: { x: number; y: number; label?: string }[] = [];
+			for (const [pointIndex, point] of rawPoints.entries()) {
+				const x = Number(point?.x);
+				const y = Number(point?.y);
+				if (!Number.isFinite(x) || !Number.isFinite(y)) {
+					return fail(
+						"LINE_POINT_INVALID",
+						`lineChart series ${seriesIndex + 1} point ${pointIndex + 1} needs finite x and y numbers`,
+					);
+				}
+				const pointLabel = String(point?.label ?? "").trim();
+				if (pointLabel.length > STRING_CAPS.tag.max) {
+					return fail(
+						"LINE_POINT_LABEL_TOO_LONG",
+						`lineChart point label "${pointLabel.slice(0, 40)}" is ${pointLabel.length} characters; ${STRING_CAPS.tag.max} is the cap`,
+					);
+				}
+				points.push({ x, y, ...(pointLabel ? { label: pointLabel } : {}) });
+			}
+			points.sort((a, b) => a.x - b.x);
+			const accent = Boolean(raw?.accent);
+			if (accent) accentCount += 1;
+			compiled.push({ ...(label ? { label } : {}), points, ...(accent ? { accent: true } : {}) });
+		}
+		if (accentCount > 1) {
+			return fail("LINE_MULTIPLE_ACCENTS", "lineChart can accent at most one series");
+		}
+
+		const compileAxis = (
+			raw: NonNullable<ArtifactPlan["xAxis"]> | undefined,
+			name: "x" | "y",
+		): CompileResult => {
+			if (!raw) return fail("LINE_AXIS_MISSING", `lineChart needs a ${name} axis with a label`);
+			const label = String(raw.label ?? "").trim();
+			if (!label) return fail("LINE_AXIS_LABEL_MISSING", `lineChart ${name} axis needs a label`);
+			if (label.length > 40) {
+				return fail(
+					"LINE_AXIS_LABEL_TOO_LONG",
+					`lineChart ${name} axis label is ${label.length} characters; 40 is the cap`,
+				);
+			}
+			const format = raw.format ?? "number";
+			if (format !== "number" && format !== "currency" && format !== "percent") {
+				return fail("LINE_AXIS_FORMAT", `lineChart ${name} axis format must be number, currency, or percent`);
+			}
+			const min = raw.min === undefined ? undefined : Number(raw.min);
+			const max = raw.max === undefined ? undefined : Number(raw.max);
+			if ((min !== undefined && !Number.isFinite(min)) || (max !== undefined && !Number.isFinite(max))) {
+				return fail("LINE_AXIS_DOMAIN", `lineChart ${name} axis min and max must be finite numbers`);
+			}
+			if (min !== undefined && max !== undefined && min >= max) {
+				return fail("LINE_AXIS_DOMAIN", `lineChart ${name} axis min must be below max`);
+			}
+			const ticks = raw.ticks === undefined ? undefined : Number(raw.ticks);
+			if (ticks !== undefined && (!Number.isInteger(ticks) || ticks < 3 || ticks > 7)) {
+				return fail("LINE_AXIS_TICKS", `lineChart ${name} axis ticks must be an integer from 3 to 7`);
+			}
+			return {
+				ok: true,
+				spec: {
+					label,
+					format,
+					...(min !== undefined ? { min } : {}),
+					...(max !== undefined ? { max } : {}),
+					...(raw.reverse ? { reverse: true } : {}),
+					...(ticks !== undefined ? { ticks } : {}),
+				},
+			};
+		};
+
+		const xAxis = compileAxis(plan.xAxis, "x");
+		if (!xAxis.ok) return xAxis;
+		const yAxis = compileAxis(plan.yAxis, "y");
+		if (!yAxis.ok) return yAxis;
+		const xValues = compiled.flatMap((s) =>
+			(s.points as { x: number; y: number }[]).map((point) => point.x),
+		);
+		const yValues = compiled.flatMap((s) =>
+			(s.points as { x: number; y: number }[]).map((point) => point.y),
+		);
+		const outside = (
+			axis: Record<string, unknown>,
+			values: readonly number[],
+			name: "x" | "y",
+		): CompileFail | null => {
+			const min = axis.min;
+			const max = axis.max;
+			if (typeof min !== "number" || typeof max !== "number") return null;
+			return values.some((value) => value < min || value > max)
+				? fail("LINE_AXIS_DOMAIN", `lineChart ${name} axis domain must contain every point`)
+				: null;
+		};
+		const xOutside = outside(xAxis.spec, xValues, "x");
+		if (xOutside) return xOutside;
+		const yOutside = outside(yAxis.spec, yValues, "y");
+		if (yOutside) return yOutside;
+
+		return finish(plan, { type: "lineChart", xAxis: xAxis.spec, yAxis: yAxis.spec, series: compiled });
+	},
+};
+
 const quadrant: KindModule = {
 	id: "quadrant",
 	slotsSchema: {
@@ -1616,6 +1790,7 @@ export const KIND_MODULES: readonly KindModule[] = [
 	hero,
 	bars,
 	segments,
+	lineChart,
 	quadrant,
 	quote,
 	note,

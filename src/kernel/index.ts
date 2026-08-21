@@ -2,6 +2,9 @@
 export type {
 	ArtifactKind,
 	ArtifactPlan,
+	LineChartAxisPlan,
+	LineChartPointPlan,
+	LineChartSeriesPlan,
 	PlatePlan,
 	PlatePlanKind,
 } from "./platePlan.js";

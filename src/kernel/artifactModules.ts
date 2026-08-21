@@ -20,6 +20,7 @@ export type ArtifactModuleId =
 	| "layers"
 	| "bars"
 	| "segments"
+	| "lineChart"
 	| "quadrant"
 	| "timeline"
 	| "timelineVertical"
@@ -928,6 +929,92 @@ const MODULES: readonly ArtifactModuleSchema[] = [
 			"Write gated = 15",
 		],
 		bans: ["Segments that ignore the whole"],
+	},
+	{
+		id: "lineChart",
+		title: "Line chart",
+		use: "Numeric series plotted on shared x and y axes.",
+		pickWhen:
+			"The relationship between two measured quantities is the claim, and the distance between observations matters.",
+		units: "1–3 series × 3–12 points + two labelled axes (series labels when comparing)",
+		slots: {
+			type: "object",
+			required: ["xAxis", "yAxis", "series"],
+			properties: {
+				xAxis: {
+					type: "object",
+					required: ["label"],
+					properties: {
+						label: { type: "string", maxLength: 40 },
+						format: { type: "string", enum: ["number", "currency", "percent"] },
+						min: { type: "number" },
+						max: { type: "number" },
+						reverse: { type: "boolean" },
+						ticks: { type: "integer", minimum: 3, maximum: 7 },
+					},
+				},
+				yAxis: {
+					type: "object",
+					required: ["label"],
+					properties: {
+						label: { type: "string", maxLength: 40 },
+						format: { type: "string", enum: ["number", "currency", "percent"] },
+						min: { type: "number" },
+						max: { type: "number" },
+						reverse: { type: "boolean" },
+						ticks: { type: "integer", minimum: 3, maximum: 7 },
+					},
+				},
+				series: {
+					type: "array",
+					minItems: ITEM_BOUNDS.lineChart.series.min,
+					maxItems: ITEM_BOUNDS.lineChart.series.max,
+					items: {
+						type: "object",
+						required: ["points"],
+						properties: {
+							label: { type: "string", maxLength: 40 },
+							accent: { type: "boolean" },
+							points: {
+								type: "array",
+								minItems: ITEM_BOUNDS.lineChart.points.min,
+								maxItems: ITEM_BOUNDS.lineChart.points.max,
+								items: {
+									type: "object",
+									required: ["x", "y"],
+									properties: {
+										x: { type: "number" },
+										y: { type: "number" },
+										label: { type: "string", maxLength: STRING_CAPS.tag.max },
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		density: [
+			"Each series has at least three measured points, and all series share both domains.",
+			"Both axes are named; use currency or percent formatting when the unit needs to be visible on every tick.",
+			"Point labels are short annotations for named observations, not a second paragraph beside the line.",
+		],
+		outlineHint:
+			"X: label, format, min, max; Y: label, format, min, max; SERIES: label; then x | y | point label.",
+		exampleOutline: [
+			"X: COST, currency, 0, 4",
+			"Y: SCORE, percent, 0, 100",
+			"SERIES: Luna",
+			"0.1 | 15 | LOW",
+			"1.0 | 45 | HIGH",
+			"2.0 | 50 | MAX",
+		],
+		bans: [
+			"More than three series or twelve points per series",
+			"Series with different domains",
+			"Unlabelled axes or point labels that are full sentences",
+			"A line chart for categorical order where a timeline is the honest shape",
+		],
 	},
 	{
 		id: "quadrant",

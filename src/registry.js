@@ -15,7 +15,7 @@
  * explanation. This is documentation, and the component is the contract.
  */
 
-import { bars, donut, quadrant, segments } from "../components/chart.js";
+import { bars, donut, lineChart, quadrant, segments } from "../components/chart.js";
 import { cards, hero, metrics, note } from "../components/data.js";
 import { graph } from "../components/graph.js";
 import { ICON_NAMES, icon, iconGrid, iconTile } from "../components/icon.js";
@@ -915,6 +915,55 @@ const DATA = [
 			items: [
 				{ label: "Docs", value: 60 },
 				{ label: "Marketing", value: 40 },
+			],
+		},
+	}),
+
+	def("lineChart", {
+		fn: lineChart,
+		summary: "Numeric lines on shared x and y axes.",
+		use: "when both the position along x and the change in y are meaningful",
+		params: {
+			series: {
+				type: ITEMS,
+				required: true,
+				min: 1,
+				max: 3,
+				of: {
+					label: "string (required with multiple series)",
+					accent: "boolean, the series the claim is about",
+					points: "[{x, y, label?}], 3 to 12 numeric points, sorted by x before drawing",
+				},
+			},
+			xAxis: {
+				type: "{label, format?, min?, max?, reverse?, ticks?}",
+				required: true,
+				doc: "shared x scale; format is number, currency, or percent",
+			},
+			yAxis: {
+				type: "{label, format?, min?, max?, reverse?, ticks?}",
+				required: true,
+				doc: "shared y scale; the domain defaults from the data",
+			},
+		},
+		notes: [
+			"Points are positioned by their numeric values, not by array index. Every series shares both domains.",
+			"A point label is optional and is drawn beside its marker; use it for the few named observations the claim needs.",
+			"The first series is the accent by default. Set accent on one series to move that emphasis without naming a colour.",
+		],
+		example: {
+			type: "lineChart",
+			xAxis: { label: "COST", format: "currency", min: 0, max: 4 },
+			yAxis: { label: "SCORE", format: "percent", min: 0, max: 100 },
+			series: [
+				{
+					label: "Luna",
+					points: [
+						{ x: 0.1, y: 15, label: "LOW" },
+						{ x: 1.0, y: 45, label: "HIGH" },
+						{ x: 2.0, y: 50, label: "MAX" },
+					],
+				},
 			],
 		},
 	}),

@@ -263,6 +263,58 @@ export const outlineToPlatePlan = (input: {
 				segments: segments.slice(0, 5),
 			};
 		}
+		case "lineChart": {
+			let xAxis: { label: string; format: "number" | "currency" | "percent"; min?: number; max?: number } | null = null;
+			let yAxis: { label: string; format: "number" | "currency" | "percent"; min?: number; max?: number } | null = null;
+			const series: { label: string; points: { x: number; y: number; label?: string }[] }[] = [];
+			let current: (typeof series)[number] | null = null;
+			const readAxis = (raw: string) => {
+				const parts = raw
+					.split(",")
+					.map((part) => part.trim())
+					.filter(Boolean);
+				const label = parts[0] ?? "";
+				const format: "number" | "currency" | "percent" =
+					parts[1] === "currency" || parts[1] === "percent" ? parts[1] : "number";
+				const min = parts[2] === undefined ? undefined : Number(parts[2]);
+				const max = parts[3] === undefined ? undefined : Number(parts[3]);
+				if (!label || (min !== undefined && !Number.isFinite(min)) || (max !== undefined && !Number.isFinite(max))) return null;
+				return {
+					label,
+					format,
+					...(min !== undefined ? { min } : {}),
+					...(max !== undefined ? { max } : {}),
+				};
+			};
+			for (const line of lines) {
+				if (/^x:/i.test(line)) {
+					xAxis = readAxis(line.replace(/^x:/i, "").trim());
+					continue;
+				}
+				if (/^y:/i.test(line)) {
+					yAxis = readAxis(line.replace(/^y:/i, "").trim());
+					continue;
+				}
+				if (/^series:/i.test(line)) {
+					const label = line.replace(/^series:/i, "").trim();
+					if (!label) return null;
+					current = { label, points: [] };
+					series.push(current);
+					continue;
+				}
+				if (!current) continue;
+				const parts = line
+					.split("|")
+					.map((part) => part.trim())
+					.filter(Boolean);
+				const x = Number(parts[0]);
+				const y = Number(parts[1]);
+				if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+				current.points.push({ x, y, ...(parts[2] ? { label: parts[2] } : {}) });
+			}
+			if (!xAxis || !yAxis || series.length < 1 || series.some((s) => s.points.length < 3)) return null;
+			return { ...base, kind: "lineChart", xAxis, yAxis, series: series.slice(0, 3) };
+		}
 		case "quadrant": {
 			let xLabel = "LOW TO HIGH X";
 			let yLabel = "LOW TO HIGH Y";

@@ -233,6 +233,33 @@ export const assessPlatePedagogy = (spec: Record<string, unknown>): readonly Ped
 		}
 	}
 
+	if (type === "lineChart") {
+		const series = Array.isArray(body.series) ? body.series : [];
+		const xAxis = isRecord(body.xAxis) ? body.xAxis : null;
+		const yAxis = isRecord(body.yAxis) ? body.yAxis : null;
+		if (
+			series.length < 1 ||
+			!xAxis ||
+			!String(xAxis.label ?? "").trim() ||
+			!yAxis ||
+			!String(yAxis.label ?? "").trim()
+		) {
+			errors.push({
+				code: "PLATE_THIN",
+				message: "lineChart needs one or more series and labelled x and y axes.",
+			});
+		}
+		const sparse = series.filter(
+			(s) => isRecord(s) && Array.isArray(s.points) && s.points.length >= 3,
+		);
+		if (sparse.length !== series.length) {
+			errors.push({
+				code: "PLATE_THIN",
+				message: "lineChart needs at least three measured points on every series.",
+			});
+		}
+	}
+
 	if (type === "quadrant") {
 		const cells = Array.isArray(body.cells) ? body.cells : [];
 		const x = String(body.x ?? "").trim();
