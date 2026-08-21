@@ -1,0 +1,34 @@
+{
+	"kind": "lineChart",
+	"id": "exemplar-line-chart",
+	"frame": "square",
+	"kicker": "EVIDENCE / EFFICIENCY",
+	"title": "GPT-5.6 Terra & Luna: Score vs. Cost",
+	"lead": "DeepSWE score by reasoning effort, on original long-horizon engineering tasks.",
+	"footnote": "SOURCE: DEEPSWE",
+	"xAxis": { "label": "COST", "format": "currency", "min": 0, "max": 4, "reverse": true },
+	"yAxis": { "label": "SCORE", "format": "percent", "min": 0, "max": 100 },
+	"series": [
+		{
+			"label": "Luna",
+			"accent": true,
+			"points": [
+				{ "x": 0.01, "y": 2 },
+				{ "x": 0.03, "y": 11 },
+				{ "x": 0.15, "y": 44 },
+				{ "x": 0.3, "y": 57 },
+				{ "x": 0.6, "y": 67 }
+			]
+		},
+		{
+			"label": "Terra",
+			"points": [
+				{ "x": 0.35, "y": 24 },
+				{ "x": 0.47, "y": 35 },
+				{ "x": 0.9, "y": 54 },
+				{ "x": 1.7, "y": 60 },
+				{ "x": 3.96, "y": 70 }
+			]
+		}
+	]
+}

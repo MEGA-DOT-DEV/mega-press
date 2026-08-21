@@ -19,9 +19,32 @@
  * a colour on its own. See "The series screen" below.
  */
 
+import {
+	BasicPlatform,
+	Chart as ChartJS,
+	Legend,
+	LinearScale,
+	LineController,
+	LineElement,
+	PointElement,
+} from "chart.js";
 import { box, custom, grid, row, stack, text } from "../src/solve.js";
 import { measure } from "../src/text.js";
-import { CATEGORICAL, COLOR, GROUND, ratio, STROKE, snap, space, UNIT } from "../src/tokens.js";
+import {
+	CATEGORICAL,
+	COLOR,
+	FAMILY,
+	GROUND,
+	lineHeight,
+	ratio,
+	STROKE,
+	snap,
+	space,
+	type,
+	UNIT,
+} from "../src/tokens.js";
+
+ChartJS.register(LinearScale, LineController, LineElement, PointElement, Legend);
 
 /* --------------------------------------------------------------------------
  * The series screen
@@ -29,8 +52,8 @@ import { CATEGORICAL, COLOR, GROUND, ratio, STROKE, snap, space, UNIT } from "..
  * A chart that has to tell four parts apart has two ways to do it: give each
  * part its own hue, or give each part its own weight of the same ink.
  *
- * Four saturated hues on a black page is what a charting library does, and
- * what it says is "here are four unrelated things". A part-to-whole chart is
+ * Four saturated hues on a black page is what an unconfigured charting library
+ * does, and what it says is "here are four unrelated things". A part-to-whole chart is
  * making the opposite claim. This system already owns the better answer, and
  * the whole of mega.dev is built on it: one continuous field forced through a
  * 4x4 ordered screen into binary ink, at seventeen discrete levels of coverage
@@ -377,6 +400,553 @@ export function bars({ items, unit, max, barHeight = 28 } = {}) {
      between states, because bar lengths that mean two different things make
      every state honest on its own and the comparison between them a lie. */
 	node.scale = scale;
+	return node;
+}
+
+/* --------------------------------------------------------------------------
+ * lineChart
+ *
+ * A line chart is the right shape when both axes carry quantities and the
+ * distance between observations matters. Unlike a timeline, its x positions
+ * come from the values themselves, not from the number of stops. Unlike bars,
+ * its y axis is a position scale rather than a zero baseline, so an explicit
+ * domain is honoured and negative values are allowed.
+ *
+ * The chart is one custom node because a point at a fraction of a shared axis
+ * has no box for the solver to place. The node reports its full measure, then
+ * gives Chart.js an authored-size canvas with fixed scales, no animation, and
+ * no responsive resize. The rendered canvas is copied into the plate layer, so
+ * the solver and the chart still share one deterministic rectangle.
+ * ------------------------------------------------------------------------ */
+
+const LINE_FORMATS = new Set(["number", "currency", "percent"]);
+const LINE_POINT_LIMIT = 12;
+const LINE_SERIES_LIMIT = 3;
+const LINE_DEFAULT_TICKS = 5;
+
+const asFiniteNumber = (value, fallback = null) => {
+	if (value === undefined || value === null || value === "") return fallback;
+	const n = Number(value);
+	return Number.isFinite(n) ? n : fallback;
+};
+
+const trimNumber = (value, places) => {
+	const rounded = Number(Number(value).toFixed(places));
+	return rounded.toFixed(places).replace(/(?:\\.0+|(?:(\\.\\d*?)0+))$/, "$1");
+};
+
+const lineTickText = (value, axis) => {
+	if (axis.format === "currency") return `$${Number(value).toFixed(2)}`;
+	if (axis.format === "percent") {
+		const step = Math.abs(axis.max - axis.min) / Math.max(1, axis.ticks - 1);
+		return `${trimNumber(value, step < 10 && !Number.isInteger(value) ? 1 : 0)}%`;
+	}
+	const step = Math.abs(axis.max - axis.min) / Math.max(1, axis.ticks - 1);
+	const places = step >= 1 ? 0 : step >= 0.1 ? 1 : 2;
+	return trimNumber(value, places);
+};
+
+const lineTicks = (axis) =>
+	Array.from({ length: axis.ticks }, (_, i) => {
+		const f = i / Math.max(1, axis.ticks - 1);
+		return axis.reverse ? axis.max - f * (axis.max - axis.min) : axis.min + f * (axis.max - axis.min);
+	});
+
+const lineAxis = (raw, fallback, values, name) => {
+	const source = raw && typeof raw === "object" ? raw : fallback;
+	const dataMin = Math.min(...values);
+	const dataMax = Math.max(...values);
+	let min = asFiniteNumber(source?.min);
+	let max = asFiniteNumber(source?.max);
+
+	if (min === null) min = name === "y" && dataMin >= 0 ? 0 : dataMin;
+	if (max === null) max = name === "y" && dataMax <= 0 ? 0 : dataMax;
+	if (min === max) {
+		const pad = Math.max(1, Math.abs(min) * 0.1);
+		min -= pad;
+		max += pad;
+	}
+	if (min === null || max === null || min >= max) {
+		throw new Error(`lineChart ${name} axis needs a finite min below max.`);
+	}
+	if (values.some((value) => value < min || value > max)) {
+		throw new Error(`lineChart ${name} axis domain does not contain every point.`);
+	}
+
+	const format = String(source?.format ?? "number").trim().toLowerCase();
+	if (!LINE_FORMATS.has(format)) {
+		throw new Error(`lineChart ${name} axis format must be number, currency, or percent.`);
+	}
+	const ticks = source?.ticks === undefined ? LINE_DEFAULT_TICKS : Number(source.ticks);
+	if (!Number.isInteger(ticks) || ticks < 3 || ticks > 7) {
+		throw new Error(`lineChart ${name} axis ticks must be an integer from 3 to 7.`);
+	}
+
+	return {
+		label: String(source?.label ?? source?.unit ?? "").trim(),
+		format,
+		min,
+		max,
+		ticks,
+		reverse: Boolean(source?.reverse),
+	};
+};
+
+const lineSeries = (rawSeries) => {
+	if (!Array.isArray(rawSeries) || rawSeries.length < 1) {
+		throw new Error("lineChart needs at least one series.");
+	}
+	if (rawSeries.length > LINE_SERIES_LIMIT) {
+		throw new Error(`lineChart supports at most ${LINE_SERIES_LIMIT} series.`);
+	}
+
+	return rawSeries.map((raw, seriesIndex) => {
+		const source = raw && typeof raw === "object" ? raw : {};
+		const rawPoints = Array.isArray(source.points)
+			? source.points
+			: Array.isArray(source.data)
+				? source.data
+				: [];
+		if (rawPoints.length < 3) {
+			throw new Error(`lineChart series ${seriesIndex + 1} needs at least three points.`);
+		}
+		if (rawPoints.length > LINE_POINT_LIMIT) {
+			throw new Error(
+				`lineChart series ${seriesIndex + 1} has ${rawPoints.length} points; ${LINE_POINT_LIMIT} is the cap.`,
+			);
+		}
+
+		const points = rawPoints.map((point, pointIndex) => {
+			const p = point && typeof point === "object" ? point : {};
+			const x = asFiniteNumber(p.x);
+			const y = asFiniteNumber(p.y);
+			if (x === null || y === null) {
+				throw new Error(
+					`lineChart series ${seriesIndex + 1} point ${pointIndex + 1} needs finite x and y values.`,
+				);
+			}
+			const label = String(p.label ?? "").trim();
+			if (label.length > 32) {
+				throw new Error(
+					`lineChart point label "${label.slice(0, 40)}" is ${label.length} characters; 32 is the cap.`,
+				);
+			}
+			return { x, y, ...(label ? { label } : {}) };
+		});
+
+		return {
+			label: String(source.label ?? source.name ?? "").trim(),
+			accent: Boolean(source.accent),
+			points: points
+				.map((point, index) => ({ point, index }))
+				.sort((a, b) => a.point.x - b.point.x || a.index - b.index)
+				.map(({ point }) => point),
+		};
+	});
+};
+
+const lineSeriesColor = (index, accentIndex) => {
+	if (index === accentIndex) return CATEGORICAL[0];
+	const rank = index > accentIndex ? index - 1 : index;
+	return CATEGORICAL[rank + 1] || CATEGORICAL[1];
+};
+
+const drawTracked = (ctx, value, x, y, role, family, color, align = "left", baseline = "alphabetic") => {
+	const t = type(role);
+	ctx.font = `400 ${t.size}px ${family}`;
+	ctx.textAlign = align;
+	ctx.textBaseline = baseline;
+	ctx.fillStyle = color;
+	if ("letterSpacing" in ctx) ctx.letterSpacing = `${t.tracking * t.size}px`;
+	ctx.fillText(value, x, y);
+	if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
+};
+
+const createLineCanvas = (ctx, width, height) => {
+	const w = Math.max(1, Math.round(width));
+	const h = Math.max(1, Math.round(height));
+	let canvas = ctx.canvas?.ownerDocument?.createElement?.("canvas");
+	if (!canvas && typeof OffscreenCanvas !== "undefined") canvas = new OffscreenCanvas(w, h);
+	if (!canvas && typeof ctx.canvas?.constructor === "function") {
+		try {
+			canvas = new ctx.canvas.constructor(w, h);
+		} catch {
+			// The browser's HTMLCanvasElement cannot be constructed directly. The
+			// owner-document branch above is the normal browser path.
+		}
+	}
+	if (!canvas) throw new Error("lineChart could not create a Chart.js canvas.");
+	canvas.width = w;
+	canvas.height = h;
+	if (canvas.style) {
+		canvas.style.width = `${w}px`;
+		canvas.style.height = `${h}px`;
+	}
+	return canvas;
+};
+
+export function lineChart({
+	series,
+	xAxis,
+	yAxis,
+	xLabel,
+	yLabel,
+	xFormat,
+	yFormat,
+	xMin,
+	xMax,
+	yMin,
+	yMax,
+	xReverse,
+	yReverse,
+	xTicks,
+	yTicks,
+} = {}) {
+	const normalizedSeries = lineSeries(series);
+	if (normalizedSeries.length > 1 && normalizedSeries.some((s) => !s.label)) {
+		throw new Error("lineChart needs a label on every series when it draws a legend.");
+	}
+
+	const xValues = normalizedSeries.flatMap((s) => s.points.map((p) => p.x));
+	const yValues = normalizedSeries.flatMap((s) => s.points.map((p) => p.y));
+	const xAxisValue = lineAxis(
+		xAxis,
+		{ label: xLabel, format: xFormat, min: xMin, max: xMax, reverse: xReverse, ticks: xTicks },
+		xValues,
+		"x",
+	);
+	const yAxisValue = lineAxis(
+		yAxis,
+		{ label: yLabel, format: yFormat, min: yMin, max: yMax, reverse: yReverse, ticks: yTicks },
+		yValues,
+		"y",
+	);
+	const accentIndex = Math.max(0, normalizedSeries.findIndex((s) => s.accent));
+	const labelledSeries = normalizedSeries.filter((s) => s.label);
+	const legendHeight = labelledSeries.length > 1 ? lineHeight("list") + space(2) : 0;
+	const markerSize = space(2);
+	const labelHeight = lineHeight("utility");
+
+	const layoutFor = (width) => {
+		const yTickLabels = lineTicks(yAxisValue).map((value) => lineTickText(value, yAxisValue));
+		const yWidth = snap(Math.max(...yTickLabels.map((label) => measure(label, "utility"))) + space(2));
+		const left = yWidth + space(2);
+		const right = space(2);
+		const top = space(2) + labelHeight + (yAxisValue.label ? lineHeight("utility") + space(1) : 0);
+		const bottom =
+			labelHeight +
+			space(2) +
+			(xAxisValue.label ? lineHeight("utility") + space(1) : 0) +
+			legendHeight +
+			space(2);
+		const plotWidth = width - left - right;
+		const plotHeight = snap(width * ratio("1/2")) - space(3) - space(1);
+		if (plotWidth <= space(5) || plotHeight <= space(5)) {
+			throw new Error(`lineChart has no usable plot at ${Math.floor(width)}px wide.`);
+		}
+		return {
+			xTicks: lineTicks(xAxisValue),
+			yTicks: lineTicks(yAxisValue),
+			xTickLabels: lineTicks(xAxisValue).map((value) => lineTickText(value, xAxisValue)),
+			yTickLabels,
+			plot: { x: left, y: top, w: plotWidth, h: plotHeight },
+			h: top + plotHeight + bottom,
+			legendTop: top + plotHeight + labelHeight + space(2) + (xAxisValue.label ? lineHeight("utility") + space(1) : 0) + space(2),
+		};
+	};
+
+	const node = custom({
+		unit: true,
+		measure: (width) => ({ w: width, h: layoutFor(width).h }),
+		paint: (ctx, rect, C) => {
+			const layout = layoutFor(rect.w);
+			const canvas = createLineCanvas(ctx, rect.w, layout.h);
+			const utility = type("utility");
+			const list = type("list");
+			const font = (token) => ({
+				family: FAMILY[token.family],
+				size: token.size,
+				weight: 400,
+			});
+			const labelPlugin = {
+				id: "pressLineLabels",
+				afterDatasetsDraw(chart) {
+					const chartContext = chart.ctx;
+					const area = chart.chartArea;
+					if (!area) return;
+					const gap = space(2);
+					const labelPad = space(1);
+					const labelLine = lineHeight("utility");
+					const labels = [];
+					const points = [];
+					const segments = [];
+
+					for (let datasetIndex = 0; datasetIndex < chart.data.datasets.length; datasetIndex++) {
+						const dataset = chart.data.datasets[datasetIndex];
+						const meta = chart.getDatasetMeta(datasetIndex);
+						const positions = [];
+						for (let pointIndex = 0; pointIndex < meta.data.length; pointIndex++) {
+							const point = meta.data[pointIndex];
+							const position = point.getProps(["x", "y"], true);
+							positions.push(position);
+							points.push({ ...position, datasetIndex, pointIndex });
+							const raw = dataset.data[pointIndex];
+							if (!raw || typeof raw !== "object" || !raw.label) continue;
+							labels.push({
+								datasetIndex,
+								pointIndex,
+								text: raw.label,
+								x: position.x,
+								y: position.y,
+								w: measure(raw.label, "utility") + labelPad * 2,
+							});
+						}
+						for (let pointIndex = 1; pointIndex < positions.length; pointIndex++) {
+							segments.push({ from: positions[pointIndex - 1], to: positions[pointIndex] });
+						}
+					}
+
+					labels.sort((a, b) => a.x - b.x || a.y - b.y);
+					const occupied = [];
+					const collides = (a, b) =>
+						a.x < b.x + b.w + gap &&
+						a.x + a.w + gap > b.x &&
+						a.top < b.y + b.h + gap &&
+						a.bottom + gap > b.y;
+					const candidate = (item, placement) => {
+						const above = placement.startsWith("above");
+						const below = placement.startsWith("below");
+						const left = placement === "left" || placement.endsWith("-left");
+						const right = placement === "right" || placement.endsWith("-right");
+						const side = !above && !below && (left || right);
+						const distance = placement.endsWith("-far") ? gap + space(2) : gap;
+						const x = left ? item.x - item.w - distance : right ? item.x + distance : item.x - item.w / 2;
+						const y = below ? item.y + distance : above ? item.y - distance : item.y;
+						const top = above ? y - labelLine : below ? y : y - labelLine / 2;
+						return {
+							x: Math.max(area.left, Math.min(x, area.right - item.w)),
+							y,
+							w: item.w,
+							h: labelLine,
+							top,
+							bottom: top + labelLine,
+							baseline: side ? "middle" : above ? "bottom" : "top",
+						};
+					};
+					const ccw = (a, b, c) =>
+						(c.y - a.y) * (b.x - a.x) > (b.y - a.y) * (c.x - a.x);
+					const crosses = (a, b, c, d) =>
+						ccw(a, c, d) !== ccw(b, c, d) && ccw(a, b, c) !== ccw(a, b, d);
+					const lineCollides = (box) => {
+						const left = box.x - labelPad;
+						const right = box.x + box.w + labelPad;
+						const top = box.top - labelPad;
+						const bottom = box.bottom + labelPad;
+						const inside = (point) =>
+							point.x >= left && point.x <= right && point.y >= top && point.y <= bottom;
+						const edges = [
+							[{ x: left, y: top }, { x: right, y: top }],
+							[{ x: right, y: top }, { x: right, y: bottom }],
+							[{ x: right, y: bottom }, { x: left, y: bottom }],
+							[{ x: left, y: bottom }, { x: left, y: top }],
+						];
+						return segments.some(({ from, to }) =>
+							inside(from) || inside(to) || edges.some(([edgeFrom, edgeTo]) => crosses(from, to, edgeFrom, edgeTo)),
+						);
+					};
+
+					for (const item of labels) {
+						const placements = [
+							"above",
+							"below",
+							"left",
+							"right",
+							"above-far",
+							"below-far",
+							"left-far",
+							"right-far",
+							"above-left",
+							"above-right",
+							"below-left",
+							"below-right",
+							"above-left-far",
+							"above-right-far",
+							"below-left-far",
+							"below-right-far",
+						];
+						let chosen = null;
+						for (const placement of placements) {
+							const box = candidate(item, placement);
+							const coversPoint = points.some((other) => {
+								if (other.datasetIndex === item.datasetIndex && other.pointIndex === item.pointIndex) return false;
+								const nearX = Math.max(box.x, Math.min(other.x, box.x + box.w));
+								const nearY = Math.max(box.top, Math.min(other.y, box.bottom));
+								return Math.hypot(nearX - other.x, nearY - other.y) < markerSize / 2;
+							});
+							if (
+								box.top >= area.top &&
+								!coversPoint &&
+								!lineCollides(box) &&
+								box.bottom <= area.bottom &&
+								!occupied.some(
+									(other) =>
+										other.datasetIndex === item.datasetIndex && other.pointIndex === item.pointIndex
+											? false
+											: collides(box, other)
+								)
+							) {
+								chosen = box;
+								break;
+							}
+						}
+						const box = chosen || candidate(item, "above");
+						occupied.push({ ...box, y: box.top });
+						drawTracked(
+							chartContext,
+							item.text,
+							box.x + labelPad,
+							box.y,
+							"utility",
+							FAMILY.mono,
+							C.quiet,
+							"left",
+							box.baseline,
+						);
+					}
+				},
+			};
+			const chart = new ChartJS(canvas, {
+				type: "line",
+				data: {
+					datasets: normalizedSeries.map((s, index) => {
+						const color = lineSeriesColor(index, accentIndex);
+						return {
+							label: s.label,
+							data: s.points,
+							parsing: false,
+							normalized: true,
+							borderColor: color,
+							backgroundColor: color,
+							borderWidth: STROKE.emphasis,
+							borderCapStyle: "round",
+							borderJoinStyle: "round",
+							pointRadius: markerSize / 2,
+							pointHoverRadius: markerSize / 2,
+							pointBorderColor: C.page,
+							pointBorderWidth: STROKE.connector,
+							pointBackgroundColor: color,
+							pointStyle: "circle",
+							showLine: true,
+							fill: false,
+							spanGaps: false,
+							clip: false,
+							tension: 0,
+						};
+					}),
+				},
+				options: {
+					responsive: false,
+					maintainAspectRatio: false,
+					animation: false,
+					devicePixelRatio: 1,
+					platform: BasicPlatform,
+					events: [],
+					layout: {
+						padding: {
+							top: space(3),
+							right: space(1),
+							bottom: space(3),
+							left: space(1),
+						},
+					},
+					color: C.quiet,
+					font: font(utility),
+					scales: {
+						x: {
+							type: "linear",
+							min: xAxisValue.min,
+							max: xAxisValue.max,
+							reverse: xAxisValue.reverse,
+							alignToPixels: true,
+							grid: {
+								color: C.black2,
+								lineWidth: STROKE.connector,
+								drawTicks: false,
+								drawOnChartArea: true,
+							},
+							border: { color: C.black2, width: STROKE.divider },
+							title: {
+								display: false,
+								text: xAxisValue.label,
+								color: C.quiet,
+								font: font(utility),
+								padding: space(2),
+							},
+							ticks: {
+								color: C.quiet,
+								font: font(utility),
+								count: xAxisValue.ticks,
+								maxTicksLimit: xAxisValue.ticks,
+								padding: space(2),
+								callback: (value) => lineTickText(Number(value), xAxisValue),
+							},
+						},
+						y: {
+							type: "linear",
+							min: yAxisValue.min,
+							max: yAxisValue.max,
+							reverse: yAxisValue.reverse,
+							alignToPixels: true,
+							grid: {
+								color: C.black2,
+								lineWidth: STROKE.connector,
+								drawTicks: false,
+								drawOnChartArea: true,
+							},
+							border: { color: C.black2, width: STROKE.divider },
+							title: {
+								display: false,
+								text: yAxisValue.label,
+								color: C.quiet,
+								font: font(utility),
+								padding: space(2),
+							},
+							ticks: {
+								color: C.quiet,
+								font: font(utility),
+								count: yAxisValue.ticks,
+								maxTicksLimit: yAxisValue.ticks,
+								padding: space(1),
+								callback: (value) => lineTickText(Number(value), yAxisValue),
+							},
+						},
+					},
+					plugins: {
+						legend: {
+							display: normalizedSeries.length > 1,
+							position: "bottom",
+							labels: {
+								color: C.text,
+								font: font(list),
+								boxWidth: space(1),
+								boxHeight: space(1),
+								padding: space(2),
+							},
+						},
+						tooltip: { enabled: false },
+					},
+				},
+				plugins: [labelPlugin],
+			});
+			try {
+				ctx.drawImage(canvas, rect.x, rect.y, rect.w, rect.h);
+			} finally {
+				chart.destroy();
+			}
+		},
+	});
+
+	node.scale = `${xAxisValue.min}:${xAxisValue.max}|${yAxisValue.min}:${yAxisValue.max}`;
 	return node;
 }
 
