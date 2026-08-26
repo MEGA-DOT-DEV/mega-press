@@ -10,7 +10,7 @@ Status marks are prose only: 🟠 ACTIVE · 🔴 PLANNED · 🟢 PROVEN · ⚪ D
 
 ## NOW
 
-- **F008-deterministic-consumer-vendoring** 🟠 — `mega-press` is canonical; `mega-experience` and `mega-dev` import exact pushed SHAs as reviewed committed snapshots through consumer-owned sync/check commands. → `spec/features/active/F008-deterministic-consumer-vendoring/`
+- (nothing active)
 
 ## NEXT
 
@@ -18,6 +18,7 @@ Status marks are prose only: 🟠 ACTIVE · 🔴 PLANNED · 🟢 PROVEN · ⚪ D
 
 ## PROVEN
 
+- `F008-deterministic-consumer-vendoring` — `mega-press` is canonical; both consumers import exact pushed SHAs into reviewed committed snapshots and verify drift offline. → `spec/features/done/2026-08/F008-deterministic-consumer-vendoring/`
 - `F001-render-refusal-reporting` — `press render` geometry failures exit `1` with named codes and write no file. → `spec/features/done/2026-08/F001-render-refusal-reporting/`
 - `F002-compile-contract-parity` — compile honors advertised min/max; over-max is a named refusal, never a silent `.slice()`. → `spec/features/done/2026-08/F002-compile-contract-parity/`
 - `F003-deterministic-text-metrics` — baked glyph-advance table; `measure()` is identical in Node and browser. → `spec/features/done/2026-08/F003-deterministic-text-metrics/`

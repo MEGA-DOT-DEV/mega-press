@@ -1,6 +1,6 @@
 # F008-deterministic-consumer-vendoring · Consumers import reviewed, committed Press snapshots
 
-[2026-08-26] [🟠] [STATUS] [COORDINATOR] ACTIVE · F008-deterministic-consumer-vendoring
+[2026-08-26] [🟢] [STATUS] [COORDINATOR] PROVEN · F008-deterministic-consumer-vendoring
 
 ## Outcome
 
