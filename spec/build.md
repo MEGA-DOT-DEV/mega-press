@@ -10,7 +10,7 @@ Status marks are prose only: 🟠 ACTIVE · 🔴 PLANNED · 🟢 PROVEN · ⚪ D
 
 ## NOW
 
-- (nothing active)
+- **F008-deterministic-consumer-vendoring** 🟠 — `mega-press` is canonical; `mega-experience` and `mega-dev` import exact pushed SHAs as reviewed committed snapshots through consumer-owned sync/check commands. → `spec/features/active/F008-deterministic-consumer-vendoring/`
 
 ## NEXT
 
