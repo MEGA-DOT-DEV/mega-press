@@ -474,7 +474,13 @@ async function writePng(api, spec, dest) {
 	} finally {
 		cdp?.close();
 		chrome.kill();
-		rmSync(profile, { recursive: true, force: true });
+		try {
+			// Chrome may still be flushing its profile as it dies; retry ENOTEMPTY
+			// instead of failing a render whose png is already on disk.
+			rmSync(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+		} catch (err) {
+			console.error(`profile cleanup failed (${err?.code ?? err}): ${profile}`);
+		}
 		await new Promise((r) => server.close(r));
 	}
 	if (refuse) refuseRender(refuse);

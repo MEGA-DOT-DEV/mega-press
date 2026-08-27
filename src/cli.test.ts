@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it } from "vitest";
+import { KIND_MODULES, listArtifactModules } from "./index.js";
 
 const ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..");
 const BIN = join(ROOT, "bin/press.mjs");
@@ -18,11 +19,12 @@ const run = (args: string[]) =>
 		cwd: ROOT,
 	});
 
+// Always rebuild: the CLI runs against dist/, and a dist built before the
+// current sources silently fails catalog assertions with confusing diffs.
 beforeAll(() => {
-	if (existsSync(join(ROOT, "dist/parse.js"))) return;
 	const built = spawnSync("pnpm", ["build"], { cwd: ROOT, encoding: "utf8" });
 	expect(built.status).toBe(0);
-});
+}, 120_000);
 
 describe("press cli", () => {
 	it("kinds --json lists the catalog", () => {
@@ -31,31 +33,7 @@ describe("press cli", () => {
 		const body = JSON.parse(r.stdout);
 		expect(body.ok).toBe(true);
 		const ids = body.kinds.map((k: { id: string }) => k.id);
-		expect(ids).toEqual([
-			"railSteps",
-			"compare",
-			"compareFlows",
-			"compareSets",
-			"compareSpecs",
-			"converge",
-			"metrics",
-			"cards",
-			"checklist",
-			"table",
-			"layers",
-			"bars",
-			"segments",
-			"lineChart",
-			"quadrant",
-			"timeline",
-			"timelineVertical",
-			"railFlow",
-			"graph",
-			"derivation",
-			"code",
-			"tree",
-			"codeSteps",
-		]);
+		expect(ids).toEqual(listArtifactModules().map((k) => k.id));
 	});
 
 	it("schema railSteps --json returns slots", () => {
@@ -160,7 +138,9 @@ describe("press cli", () => {
 		expect(existsSync(dest)).toBe(true);
 		const body = JSON.parse(r.stdout);
 		expect(body.ok).toBe(true);
-		expect(body.kinds).toBe(25);
+		// every kind mounts one exemplar; "note" rides inside the composed
+		// callouts wrapper instead of standing alone (see cmdGallery)
+		expect(body.kinds).toBe(KIND_MODULES.filter((k) => k.id !== "note").length);
 		const html = readFileSync(dest, "utf8");
 		expect(html).toContain("__PRESS_GALLERY__");
 		expect(html).toContain("compareFlows");
