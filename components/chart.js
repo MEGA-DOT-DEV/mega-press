@@ -432,7 +432,7 @@ const asFiniteNumber = (value, fallback = null) => {
 
 const trimNumber = (value, places) => {
 	const rounded = Number(Number(value).toFixed(places));
-	return rounded.toFixed(places).replace(/(?:\\.0+|(?:(\\.\\d*?)0+))$/, "$1");
+	return rounded.toFixed(places).replace(/(?:\.0+|(?:(\.\d*?)0+))$/, "$1");
 };
 
 const lineTickText = (value, axis) => {
