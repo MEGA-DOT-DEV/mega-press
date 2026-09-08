@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "press-composition/1",
+  "id": "time-flow",
+  "frame": "portrait",
+  "kicker": "TIME FLOW / SHARED DATE AXIS",
+  "title": "Parallel work shares one clock.",
+  "lead": "An illustrative editorial schedule. Horizontal position and bar length encode dates and durations—not evenly spaced steps.",
+  "body": {
+    "type": "stack", "gap": 4,
+    "children": [
+      {"type": "metrics", "items": [
+        {"label": "Shared window", "value": "7", "unit": "days"},
+        {"label": "Workstreams", "value": "3", "unit": "tracks"},
+        {"label": "Planned work", "value": "4", "unit": "intervals"}
+      ]},
+      {"type": "panel", "title": "Writing and figures can overlap", "body": {
+        "type": "swimlanes", "tracks": [
+          {"name": "Writing", "spans": [
+            {"from": "2026-09-01", "to": "2026-09-04", "label": "Draft"},
+            {"from": "2026-09-06", "to": "2026-09-08", "label": "Revise"}
+          ]},
+          {"name": "Figures", "spans": [{"from": "2026-09-02", "to": "2026-09-06", "label": "Generate"}]},
+          {"name": "Review", "spans": [{"from": "2026-09-06", "to": "2026-09-08", "label": "Inspect", "accent": true}]}
+        ]
+      }},
+      {"type": "table", "columns": [
+        {"key": "work", "label": "Work", "type": "text", "grow": true},
+        {"key": "from", "label": "Start (UTC)", "type": "tag"},
+        {"key": "to", "label": "End (UTC)", "type": "tag"}
+      ], "rows": [
+        {"work": "Draft", "from": "2026-09-01", "to": "2026-09-04"},
+        {"work": "Revise", "from": "2026-09-06", "to": "2026-09-08"},
+        {"work": "Generate figures", "from": "2026-09-02", "to": "2026-09-06"},
+        {"work": "Inspect", "from": "2026-09-06", "to": "2026-09-08"}
+      ]},
+      {"type": "note", "content": "All boundaries are UTC midnight. Intervals include their start and exclude their end. Overlapping work durations must not be added together to infer elapsed project time."}
+    ]
+  }
+}

@@ -1,0 +1,105 @@
+{
+  "schemaVersion": "press-composition/1",
+  "id": "library-parts-and-whole",
+  "frame": "reading",
+  "gap": 4,
+  "kicker": "COMPARISON / SHARE & MAGNITUDE",
+  "title": "One whole. Two useful questions.",
+  "lead": "An invented 100-minute workshop: 70 minutes of practice and 30 minutes of reflection. Both views below use exactly those values.",
+  "body": {
+    "type": "stack",
+    "gap": 4,
+    "children": [
+      {
+        "type": "panel",
+        "title": "How is the whole divided?",
+        "children": [
+          {
+            "type": "segments",
+            "id": "workshop-whole",
+            "total": 100,
+            "unit": "minutes",
+            "items": [
+              {
+                "label": "Practice",
+                "value": 70
+              },
+              {
+                "label": "Reflection",
+                "value": 30
+              }
+            ]
+          }
+        ],
+        "label": "01 / SHARE OF 100"
+      },
+      {
+        "type": "grid",
+        "cols": 2,
+        "gap": 4,
+        "align": "start",
+        "children": [
+          {
+            "type": "stack",
+            "gap": 4,
+            "children": [
+              {
+                "type": "text",
+                "role": "utility",
+                "content": "02 / COMMON ZERO"
+              },
+              {
+                "type": "text",
+                "role": "head",
+                "content": "Which part is larger?"
+              },
+              {
+                "type": "text",
+                "role": "body",
+                "content": "A shared starting point makes the two durations easy to compare."
+              }
+            ]
+          },
+          {
+            "type": "panel",
+            "title": "Keep the question attached.",
+            "children": [
+              {
+                "type": "text",
+                "role": "body",
+                "content": "The joined bar shows composition. Separate bars show magnitude. The values stay the same."
+              }
+            ],
+            "label": "ONE DATASET / TWO VIEWS"
+          }
+        ]
+      },
+      {
+        "type": "box",
+        "pad": 4,
+        "children": [
+          {
+            "type": "bars",
+            "id": "workshop-parts",
+            "unit": "minutes · shared scale 0–100",
+            "max": 100,
+            "items": [
+              {
+                "label": "Practice",
+                "value": 70
+              },
+              {
+                "label": "Reflection",
+                "value": 30
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "note",
+        "content": "Practice takes 70% of the workshop and lasts 40 minutes longer than reflection."
+      }
+    ]
+  }
+}

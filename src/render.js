@@ -15,9 +15,11 @@
  */
 
 import { arrowhead } from "./connect.js";
-import { contentMass, MIN_HALO, plateGround } from "./field.js";
+import { contentMass, MIN_HALO, MIN_MASS_STRENGTH, plateGround } from "./field.js";
 import { cellCanvas, resolve } from "./screen.js";
-import { COLOR, FAMILY, lineHeight, STROKE, type } from "./tokens.js";
+import { COLOR, FAMILY, lineHeight, STROKE, type, UNIT } from "./tokens.js";
+import { withPressTheme } from "./theme.js";
+import { annotationCss } from "./annotation.js";
 
 const NS_STYLE = `
 .press-plate { position: relative; overflow: hidden; }
@@ -27,20 +29,24 @@ const NS_STYLE = `
 .press-text { position: absolute; margin: 0; white-space: pre; }
 `;
 
-let styled = false;
+const styled = new WeakSet();
 function ensureStyle(doc) {
-	if (styled) return;
+	if (styled.has(doc)) return;
 	const el = doc.createElement("style");
 	el.textContent = NS_STYLE;
 	doc.head.appendChild(el);
-	styled = true;
+	styled.add(doc);
 }
 
 /* --------------------------------------------------------------------------
  * Mount
  * ------------------------------------------------------------------------ */
 
-export function mount(plate, host, { dpr = 2, field = null, pixelSize = 4 } = {}) {
+export function mount(plate, host, { dpr = 2, field = null, pixelSize = 4, themed = false } = {}) {
+	if (plate.theme && !themed) return withPressTheme(plate.theme, () => mount(plate, host, { dpr, field, pixelSize, themed: true }));
+	if (!Number.isFinite(dpr) || dpr <= 0) throw new Error("Render DPR must be positive and finite.");
+	// Long reading figures must not allocate an unbounded high-DPI canvas.
+	dpr = Math.min(dpr, Math.sqrt(32_000_000 / (plate.frame.w * plate.frame.h)));
 	const doc = host.ownerDocument;
 	ensureStyle(doc);
 
@@ -106,7 +112,7 @@ export function mount(plate, host, { dpr = 2, field = null, pixelSize = 4 } = {}
 	root.appendChild(dom);
 
 	host.appendChild(root);
-	return { root, vector, field: fieldCanvas, dom };
+	return { root, vector, field: fieldCanvas, dom, dpr };
 }
 
 /* --------------------------------------------------------------------------
@@ -168,7 +174,6 @@ const PICTURE = {
 	contrast: 1.15,
 	lift: 0.1, // so the shadows in a picture print as ink rather than as nothing
 	ceiling: 0.62, // and so the highlights never print brighter than body copy
-	ink: COLOR.ink,
 	halo: 110,
 	massStrength: 1,
 };
@@ -183,7 +188,10 @@ const resolveSrc = (src) => src;
 
 function paintPicture(doc, root, plate, pixelSize) {
 	const { frame, background } = plate;
-	const p = { ...PICTURE, ...background };
+	// The image loads after the theme scope has been restored. Capture this
+	// plate's ink now instead of retaining the palette from module import.
+	const p = { ...PICTURE, ink: plate.theme?.color?.ink || COLOR.ink, ...background };
+	p.massStrength = Math.max(p.massStrength, MIN_MASS_STRENGTH);
 
 	const canvas = doc.createElement("canvas");
 	canvas.setAttribute("role", "img");
@@ -222,6 +230,7 @@ function paintPicture(doc, root, plate, pixelSize) {
 			ink: p.ink,
 			density: (_uvx, _uvy, x, y) => {
 				const i = y * cols + x;
+				if (mass[i] >= 1) return 0;
 				const o = i * 4;
 				const tone = (0.2126 * px[o] + 0.7152 * px[o + 1] + 0.0722 * px[o + 2]) / 255;
 				// The ceiling is the legibility floor read from the other side. A fully
@@ -262,22 +271,7 @@ export function paintVector(ctx, plate) {
 	// fills, borders and markers
 	for (const n of nodes) {
 		if (!n.rect) continue;
-		if (n.kind === "box") {
-			if (n.fill) {
-				ctx.fillStyle = n.fill;
-				ctx.fillRect(n.rect.x, n.rect.y, n.rect.w, n.rect.h);
-			}
-			if (n.border) {
-				ctx.strokeStyle = n.borderColor || COLOR.black2;
-				ctx.lineWidth = STROKE.divider;
-				// A dashed border is the ephemeral voice: a panel that exists only
-				// for the duration of a run. Same weight, same colour rules.
-				if (n.borderDash) ctx.setLineDash(n.borderDash);
-				// Half-pixel offset so a 1px border lands on a pixel, not across two.
-				ctx.strokeRect(n.rect.x + 0.5, n.rect.y + 0.5, n.rect.w - 1, n.rect.h - 1);
-				if (n.borderDash) ctx.setLineDash([]);
-			}
-		}
+		if (n.kind === "box" && !n.connectorLabel) paintBox(ctx, n);
 		if (n.kind === "marker") {
 			const r = n.rect;
 			/* A marker is a square, not a disc: the icon set and the faces are all
@@ -302,6 +296,11 @@ export function paintVector(ctx, plate) {
 			} else {
 				ctx.fillStyle = n.fill || COLOR.red;
 				ctx.fillRect(r.x, r.y, r.w, r.h);
+				if (n.outline) {
+					ctx.strokeStyle = n.outline;
+					ctx.lineWidth = STROKE.connector;
+					ctx.strokeRect(r.x + pad, r.y + pad, r.w - 2 * pad, r.h - 2 * pad);
+				}
 			}
 		}
 		if (n.kind === "custom" && typeof n.paint === "function") {
@@ -329,18 +328,115 @@ export function paintVector(ctx, plate) {
 		ctx.strokeStyle = l.color;
 		ctx.lineWidth = l.weight;
 		ctx.lineJoin = "miter";
-		line(ctx, l.points);
-		if (l.arrow) {
-			const head = arrowhead(l.points);
+		const terminal = l.terminal || (l.arrow ? "arrow" : "none");
+		const terminalInset = l.terminalInset ?? (terminal === "denied" ? 3 * UNIT : 0);
+		const points = terminalInset ? stopBeforeTarget(l.points, terminalInset) : l.points;
+		const shaftPoints =
+			l.arrowheadStyle === "chevron" && (terminal === "arrow" || terminal === "review")
+				? stopBeforeTarget(points, 3 * UNIT)
+				: points;
+		line(ctx, shaftPoints, l.dash);
+		if (terminal === "arrow" || terminal === "review") {
+			const head = l.arrowheadStyle === "chevron" ? chevronArrowhead(points) : arrowhead(points);
 			if (head) {
 				ctx.fillStyle = l.color;
 				for (const r of head) ctx.fillRect(r.x, r.y, r.w, r.h);
 			}
 		}
+		if (terminal === "review" && l.arrowheadStyle !== "chevron") {
+			paintTerminalCap(ctx, points, l.color, 2 * UNIT, 3 * UNIT);
+		}
+		if (terminal === "denied") paintTerminalCap(ctx, points, l.color, 4 * UNIT, 0);
 	}
 
 	ctx.setLineDash([]);
+	// A relation label clears its own route. Placement already refuses boxes
+	// intersecting another relation, so this cannot conceal a different edge.
+	for (const n of nodes) if (n.connectorLabel) paintBox(ctx, n);
 	if (marks) paintCornerMarks(ctx, plate);
+}
+
+function paintBox(ctx, n) {
+	// Panels, code and relation labels share the handoff's square furniture.
+	// No composition-only corner radius or second box painter.
+	if (n.fill) {
+		ctx.fillStyle = n.fill;
+		ctx.fillRect(n.rect.x, n.rect.y, n.rect.w, n.rect.h);
+	}
+	if (n.border) {
+		ctx.strokeStyle = n.borderColor || COLOR.black2;
+		ctx.lineWidth = STROKE.divider;
+		if (n.borderDash) ctx.setLineDash(n.borderDash);
+		ctx.strokeRect(n.rect.x + .5, n.rect.y + .5, n.rect.w - 1, n.rect.h - 1);
+		if (n.borderDash) ctx.setLineDash([]);
+	}
+}
+
+function stopBeforeTarget(points, distance) {
+	if (!points || points.length < 2) return points;
+	const out = points.map((point) => ({ ...point }));
+	let remaining = distance;
+	while (out.length >= 2 && remaining > 0) {
+		const end = out[out.length - 1];
+		const prev = out[out.length - 2];
+		const length = Math.abs(end.x - prev.x) + Math.abs(end.y - prev.y);
+		if (length <= remaining) {
+			out.pop();
+			remaining -= length;
+			continue;
+		}
+		if (end.x !== prev.x) end.x -= Math.sign(end.x - prev.x) * remaining;
+		else end.y -= Math.sign(end.y - prev.y) * remaining;
+		remaining = 0;
+	}
+	return out;
+}
+
+function paintTerminalCap(ctx, points, color, size, inset) {
+	if (!points || points.length < 2) return;
+	const end = points[points.length - 1];
+	const prev = points[points.length - 2];
+	const horizontal = end.y === prev.y;
+	const direction = horizontal ? Math.sign(end.x - prev.x) : Math.sign(end.y - prev.y);
+	const at = {
+		x: horizontal ? end.x - direction * inset : end.x,
+		y: horizontal ? end.y : end.y - direction * inset,
+	};
+	ctx.strokeStyle = color;
+	ctx.lineWidth = STROKE.emphasis;
+	line(
+		ctx,
+		horizontal
+			? [{ x: at.x, y: at.y - size / 2 }, { x: at.x, y: at.y + size / 2 }]
+			: [{ x: at.x - size / 2, y: at.y }, { x: at.x + size / 2, y: at.y }],
+	);
+}
+
+/** A sparse pixel chevron remains directional after article-scale reduction. */
+function chevronArrowhead(points) {
+	if (!points || points.length < 2) return null;
+	const tip = points[points.length - 1];
+	const prev = points[points.length - 2];
+	const horizontal = Math.abs(tip.x - prev.x) >= Math.abs(tip.y - prev.y);
+	const dir = Math.sign(horizontal ? tip.x - prev.x : tip.y - prev.y) || 1;
+	const q = UNIT;
+	const along = (far, near) => {
+		const a = (horizontal ? tip.x : tip.y) - dir * far * q;
+		const b = (horizontal ? tip.x : tip.y) - dir * near * q;
+		return { at: Math.min(a, b), size: Math.abs(b - a) };
+	};
+	const cell = (far, near, cross, span = 1) => {
+		const run = along(far, near);
+		return horizontal
+			? { x: run.at, y: tip.y + cross * q, w: run.size, h: span * q }
+			: { x: tip.x + cross * q, y: run.at, w: span * q, h: run.size };
+	};
+	return [
+		cell(3, 2, -1.5),
+		cell(3, 2, 0.5),
+		cell(2, 1, -1, 2),
+		cell(1, 0, -0.5),
+	];
 }
 
 function line(ctx, points, dash) {
@@ -416,7 +512,26 @@ export function paintText(doc, host, plate) {
 		n._block.lines.forEach((lineText, i) => {
 			const el = doc.createElement("p");
 			el.className = "press-text";
-			el.textContent = lineText;
+			if (n.runs && n._block.fragments) {
+				const fragment = n._block.fragments[i];
+				let offset = 0;
+				for (const run of n.runs) {
+					const start = Math.max(offset, fragment.start), end = Math.min(offset + run.text.length, fragment.end);
+					if (end > start) {
+						const span = doc.createElement("span");
+						span.textContent = run.text.slice(start - offset, end - offset);
+						if (run.color) span.style.color = run.color;
+						if (run.annotation) { Object.assign(span.style, annotationCss(run.annotation)); span.dataset.pressTreatment = run.annotation.treatment; }
+						if (run.id) span.dataset.pressTarget = run.id;
+						if (run.category) span.dataset.pressCategory = run.category;
+						span.dataset.sourceStart = String(start); span.dataset.sourceEnd = String(end);
+						el.appendChild(span);
+					}
+					offset += run.text.length;
+				}
+				if (el.textContent !== lineText) throw new Error("Authored text fragments did not match their prepared source.");
+			} else el.textContent = lineText;
+			if (n.semanticId) el.dataset.pressTarget = n.semanticId;
 			/* Identity, for anything that has to recognise this run of text in a
          different solve of the same plate. `src/interact.js` tweens between
          two states by matching these; nothing else reads them. */

@@ -1,0 +1,34 @@
+{
+  "id": "context-is-a-budget",
+  "revision": 1,
+  "title": "More context still occupies a finite space.",
+  "steps": [
+    {
+      "id": "read",
+      "title": "Start at the same zero",
+      "description": "Each bar uses the same 0–100 scale. A longer bar represents a larger allocation within this illustrative budget.",
+      "targetIds": [
+        "allocation"
+      ],
+      "durationMs": 6000
+    },
+    {
+      "id": "sum",
+      "title": "Account for the whole",
+      "description": "15 instructions + 45 evidence + 25 history + 15 output = 100 units. These four categories exhaust the example budget.",
+      "targetIds": [
+        "total"
+      ],
+      "durationMs": 6000
+    },
+    {
+      "id": "trade",
+      "title": "Make the tradeoff visible",
+      "description": "If the budget stays at 100, adding 10 units to history leaves 10 fewer units for the other categories. This is arithmetic, not a prediction of model quality.",
+      "targetIds": [
+        "tradeoff"
+      ],
+      "durationMs": 6000
+    }
+  ]
+}

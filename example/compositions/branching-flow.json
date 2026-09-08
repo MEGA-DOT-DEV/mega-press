@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "press-composition/1",
+  "id": "branching-flow",
+  "frame": "portrait",
+  "kicker": "CONDITIONAL FLOW / BRANCH + MERGE",
+  "title": "Two paths. One response contract.",
+  "lead": "An illustrative cache policy. A fresh entry avoids an origin request; a missing or stale entry takes the other path.",
+  "categories": [
+    {"id": "cached", "label": "Cache path", "tone": "blue"},
+    {"id": "origin", "label": "Origin path", "tone": "red"}
+  ],
+  "body": {
+    "type": "stack", "gap": 4,
+    "children": [
+      {"type": "legend"},
+      {
+        "type": "graph", "id": "cache-flow", "dir": "y",
+        "nodes": [
+          {"key": "lookup", "rank": 0, "body": {"type": "panel", "title": "Check the cache entry", "body": {"type": "code", "lang": "js", "code": "entry = cache.get(key)"}}},
+          {"key": "reuse", "rank": 1, "category": "cached", "body": {"type": "panel", "title": "Reuse cached data", "body": {"type": "text", "role": "body", "content": "Read the stored value. No origin request is needed."}}},
+          {"key": "fetch", "rank": 1, "category": "origin", "body": {"type": "panel", "title": "Read from the origin", "body": {"type": "text", "role": "body", "content": "Fetch a new value and update the cache."}}},
+          {"key": "response", "rank": 2, "body": {"type": "panel", "title": "Return the same output shape", "body": {"type": "code", "lang": "ts", "code": "type Response = {\n  data: Article\n  source: \"cache\" | \"origin\"\n}"}}}
+        ],
+        "edges": [
+          {"id": "fresh", "from": "lookup", "to": "reuse", "label": "fresh entry", "category": "cached"},
+          {"id": "stale", "from": "lookup", "to": "fetch", "label": "missing or stale", "category": "origin"},
+          {"id": "cached-result", "from": "reuse", "to": "response", "label": "cached data", "category": "cached"},
+          {"id": "origin-result", "from": "fetch", "to": "response", "label": "new data", "category": "origin"}
+        ]
+      },
+      {"type": "note", "content": "The branches are alternatives, not a broadcast. This diagram describes a policy; it does not execute requests or define a production cache implementation."}
+    ]
+  }
+}

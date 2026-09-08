@@ -3,8 +3,8 @@ import { proveArtifact } from "./evaluate.js";
 import { mount } from "./render.js";
 import type { PressPlate } from "./plate.js";
 import { resetMetrics } from "./text.js";
-import type { PressChrome, PressChromePreset, PressColorTheme, PressFontTheme } from "./theme.js";
-import { withPressTheme } from "./theme.js";
+import type { PressChrome, PressChromePreset, PressColorTheme, PressFontTheme, PressSyntaxTheme, PressTheme } from "./theme.js";
+import { resolvePressTheme, withPressTheme } from "./theme.js";
 
 const FONT_STYLE_ID = "mega-press-fonts";
 
@@ -15,6 +15,7 @@ const MEASURE_FACES = [
 	'400 32px "Geist Pixel"',
 	'400 26px "Geist Pixel"',
 	'400 26px "Geist Sans"',
+	'400 26px "Geist Mono"',
 ] as const;
 
 /**
@@ -87,6 +88,9 @@ export type MountArtifactOpts = {
 	readonly chrome?: PressChrome | PressChromePreset;
 	readonly color?: PressColorTheme;
 	readonly fonts?: PressFontTheme;
+	readonly syntax?: PressSyntaxTheme;
+	/** Host-owned skin; the same resolved tokens govern measuring and painting. */
+	readonly theme?: PressTheme;
 };
 
 export type MountRefusalError = {
@@ -127,42 +131,31 @@ const paintPlate = (
 	el: HTMLElement,
 	spec: Record<string, unknown>,
 	opts: MountArtifactOpts | undefined,
-): { unmount(): void } =>
+): { unmount(): void; ready: Promise<void> } =>
 	withPressTheme(
-		opts?.chrome !== undefined || opts?.color !== undefined || opts?.fonts !== undefined
-			? {
-					...(opts.chrome !== undefined ? { chrome: opts.chrome } : {}),
-					...(opts.color !== undefined ? { color: opts.color } : {}),
-					...(opts.fonts !== undefined ? { fonts: opts.fonts } : {}),
-				}
-			: null,
+		opts?.theme,
 		() => {
-			const proved = proveArtifact(spec);
+			const proved = proveArtifact(spec, opts?.theme ? { theme: opts.theme } : {});
 			if (!proved.ok) throw new MountRefusal(proved.errors);
 			const plate = proved.plate as PressPlate;
 			const doc = el.ownerDocument;
 			const artW = Math.max(1, plate.frame.w);
 			const artH = Math.max(1, plate.frame.h);
 
-			el.replaceChildren();
-			el.style.position = el.style.position || "relative";
-			el.style.width = "100%";
-			el.style.aspectRatio = `${artW} / ${artH}`;
-			el.style.minWidth = `${LEGIBILITY_MIN_WIDTH}px`;
-			el.style.height = "";
-			el.style.overflow = "hidden";
-
+			const minWidth = spec.schemaVersion === "press-composition/1" ? 1000 : LEGIBILITY_MIN_WIDTH;
 			const stage = doc.createElement("div");
+			// Scaling must not leave the unscaled artboard height in document flow.
+			stage.style.position = "absolute";
+			stage.style.left = "0";
+			stage.style.top = "0";
 			stage.style.width = `${artW}px`;
 			stage.style.height = `${artH}px`;
 			stage.style.transformOrigin = "0 0";
-			el.appendChild(stage);
 
 			const applyScale = () => {
-				const hostW = Math.max(1, el.clientWidth || el.getBoundingClientRect().width || LEGIBILITY_MIN_WIDTH);
+				const hostW = Math.max(1, el.clientWidth || el.getBoundingClientRect().width || minWidth);
 				stage.style.transform = `scale(${hostW / artW})`;
 			};
-			applyScale();
 
 			mount(plate, stage, {
 				dpr: opts?.dpr ?? Math.min(2, doc.defaultView?.devicePixelRatio ?? 1),
@@ -175,12 +168,26 @@ const paintPlate = (
 							applyScale();
 						})
 					: null;
-			ro?.observe(el);
+			let disposed = false;
+			const ready = Promise.all([...stage.querySelectorAll("img")].map(image => image.decode())).then(() => {
+				if (disposed) return;
+				el.style.position = el.style.position || "relative";
+				el.style.width = "100%";
+				el.style.aspectRatio = `${artW} / ${artH}`;
+				el.style.minWidth = `${minWidth}px`;
+				el.style.height = "";
+				el.style.overflow = "hidden";
+				el.replaceChildren(stage);
+				applyScale();
+				ro?.observe(el);
+			}).catch(error => { if (!disposed) throw error; });
 
 			return {
+				ready,
 				unmount() {
+					disposed = true;
 					ro?.disconnect();
-					el.replaceChildren();
+					stage.remove();
 				},
 			};
 		},
@@ -197,12 +204,30 @@ export function mountArtifact(
 ): MountedArtifact {
 	const doc = el.ownerDocument;
 	let cancelled = false;
-	let inner: { unmount(): void } | null = null;
+	let inner: { unmount(): void; ready: Promise<void> } | null = null;
+	let effectiveTheme: PressTheme;
+	try {
+		// Capture the project skin before asynchronous font loading, so a second
+		// mount or configurePress call cannot change this instance's outcome.
+		effectiveTheme = resolvePressTheme({
+			...opts?.theme,
+			...(opts?.chrome !== undefined ? { chrome: opts.chrome } : {}),
+			...(opts?.color ? { color: { ...opts.theme?.color, ...opts.color } } : {}),
+			...(opts?.fonts ? { fonts: { ...opts.theme?.fonts, ...opts.fonts } } : {}),
+			...(opts?.syntax ? { syntax: { ...opts.theme?.syntax, ...opts.syntax } } : {}),
+		}, { composition: spec.schemaVersion === "press-composition/1" });
+	} catch (error) {
+		return { ready: Promise.reject(toRefusal(error)), unmount() {} };
+	}
 
 	const ready = ensurePressFonts(doc).then(() => {
 		if (cancelled) return;
 		try {
-			inner = paintPlate(el, spec, opts);
+			const loaded = new Set(Array.from(doc.fonts || []).filter(face => face.status === "loaded").map(face => face.family.replace(/["']/g, "")));
+			const required = new Set(Object.values(effectiveTheme.fonts || {}).map(value => (value.split(",")[0] || "").trim().replace(/^["']|["']$/g, "")));
+			for (const family of required) if (!loaded.has(family)) throw new MountRefusal([{ code: "FONT_NOT_READY", message: `Required font did not load: ${family}` }]);
+			inner = paintPlate(el, spec, { ...opts, theme: effectiveTheme });
+			return inner.ready.catch(error => { throw toRefusal(error); });
 		} catch (err) {
 			throw toRefusal(err);
 		}

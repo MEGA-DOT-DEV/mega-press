@@ -1381,6 +1381,158 @@ const railFlow: KindModule = {
 	},
 };
 
+const ACCESS_EDGE_KINDS = ["flow", "controlled", "review", "denied", "reference"] as const;
+const ACCESS_PRESENTATION_FIELDS = new Set([
+	"x", "y", "width", "height", "w", "h", "row", "column", "rank", "anchor",
+	"fromAnchor", "toAnchor", "gap", "pad", "color", "colour", "fill", "style", "styles",
+	"font", "fontSize", "size", "stroke", "weight", "align", "layout",
+]);
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+	typeof value === "object" && value !== null && !Array.isArray(value);
+
+const accessUnknownField = (
+	value: Record<string, unknown>,
+	allowed: readonly string[],
+	path: string,
+): CompileFail | null => {
+	const unknown = Object.keys(value).find((key) => !allowed.includes(key));
+	if (!unknown) return null;
+	return ACCESS_PRESENTATION_FIELDS.has(unknown)
+		? fail(
+				"ACCESS_PRESENTATION_FIELD",
+				`${path}.${unknown} is authored presentation; accessBoundary derives placement and styling from semantic regions`,
+			)
+		: fail("ACCESS_FIELD_UNKNOWN", `${path}.${unknown} is not part of the accessBoundary contract`);
+};
+
+const accessBoundary: KindModule = {
+	id: "accessBoundary",
+	slotsSchema: {
+		type: "object",
+		required: ["regions", "edges"],
+		properties: {
+			dir: { type: "string", enum: ["x", "y", "auto"], description: "auto deterministically resolves to x" },
+			regions: arraySchema(ITEM_BOUNDS.accessBoundary.regions, {
+				type: "object",
+				required: ["key", "label", "boxes"],
+				properties: {
+					key: { type: "string" },
+					label: { type: "string" },
+					boxes: arraySchema(ITEM_BOUNDS.accessBoundary.regionBoxes, {
+						type: "object",
+						required: ["key", "title"],
+						properties: {
+							key: { type: "string" },
+							title: { type: "string" },
+							detail: { type: "string", maxLength: STRING_CAPS.detail.max },
+						},
+					}),
+				},
+			}),
+			edges: arraySchema(ITEM_BOUNDS.accessBoundary.edges, {
+				type: "object",
+				required: ["from", "to", "kind"],
+				properties: {
+					from: { type: "string" },
+					to: { type: "string" },
+					kind: { type: "string", enum: [...ACCESS_EDGE_KINDS] },
+					gate: { type: "string", maxLength: 24, description: "Short relationship label, 24 characters max" },
+				},
+			}),
+		},
+	},
+	compile(plan) {
+		const envelope = accessUnknownField(plan as unknown as Record<string, unknown>, ["id", "kind", "title", "dir", "regions", "edges"], "accessBoundary");
+		if (envelope) return envelope;
+		const dir = plan.dir ?? "auto";
+		if (dir !== "x" && dir !== "y" && dir !== "auto") {
+			return fail("ACCESS_DIR_INVALID", "accessBoundary dir must be x, y, or auto");
+		}
+		const rawRegions = Array.isArray(plan.regions) ? plan.regions : [];
+		const regionCount = countFail("accessBoundary", "regions", rawRegions.length);
+		if (regionCount) return regionCount;
+
+		const regions: { key: string; label: string; boxes: { key: string; title: string; detail?: string }[] }[] = [];
+		const regionKeys = new Set<string>();
+		const boxKeys = new Set<string>();
+		const boxRegion = new Map<string, string>();
+		for (const [regionIndex, rawRegion] of rawRegions.entries()) {
+			if (!isRecord(rawRegion)) return fail("ACCESS_REGION_INVALID", `regions[${regionIndex}] must be an object`);
+			const unknown = accessUnknownField(rawRegion, ["key", "label", "boxes"], `regions[${regionIndex}]`);
+			if (unknown) return unknown;
+			const key = String(rawRegion.key ?? "").trim();
+			const label = String(rawRegion.label ?? "").trim();
+			if (!key || !label) return fail("ACCESS_REGION_INCOMPLETE", `regions[${regionIndex}] needs key and label`);
+			if (regionKeys.has(key)) return fail("ACCESS_REGION_KEY_DUPLICATE", `accessBoundary region key "${key}" is duplicated`);
+			regionKeys.add(key);
+			const rawBoxes = Array.isArray(rawRegion.boxes) ? rawRegion.boxes : [];
+			const localCount = countFail("accessBoundary", "regionBoxes", rawBoxes.length);
+			if (localCount) return localCount;
+			const boxes: { key: string; title: string; detail?: string }[] = [];
+			for (const [boxIndex, rawBox] of rawBoxes.entries()) {
+				if (!isRecord(rawBox)) return fail("ACCESS_BOX_INVALID", `regions[${regionIndex}].boxes[${boxIndex}] must be an object`);
+				const boxUnknown = accessUnknownField(rawBox, ["key", "title", "detail"], `regions[${regionIndex}].boxes[${boxIndex}]`);
+				if (boxUnknown) return boxUnknown;
+				const boxKey = String(rawBox.key ?? "").trim();
+				const title = String(rawBox.title ?? "").trim();
+				const detail = String(rawBox.detail ?? "").trim();
+				if (!boxKey || !title) return fail("ACCESS_BOX_INCOMPLETE", `regions[${regionIndex}].boxes[${boxIndex}] needs key and title`);
+				if (boxKeys.has(boxKey)) return fail("ACCESS_BOX_KEY_DUPLICATE", `accessBoundary box key "${boxKey}" is duplicated`);
+				boxKeys.add(boxKey);
+				boxRegion.set(boxKey, key);
+				boxes.push({ key: boxKey, title, ...(detail ? { detail } : {}) });
+			}
+			regions.push({ key, label, boxes });
+		}
+		const boxCount = countFail("accessBoundary", "boxes", boxKeys.size);
+		if (boxCount) return boxCount;
+
+		const rawEdges = Array.isArray(plan.edges) ? plan.edges : [];
+		const edgeCount = countFail("accessBoundary", "edges", rawEdges.length);
+		if (edgeCount) return edgeCount;
+		const edges: { from: string; to: string; kind: (typeof ACCESS_EDGE_KINDS)[number]; gate?: string }[] = [];
+		const pairs = new Set<string>();
+		const participating = new Set<string>();
+		let guarded = false;
+		for (const [edgeIndex, rawEdge] of rawEdges.entries()) {
+			if (!isRecord(rawEdge)) return fail("ACCESS_EDGE_INVALID", `edges[${edgeIndex}] must be an object`);
+			const edgeUnknown = accessUnknownField(rawEdge, ["from", "to", "kind", "gate"], `edges[${edgeIndex}]`);
+			if (edgeUnknown) return edgeUnknown;
+			const from = String(rawEdge.from ?? "").trim();
+			const to = String(rawEdge.to ?? "").trim();
+			const kind = String(rawEdge.kind ?? "").trim();
+			const gate = String(rawEdge.gate ?? "").trim();
+			if (!(ACCESS_EDGE_KINDS as readonly string[]).includes(kind)) {
+				return fail("ACCESS_EDGE_KIND_INVALID", `edges[${edgeIndex}].kind must be ${ACCESS_EDGE_KINDS.join(", ")}`);
+			}
+			if (!boxKeys.has(from) || !boxKeys.has(to)) return fail("ACCESS_EDGE_UNKNOWN", `accessBoundary edge ${from} to ${to} names a key no box has`);
+			if (from === to) return fail("ACCESS_EDGE_SELF", `accessBoundary edge "${from}" cannot connect a box to itself`);
+			if (boxRegion.get(from) === boxRegion.get(to)) return fail("ACCESS_EDGE_SAME_REGION", `accessBoundary edge ${from} to ${to} stays inside one region; edges describe boundary crossings`);
+			const pair = [from, to].sort().join("|");
+			if (pairs.has(pair)) return fail("ACCESS_EDGE_PARALLEL", `accessBoundary has duplicate or parallel edges between ${from} and ${to}`);
+			pairs.add(pair);
+			if (rawEdge.gate !== undefined && !gate) return fail("ACCESS_GATE_EMPTY", `edges[${edgeIndex}].gate must be omitted or non-empty`);
+			if (gate.length > 24) return fail("ACCESS_GATE_TOO_LONG", `edges[${edgeIndex}].gate is ${gate.length} characters; 24 is the cap`);
+			const edgeKind = kind as (typeof ACCESS_EDGE_KINDS)[number];
+			guarded ||= edgeKind === "controlled" || edgeKind === "review" || edgeKind === "denied";
+			participating.add(from);
+			participating.add(to);
+			edges.push({ from, to, kind: edgeKind, ...(gate ? { gate } : {}) });
+		}
+		const idle = [...boxKeys].find((key) => !participating.has(key));
+		if (idle) return fail("ACCESS_BOX_UNCONNECTED", `accessBoundary box "${idle}" participates in no edge`);
+		if (!guarded) return fail("ACCESS_GUARD_MISSING", "accessBoundary needs at least one controlled, review, or denied edge");
+
+		const resolvedDir = dir === "y" ? "y" : "x";
+		return finish({ ...plan, frame: resolvedDir === "y" ? "portrait" : "landscape" }, {
+			type: "accessBoundary",
+			dir: resolvedDir,
+			regions,
+			edges,
+		});
+	},
+};
+
 const graph: KindModule = {
 	id: "graph",
 	slotsSchema: {
@@ -1801,6 +1953,7 @@ export const KIND_MODULES: readonly KindModule[] = [
 	compareSpecs,
 	converge,
 	railFlow,
+	accessBoundary,
 	graph,
 	derivation,
 	codeKind,

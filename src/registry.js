@@ -17,7 +17,13 @@
 
 import { bars, donut, lineChart, quadrant, segments } from "../components/chart.js";
 import { cards, hero, metrics, note } from "../components/data.js";
+import { accessBoundary } from "../components/access-boundary.js";
 import { graph } from "../components/graph.js";
+import { panel, schema } from "../components/content.js";
+import { categoryColor } from "./theme.js";
+import { resolveAnnotation } from "./annotation.js";
+import { PressError } from "./tokens.js";
+import { legend } from "../components/legend.js";
 import { ICON_NAMES, icon, iconGrid, iconTile } from "../components/icon.js";
 import { image, placeholder } from "../components/media.js";
 import { railFlow, railSteps } from "../components/rail.js";
@@ -39,7 +45,7 @@ import * as solve from "./solve.js";
  * ------------------------------------------------------------------------ */
 
 const GAP = "space step, 1 to 5 (12, 20, 28, 40, 56px). Nothing between steps exists.";
-const ROLE = "type role: utility, brand, body, list, head, datum, display, datumHero";
+const ROLE = "type role: utility, code, brand, body, list, head, datum, display, datumHero";
 const ITEMS = "array";
 
 const def = (name, spec) => ({ name, ...spec });
@@ -53,6 +59,7 @@ const def = (name, spec) => ({ name, ...spec });
 
 const LAYOUT = [
 	def("stack", {
+		composition: true,
 		fn: solve.stack,
 		summary: "Children top to bottom.",
 		use: "composing two components on one plate",
@@ -65,6 +72,7 @@ const LAYOUT = [
 	}),
 
 	def("row", {
+		composition: true,
 		fn: solve.row,
 		summary: "Children left to right. Any child may set grow to take the slack.",
 		use: "two things side by side",
@@ -81,10 +89,12 @@ const LAYOUT = [
 	}),
 
 	def("grid", {
+		composition: true,
 		fn: solve.grid,
 		summary: "Equal columns.",
 		params: {
 			cols: { type: "number", required: true },
+			align: { type: "'start' | 'stretch'", default: "stretch" },
 			children: { type: "array of nodes", required: true },
 			gap: { type: GAP, default: 3 },
 		},
@@ -92,6 +102,7 @@ const LAYOUT = [
 	}),
 
 	def("box", {
+		composition: true,
 		fn: solve.box,
 		summary: "A bordered, filled block.",
 		params: {
@@ -104,14 +115,35 @@ const LAYOUT = [
 	}),
 
 	def("text", {
-		fn: (p) => solve.text(p.content, p.role, p),
+		composition: true,
+		fn: (p, context = {}) => {
+			if (p.runs !== undefined && p.content !== undefined) throw new Error("text takes content or runs, not both.");
+			const runs = p.runs?.map(run => {
+				if (typeof run.text !== "string") throw new Error("An authored run needs literal text.");
+				const category = run.category === undefined ? null : context.categories?.get(run.category);
+				if (run.category !== undefined && !category) throw new Error(`Unknown run category "${run.category}".`);
+				const annotation = category ? resolveAnnotation(category) : null;
+				return { ...run, ...(annotation ? { color: annotation.color, annotation } : {}) };
+			});
+			const content = runs ? runs.map(run => run.text).join("") : p.content;
+			if (runs) {
+				const boundaries = new Set([0, content.length]);
+				for (const segment of new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(content)) boundaries.add(segment.index);
+				let offset = 0;
+				for (const run of runs) {
+					offset += run.text.length;
+					if (!boundaries.has(offset)) throw new PressError("TEXT_RUN_BOUNDARY", "A text run splits a Unicode grapheme. Keep the complete character sequence in one run.");
+				}
+			}
+			return solve.text(content, p.role, { ...p, ...(runs ? { runs } : {}) });
+		},
 		summary: "A run of text at a named role.",
 		params: {
 			content: {
 				type: "string",
-				required: true,
-				doc: "no em or en dashes; the build rejects them",
+				doc: "authored wording and punctuation are preserved; use content or runs",
 			},
+			runs: { type: "array", of: { text: "literal string", id: "stable occurrence ID", category: "declared category ID" } },
 			role: { type: ROLE, required: true },
 			color: { type: "hex string", doc: "defaults by role" },
 			align: { type: "'left' | 'right' | 'center'", default: "left" },
@@ -121,6 +153,7 @@ const LAYOUT = [
 	}),
 
 	def("note", {
+		composition: true,
 		fn: (p) => note(p.content),
 		summary: "The one shared commentary bar. Use this rather than inventing an aside.",
 		params: { content: { type: "string", required: true } },
@@ -128,6 +161,7 @@ const LAYOUT = [
 	}),
 
 	def("hero", {
+		composition: true,
 		fn: hero,
 		summary: "The single focal numeral. At most one per plate.",
 		params: {
@@ -148,6 +182,7 @@ const LAYOUT = [
 
 const SEQUENCE = [
 	def("railSteps", {
+		composition: true,
 		fn: railSteps,
 		summary: "A vertical sequence with a rail derived from the dots.",
 		use: "steps, waves, a roadmap, a process, a method",
@@ -156,13 +191,15 @@ const SEQUENCE = [
 				type: ITEMS,
 				required: true,
 				min: 2,
-				of: { name: "string (required)", detail: "string", index: "number" },
+				of: { name: "string (required)", detail: "string", index: "number", code: "exact unwrapped source, 1–200 logical lines in compositions; geometry decides fit", chips: "[{text, accent?}], 1–6 short mono pills" },
 			},
 			activeTo: {
 				type: "number",
 				default: -1,
 				doc: "items up to this index are drawn in the accent",
 			},
+			accentAt: { type: "number", default: -1, doc: "one zero-based focus target, mutually exclusive with activeTo" },
+			accentReach: { type: "'none' | 'approach' | 'full'", default: "approach", doc: "focus lights the arriving segment by default; its markers inherit that rail colour" },
 			gap: { type: GAP, default: 4, doc: "between steps" },
 			markerGap: { type: GAP, default: 3, doc: "from the dot to its text" },
 			numbered: { type: "boolean", default: true },
@@ -178,6 +215,7 @@ const SEQUENCE = [
 	}),
 
 	def("railFlow", {
+		composition: true,
 		fn: railFlow,
 		summary: "The same sequence laid horizontally.",
 		params: {
@@ -194,6 +232,7 @@ const SEQUENCE = [
 	}),
 
 	def("timeline", {
+		composition: true,
 		fn: timeline,
 		summary: "Horizontal stops, evenly spaced, axis derived from the markers.",
 		use: "when order matters but the intervals do not; stack two labelled rails to contrast two runs",
@@ -236,6 +275,7 @@ const SEQUENCE = [
 	}),
 
 	def("timelineVertical", {
+		composition: true,
 		fn: timelineVertical,
 		summary: "Dated stops top to bottom, the date in its own derived column.",
 		use: "an event log or transcript; an event may carry the verbatim call shape it is about",
@@ -248,7 +288,8 @@ const SEQUENCE = [
 					date: "string (required)",
 					title: "string (required)",
 					detail: "string",
-					code: "string, \\n-separated verbatim block under the event, 2 to 8 lines",
+					id: "stable event ID", body: "component tree; may replace title/detail",
+					code: "string, LF-separated exact unwrapped source; 1–200 logical lines in compositions, geometry decides fit",
 					accent: "boolean, the one event the claim is about",
 					chips: "[{text, accent?}], 1 to 6 short mono pills under the detail or code, text 32 chars max",
 				},
@@ -271,6 +312,7 @@ const SEQUENCE = [
 	}),
 
 	def("schedule", {
+		composition: true,
 		fn: schedule,
 		summary: "Positions proportional to real elapsed time, with packed labels.",
 		use: "when the GAPS between events are the point",
@@ -299,6 +341,7 @@ const SEQUENCE = [
 	}),
 
 	def("swimlanes", {
+		composition: true,
 		fn: swimlanes,
 		summary: "Several tracks on one shared clock.",
 		use: "a plan where more than one thing happens at once",
@@ -333,7 +376,66 @@ const SEQUENCE = [
  * ------------------------------------------------------------------------ */
 
 const STRUCTURE = [
+	def("panel", {
+		composition: true, fn: panel,
+		summary: "One measured surface containing any approved component tree.",
+		params: {
+			title: { type: "string" }, label: { type: "string" },
+			body: { type: "node" }, children: { type: "array of nodes" },
+		},
+		example: { type: "panel", title: "A shared contract", body: { type: "text", role: "body", content: "The contents determine the height." } },
+	}),
+	def("schema", {
+		composition: true, fn: schema,
+		summary: "A typed field list with named, measured row ports.",
+		params: {
+			title: { type: "string", required: true }, subtitle: { type: "string" }, footer: { type: "string" },
+			fields: { type: "array", required: true, of: { id: "unique local port ID", name: "string", type: "string", key: "primary | foreign", nullable: "boolean", category: "declared category ID" } },
+		},
+		example: { type: "schema", title: "users", fields: [{ id: "id", name: "id", type: "uuid", key: "primary" }] },
+	}),
+	def("legend", {
+		composition: true,
+		fn: legend,
+		summary: "Shared category marks, labels and optional explanations, defined once.",
+		params: { ids: { type: "array of category IDs; omitted means all" }, layout: { type: "'row' | 'stack'", default: "row" } },
+		example: { type: "legend" },
+	}),
+	def("accessBoundary", {
+		fn: accessBoundary,
+		summary: "Ordered trust regions with enclosed boxes and semantic boundary crossings.",
+		use: "permission surfaces, sandbox boundaries, reviewed exits, and explicit denials",
+		params: {
+			regions: {
+				type: ITEMS,
+				required: true,
+				of: { key: "unique string", label: "string", boxes: "1 to 3 {key,title,detail?}" },
+			},
+			edges: {
+				type: ITEMS,
+				required: true,
+				of: { from: "box key", to: "box key", kind: "flow | controlled | review | denied | reference", gate: "short label" },
+			},
+			dir: { type: "'x' | 'y'", default: "x" },
+		},
+		notes: [
+			"Regions are enclosed in declaration order; x makes columns and y makes rows.",
+			"Boxes flow and equalize inside each region. Routes and terminals derive from their borders.",
+			"Denied relationships stop before the protected target; reference relationships have no arrow.",
+		],
+		example: {
+			type: "accessBoundary",
+			dir: "y",
+			regions: [
+				{ key: "input", label: "UNTRUSTED", boxes: [{ key: "ticket", title: "Support ticket" }] },
+				{ key: "work", label: "ISOLATED", boxes: [{ key: "agent", title: "Background agent" }] },
+			],
+			edges: [{ from: "ticket", to: "agent", kind: "controlled", gate: "Filter prompt" }],
+		},
+	}),
+
 	def("graph", {
+		composition: true,
 		fn: graph,
 		summary: "Labelled boxes with arrows derived from the placed boxes.",
 		use: "a pipeline, an architecture, a system",
@@ -344,14 +446,16 @@ const STRUCTURE = [
 				min: 2,
 				of: {
 					key: "string (required, unique)",
-					title: "string (required)",
+					title: "string, required unless body is present",
+					body: "any compiled component tree",
 					detail: "string",
-					accent: "boolean",
+					accent: "boolean", category: "declared category ID",
+					rank: "integer", order: "integer", row: "integer", column: "integer",
 				},
 			},
 			edges: {
 				type: ITEMS,
-				of: { from: "node key", to: "node key" },
+				of: { id: "stable relation ID", from: "node key", to: "node key", fromPort: "named field ID", toPort: "named field ID", fromAnchor: "left | right | top | bottom", toAnchor: "left | right | top | bottom", label: "exact relation label", category: "declared category ID", arrow: "boolean" },
 				doc: "an edge naming a key that does not exist fails the build",
 			},
 			dir: { type: "'x' | 'y'", default: "x" },
@@ -685,17 +789,20 @@ const STRUCTURE = [
 	}),
 
 	def("code", {
+		composition: true,
 		fn: code,
-		summary: "A verbatim mono block drawn line by line, one unit, no wrapping.",
+		summary: "A source-preserving mono block with optional category annotations.",
 		use: "a snippet, a call shape, a JSON payload, a config the reader should see exactly",
 		params: {
 			code: {
 				type: "string",
 				required: true,
-				doc: "the snippet with \\n line breaks, 2 to 14 lines, drawn verbatim",
+				doc: "the snippet with \\n line breaks, 1 to 200 lines in compositions, drawn verbatim",
 			},
 			label: { type: "string", doc: "small mono caption above the block (a filename, a tool name)" },
+			wrap: { type: "boolean", doc: "Composition defaults to source-preserving visual wraps; false refuses wide logical lines." },
 			accentLines: { type: "number[]", doc: "1-based line numbers drawn in the accent" },
+			annotations: { type: "array", of: { text: "exact nonempty source substring", occurrence: "positive 1-based match index; required when repeated", category: "declared category ID", id: "stable occurrence ID" }, doc: "Nonoverlapping source selections use their category treatment and legend. Missing or ambiguous matches refuse. Cannot combine with accentLines." },
 			lang: {
 				type: "'js' | 'json' | 'none'",
 				default: "auto",
@@ -703,7 +810,7 @@ const STRUCTURE = [
 			},
 		},
 		notes: [
-			"Every line is measured with maxLines: 1, so a line too wide for the frame refuses by name instead of wrapping. Code that wraps has been rewritten by the renderer.",
+			"Composition visual wraps preserve every source character. Set wrap: false to refuse wide logical lines. Legacy code keeps its 2–14-line limit and does not wrap.",
 			"The whole block is one information unit: ten lines of one snippet are one thing the reader takes in.",
 			"Blank lines are kept as vertical space; leading spaces are indentation and indentation is content.",
 			"Token colouring follows the theme's syntax slot: keywords in the accent, strings in ink, punctuation held back. Hosts re-map it once via configurePress({ syntax }), in cabinet ink names or contrast-checked hex. The spec never names a colour.",
@@ -811,6 +918,7 @@ const STRUCTURE = [
 
 const DATA = [
 	def("metrics", {
+		composition: true,
 		fn: metrics,
 		summary: "Ruled label and value rows.",
 		params: {
@@ -831,6 +939,7 @@ const DATA = [
 	}),
 
 	def("table", {
+		composition: true,
 		fn: table,
 		summary: "Derived column widths. The column type decides the face and the alignment.",
 		params: {
@@ -862,6 +971,7 @@ const DATA = [
 	}),
 
 	def("bars", {
+		composition: true,
 		fn: bars,
 		summary: "Horizontal bars on a shared zero-based scale.",
 		params: {
@@ -869,7 +979,7 @@ const DATA = [
 				type: ITEMS,
 				required: true,
 				min: 2,
-				of: { label: "string (required)", value: "number (required)", accent: "boolean" },
+				of: { id: "stable datum ID", label: "string (required)", value: "number (required)", accent: "boolean", category: "declared category ID" },
 			},
 			unit: { type: "string", required: true, doc: "what the numbers count" },
 			max: { type: "number", doc: "override the scale; defaults to the largest value" },
@@ -886,6 +996,7 @@ const DATA = [
 	}),
 
 	def("segments", {
+		composition: true,
 		fn: segments,
 		summary: "One bar divided into parts of a whole.",
 		use: "usually the better choice than a donut: lengths on a common baseline beat angles",
@@ -920,6 +1031,7 @@ const DATA = [
 	}),
 
 	def("lineChart", {
+		composition: true,
 		fn: lineChart,
 		summary: "Numeric lines on shared x and y axes.",
 		use: "when both the position along x and the change in y are meaningful",
@@ -939,11 +1051,13 @@ const DATA = [
 				type: "{label, format?, min?, max?, reverse?, ticks?}",
 				required: true,
 				doc: "shared x scale; format is number, currency, or percent",
+				fields: ["label", "format", "min", "max", "reverse", "ticks"],
 			},
 			yAxis: {
 				type: "{label, format?, min?, max?, reverse?, ticks?}",
 				required: true,
 				doc: "shared y scale; the domain defaults from the data",
+				fields: ["label", "format", "min", "max", "reverse", "ticks"],
 			},
 		},
 		notes: [
@@ -1002,6 +1116,7 @@ const DATA = [
 	}),
 
 	def("quadrant", {
+		composition: true,
 		fn: quadrant,
 		summary: "A two by two framework.",
 		params: {
@@ -1028,6 +1143,7 @@ const DATA = [
 	}),
 
 	def("distribution", {
+		composition: true,
 		fn: distribution,
 		summary: "A point estimate and the interval it lives in, on one shared axis.",
 		use: "any measured quantity that is estimated rather than counted",
@@ -1121,6 +1237,7 @@ const MEDIA = [
 	}),
 
 	def("image", {
+		composition: true,
 		fn: image,
 		summary: "A picture at a fixed ratio, positioned on solved coordinates.",
 		params: {

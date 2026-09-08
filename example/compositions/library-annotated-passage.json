@@ -1,0 +1,118 @@
+{
+  "schemaVersion": "press-composition/1",
+  "id": "library-annotated-passage",
+  "frame": "reading",
+  "gap": 4,
+  "kicker": "ANNOTATIONS / A PASSAGE WITH CLAIMS",
+  "title": "Separate what happened from what it means.",
+  "lead": "An invented review note from a practice session. The wording distinguishes an observation, an interpretation, and a proposed next step.",
+  "categories": [
+    {
+      "id": "observation",
+      "label": "Observation",
+      "tone": "neutral",
+      "treatment": "outline",
+      "description": "A count from the session: six completions out of eight attempts."
+    },
+    {
+      "id": "interpretation",
+      "label": "Interpretation",
+      "tone": "red",
+      "treatment": "highlight",
+      "description": "A possible explanation, qualified by suggests and may."
+    },
+    {
+      "id": "action",
+      "label": "Next action",
+      "tone": "blue",
+      "treatment": "underline",
+      "description": "A proposed comparison that could reveal more."
+    }
+  ],
+  "body": {
+    "type": "stack",
+    "gap": 4,
+    "children": [
+      {
+        "type": "grid",
+        "cols": 2,
+        "gap": 4,
+        "align": "start",
+        "children": [
+          {
+            "type": "panel",
+            "title": "A short review note.",
+            "children": [
+              {
+                "type": "text",
+                "role": "body",
+                "runs": [
+                  {
+                    "id": "observed-result",
+                    "text": "Six of eight learners completed the task without a hint.",
+                    "category": "observation"
+                  },
+                  {
+                    "text": " "
+                  },
+                  {
+                    "id": "possible-explanation",
+                    "text": "This suggests the opening example may have been useful.",
+                    "category": "interpretation"
+                  },
+                  {
+                    "text": " "
+                  },
+                  {
+                    "id": "proposed-next-step",
+                    "text": "Try the lesson again with a different opening example.",
+                    "category": "action"
+                  }
+                ]
+              }
+            ],
+            "id": "annotated-note",
+            "label": "READ THE SENTENCES IN ORDER"
+          },
+          {
+            "type": "stack",
+            "gap": 2,
+            "children": [
+              {
+                "type": "text",
+                "role": "utility",
+                "content": "WHAT EACH MARK MEANS"
+              },
+              {
+                "type": "legend",
+                "layout": "stack"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "railFlow",
+        "id": "review-reasoning",
+        "items": [
+          {
+            "name": "Observe",
+            "detail": "Record the result that was actually seen."
+          },
+          {
+            "name": "Interpret",
+            "detail": "Name a possible explanation with appropriate uncertainty."
+          },
+          {
+            "name": "Investigate",
+            "detail": "Choose a next step that can challenge the explanation."
+          }
+        ]
+      },
+      {
+        "type": "note",
+        "content": "The count describes this fictional session. It does not establish that the opening example caused the result."
+      }
+    ]
+  }
+}

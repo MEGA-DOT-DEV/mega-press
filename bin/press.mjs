@@ -34,7 +34,8 @@ const JSON_OUT = flag("json");
 const HELP = `
 press  @mega/press, from the command line
 
-  press kinds                      what you can build
+  press kinds                      optional fixed-kind recipes
+  press components                bounded composition building blocks
   press schema [kind]              slot shape for one kind, or all
   press check <spec|->             validate a spec, write nothing
   press render <spec|-> --format html|png|json [--out <path>]
@@ -51,7 +52,11 @@ press  @mega/press, from the command line
 
 Exit codes: 0 success, 1 the plate did not lock, 2 the tool failed.
 
-A spec is JSON: { "id", "kind", "title", …slots }. Start with \`press kinds\`,
+A composition is JSON: { "schemaVersion": "press-composition/1", "id", "frame",
+"title"?, "body" }. Use \`press components\`; frames are landscape, square,
+portrait, or content-height reading. It uses the canonical solver and renderer.
+
+A recipe is JSON: { "id", "kind", "title", …slots }. Start with \`press kinds\`,
 then \`press schema <kind>\` for the two or three kinds that fit, then write
 the spec and \`press check\` it.
 
@@ -93,17 +98,19 @@ function ensureDist() {
 
 async function kernel() {
 	ensureDist();
-	const [{ parseArtifact }, { buildArtifact }, catalog, lock, evaluate] = await Promise.all([
+	const [{ parseArtifact }, { buildArtifact }, catalog, lock, evaluate, registry] = await Promise.all([
 		import(join(ROOT, "dist/parse.js")),
 		import(join(ROOT, "dist/build.js")),
 		import(join(ROOT, "dist/kernel/artifactModules.js")),
 		import(join(ROOT, "dist/kernel/lock.js")),
 		import(join(ROOT, "src/evaluate.js")),
+		import(join(ROOT, "src/registry.js")),
 	]);
 	return {
 		parseArtifact,
 		buildArtifact,
 		proveArtifact: evaluate.proveArtifact,
+		describeComponents: () => registry.describe().map(group => ({ ...group, components: group.components.filter(c => c.composition) })).filter(group => group.components.length),
 		listArtifactModules: catalog.listArtifactModules,
 		getArtifactModuleSchema: catalog.getArtifactModuleSchema,
 		frameSize: lock.frameSize,
@@ -122,6 +129,12 @@ function readSpec(source) {
 }
 
 function lockPlan(api, json) {
+	if (json && Object.hasOwn(json, "schemaVersion")) {
+		const result = api.proveArtifact(json);
+		return result.ok
+			? { ok: true, spec: result.spec, warnings: result.warnings ?? [] }
+			: { ok: false, errors: result.errors, spec: json, warnings: result.warnings ?? [] };
+	}
 	const parsed = api.parseArtifact(json);
 	if (!parsed.ok) return { ok: false, errors: parsed.errors, warnings: [] };
 	const built = api.buildArtifact(parsed.plan);
@@ -238,10 +251,10 @@ function inlineBuiltHtml(dir, globalName, payload) {
 			const escaped = f.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 			if (f.endsWith(".js")) {
 				const re = new RegExp(`<script[^>]*src="[^"]*${escaped}"[^>]*><\\/script>`);
-				html = html.replace(re, `<script type="module">${body}</script>`);
+				html = html.replace(re, () => `<script type="module">${body.replace(/<\/script/gi, "<\\/script")}</script>`);
 			} else if (f.endsWith(".css")) {
 				const re = new RegExp(`<link[^>]*href="[^"]*${escaped}"[^>]*>`);
-				html = html.replace(re, `<style>${body}</style>`);
+				html = html.replace(re, () => `<style>${body.replace(/<\/style/gi, "<\\/style")}</style>`);
 			}
 		}
 	}
@@ -249,7 +262,7 @@ function inlineBuiltHtml(dir, globalName, payload) {
 	// ending the inline script tag early.
 	const json = JSON.stringify(payload).replace(/</g, "\\u003c");
 	const inject = `<script>globalThis.${globalName}=${json}</script>`;
-	if (html.includes("<head>")) html = html.replace("<head>", `<head>${inject}`);
+	if (html.includes("<head>")) html = html.replace("<head>", () => `<head>${inject}`);
 	else html = inject + html;
 	return html;
 }
@@ -417,7 +430,7 @@ function refuseRender(errors) {
 }
 
 async function writePng(api, spec, dest) {
-	const frame = api.frameSize(String(spec.frame ?? "landscape"));
+	const frame = spec.schemaVersion ? api.proveArtifact(spec).plate.frame : api.frameSize(String(spec.frame ?? "landscape"));
 	const scale = Number(opt("scale", "2"));
 	const budget = Number(opt("timeout", "20000"));
 	const tmp = join(mkdtempSync(join(tmpdir(), "mega-press-png-")), "plate.html");
@@ -429,11 +442,14 @@ async function writePng(api, spec, dest) {
 	let cdp;
 	let refuse;
 	let toolBroke;
+	let timeout;
 	try {
-		const timed = sleep(budget).then(() => {
-			const err = new Error(`chrome screenshot timed out after ${budget}ms`);
-			err.toolBroke = true;
-			throw err;
+		const timed = new Promise((_, reject) => {
+			timeout = setTimeout(() => {
+				const err = new Error(`chrome screenshot timed out after ${budget}ms`);
+				err.toolBroke = true;
+				reject(err);
+			}, budget);
 		});
 		const died = chrome.exit.then(({ signal }) => {
 			const err = new Error(signal ? `chrome killed (${signal})` : "chrome exited before the plate was ready");
@@ -454,6 +470,14 @@ async function writePng(api, spec, dest) {
 			deviceScaleFactor: scale,
 			mobile: false,
 		});
+		// Reading HTML scrolls; a PNG is the exact authored artboard. Remove
+		// scrollbar width from the export and let the existing ResizeObserver
+		// settle after the viewport change before capturing it.
+		const settled = await cdp.send("Runtime.evaluate", {
+			expression: `document.documentElement.style.overflow = 'hidden'; document.body.style.overflow = 'hidden'; new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))`,
+			awaitPromise: true,
+		});
+		if (settled.exceptionDetails) throw new Error("Export viewport failed to settle.");
 		const shot = await cdp.send("Page.captureScreenshot", {
 			format: "png",
 			fromSurface: true,
@@ -472,8 +496,10 @@ async function writePng(api, spec, dest) {
 		else if (err?.toolBroke) toolBroke = err.message;
 		else throw err;
 	} finally {
+		clearTimeout(timeout);
 		cdp?.close();
 		chrome.kill();
+		await chrome.exit;
 		try {
 			// Chrome may still be flushing its profile as it dies; retry ENOTEMPTY
 			// instead of failing a render whose png is already on disk.
@@ -649,6 +675,10 @@ async function main() {
 	}
 	const api = await kernel();
 	if (command === "kinds") return cmdKinds(api);
+	if (command === "components") {
+		const groups = api.describeComponents();
+		return out(groups.map(group => `${group.group}\n${group.components.map(c => `  ${c.name}: ${c.summary}\n${JSON.stringify(c.params, null, 2)}`).join("\n")}`).join("\n\n"), { ok: true, schemaVersion: "press-composition/1", groups });
+	}
 	if (command === "schema") return cmdSchema(api);
 	if (command === "check") return cmdCheck(api);
 	if (command === "render") return cmdRender(api);

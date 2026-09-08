@@ -1,0 +1,110 @@
+{
+  "schemaVersion": "press-composition/1",
+  "id": "handoff-flow-comparison",
+  "frame": "reading",
+  "title": "One surface is published; the other is discovered.",
+  "body": {
+    "type": "grid",
+    "cols": 2,
+    "gap": 5,
+    "align": "start",
+    "children": [
+      {
+        "type": "stack",
+        "gap": 3,
+        "children": [
+          {
+            "type": "text",
+            "role": "utility",
+            "content": "Dedicated integration"
+          },
+          {
+            "type": "timelineVertical",
+            "items": [
+              {
+                "date": "VENDOR",
+                "title": "Ships a connector",
+                "detail": "One team writes the integration and owns every field it exposes."
+              },
+              {
+                "date": "REVIEW",
+                "title": "Scopes are fixed",
+                "detail": "The surface is decided once, ahead of any particular question.",
+                "chips": [
+                  {
+                    "text": "fixed scopes"
+                  },
+                  {
+                    "text": "vendor owned"
+                  },
+                  {
+                    "text": "weeks",
+                    "accent": true
+                  }
+                ]
+              },
+              {
+                "date": "USER",
+                "title": "Asks for a report",
+                "detail": "The request has to be phrased in the shapes the connector already has."
+              },
+              {
+                "date": "AGENT",
+                "title": "Calls what exists",
+                "detail": "Anything outside the published surface is simply unavailable."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "stack",
+        "gap": 3,
+        "children": [
+          {
+            "type": "text",
+            "role": "utility",
+            "content": "Agent builds its own"
+          },
+          {
+            "type": "timelineVertical",
+            "items": [
+              {
+                "date": "USER",
+                "title": "Asks for a report",
+                "detail": "The request is phrased however the person actually thinks about it."
+              },
+              {
+                "date": "AGENT",
+                "title": "Reads the API docs",
+                "detail": "The surface is discovered at the moment the question is asked.",
+                "chips": [
+                  {
+                    "text": "read docs"
+                  },
+                  {
+                    "text": "write once"
+                  },
+                  {
+                    "text": "one turn",
+                    "accent": true
+                  }
+                ]
+              },
+              {
+                "date": "AGENT",
+                "title": "Writes the call",
+                "detail": "A script for this question, not a connector for every question."
+              },
+              {
+                "date": "TOOL",
+                "title": "Runs it once",
+                "detail": "The code is disposable; the result is what was wanted."
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

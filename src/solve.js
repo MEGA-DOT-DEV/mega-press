@@ -19,7 +19,7 @@
  */
 
 import { Rect } from "./geometry.js";
-import { assertHouseStyle, baselineOffset, block, capHeight, fit } from "./text.js";
+import { assertHouseStyle, baselineOffset, block, capHeight, fit, measure, sourceBlock } from "./text.js";
 import { lineHeight, PressError, STROKE, snap, space } from "./tokens.js";
 
 /* --------------------------------------------------------------------------
@@ -98,8 +98,8 @@ export const rule = ({ weight = STROKE.rule, color, span = "full" } = {}) =>
 export const spacer = (size) => node({ kind: "spacer", size });
 
 /** A dot on a rail. Its size is fixed here so the rail can be derived from it. */
-export const marker = ({ size = 20, fill, ring = false, alignTo } = {}) =>
-	node({ kind: "marker", size, fill, ring, alignTo });
+export const marker = ({ size = 20, fill, ring = false, alignTo, outline } = {}) =>
+	node({ kind: "marker", size, fill, ring, alignTo, outline });
 
 /**
  * A picture. Rendered as a DOM element on solved coordinates, like text, so it
@@ -125,6 +125,14 @@ export function measureNode(n, availW) {
 			// A fixed width makes a column, so every row in a set starts and ends on
 			// the same two verticals rather than on whatever its own label measured.
 			if (n.width) availW = n.width;
+			if (n.noWrap && measure(n.text, n.role, n.weight) > availW + .01) {
+				throw new PressError("TEXT_UNBREAKABLE", `The identifier "${n.text}" cannot fit without being split.`, { available: availW, needed: measure(n.text, n.role, n.weight) });
+			}
+			if (n.runs) {
+				const b = sourceBlock(n.text, availW, n.role, { weight: n.weight });
+				n._block = b;
+				return { w: n.width || b.width, h: b.height };
+			}
 			if (n.floorRole) {
 				// Fitting needs a height budget, so a floored text measures at its
 				// start role here and is re-fitted during placement.
@@ -183,8 +191,8 @@ export function measureNode(n, availW) {
 			return measureStack(n, availW);
 
 		case "grid": {
-			const gap = space(n.gap);
-			const rowGap = space(n.rowGap);
+			const gap = n._gap ?? space(n.gap);
+			const rowGap = n._rowGap ?? space(n.rowGap);
 			const colW = (availW - gap * (n.cols - 1)) / n.cols;
 			if (colW <= 0) {
 				throw new PressError(
@@ -213,7 +221,7 @@ export function measureNode(n, availW) {
 }
 
 function measureStack(n, availW) {
-	const gap = space(n.gap);
+	const gap = n._gap ?? space(n.gap);
 	const kids = n.children;
 	if (!kids.length) return { w: 0, h: 0 };
 
@@ -367,9 +375,12 @@ export function placeNode(n, rect, ctx = {}) {
 			return;
 		}
 
+		case "custom":
+			if (typeof n.place === "function") n.place(rect, ctx);
+			return;
+
 		case "spacer":
 		case "rule":
-		case "custom":
 		case "image":
 			return;
 
@@ -394,15 +405,16 @@ export function placeNode(n, rect, ctx = {}) {
 			return placeStack(n, rect, ctx);
 
 		case "grid": {
-			const gap = space(n.gap);
-			const rowGap = space(n.rowGap);
+			const gap = n._gap ?? space(n.gap);
+			const rowGap = n._rowGap ?? space(n.rowGap);
 			const colW = n._colW;
 			let y = rect.y;
 			n._rowHeights.forEach((rowH, r) => {
 				for (let c = 0; c < n.cols; c++) {
 					const child = n.children[r * n.cols + c];
 					if (!child) continue;
-					placeNode(child, Rect.of(rect.x + c * (colW + gap), y, colW, rowH), ctx);
+					placeNode(child, Rect.of(rect.x + c * (colW + gap), y, colW,
+						n.align === "start" ? measureNode(child, colW).h : rowH), ctx);
 				}
 				y += rowH + rowGap;
 			});
@@ -415,7 +427,7 @@ export function placeNode(n, rect, ctx = {}) {
 }
 
 function placeStack(n, rect, ctx = {}) {
-	const gap = space(n.gap);
+	const gap = n._gap ?? space(n.gap);
 	const kids = n.children;
 
 	if (n.dir === "y") {

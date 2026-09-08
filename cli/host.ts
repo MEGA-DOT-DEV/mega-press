@@ -24,7 +24,11 @@ const reportStatus = (body: Record<string, unknown>) => {
 };
 
 const spec = loadSpec();
-const frame = frameSize(String(spec.frame ?? "landscape"));
+const frame = frameSize(String(spec.frame === "reading" ? "landscape" : spec.frame ?? "landscape"));
+if (spec.frame === "reading") {
+	document.documentElement.style.overflow = "auto";
+	document.body.style.overflow = "auto";
+}
 const el = document.getElementById("plate");
 if (!el) throw new Error("missing #plate");
 el.style.width = `${frame.w}px`;

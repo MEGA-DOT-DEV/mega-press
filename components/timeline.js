@@ -154,6 +154,11 @@ function refuseUnread(item, read, who) {
  * and this file consumes the validated hug-width row.
  * ------------------------------------------------------------------------ */
 
+function checkPointFocus(items, activeTo) {
+	const focused = items.filter(item => item.accent).length;
+	if (focused > 1 || (focused && activeTo >= 0)) throw new PressError("TIMELINE_ACCENT_CONFLICT", "One focus event per rail; do not combine event focus with cumulative progress.");
+}
+
 /* --------------------------------------------------------------------------
  * timeline: evenly spaced stops
  * ------------------------------------------------------------------------ */
@@ -167,10 +172,11 @@ export function timeline({
 	quiet = COLOR.black2,
 	label,
 	unitPerStop = true,
-} = {}) {
+} = {}, context = {}) {
 	if (!items || items.length < 2) {
 		throw new Error("timeline needs at least two stops. One date is not a timeline.");
 	}
+	if (context.composition) checkPointFocus(items, activeTo);
 
 	const markers = [];
 
@@ -521,6 +527,7 @@ export function transcriptEvents(
 		activeTo = -1,
 		unitPerRow = true,
 		who = "timelineVertical",
+		composition = false,
 	} = {},
 ) {
 	const dateWidth = snap(Math.max(...items.map((i) => measure(i.date, "utility"))) + space(3));
@@ -539,11 +546,13 @@ export function transcriptEvents(
 		/* Chips ride under the detail and the code, inside the event's stack, so
 		   they belong to the row and never count as extra units: the row already
 		   is the unit, and a badge on it is annotation, not new information. */
-		const chips = chipsRow(item.chips, `${who} event "${item.date}"`);
+		const chips = chipsRow(item.chips, `${who} event "${item.date}"`, { exact: composition });
 
+		if (item.body && !item.body.kind) throw new Error(`${who} event bodies must be compiled component nodes.`);
 		return row({
 			gap: 3,
 			align: "baseline",
+			semanticId: item.id,
 			unit: unitPerRow,
 			children: [
 				text(item.date, "utility", {
@@ -555,12 +564,13 @@ export function transcriptEvents(
 					gap: item.code || chips ? 2 : 1,
 					grow: true,
 					children: [
-						text(item.title, "list", { color: COLOR.text }),
+						item.title !== undefined ? text(item.title, "list", { color: COLOR.text }) : item.body ? null : text(item.title, "list"),
+						item.body || null,
 						item.detail
 							? text(item.detail, "body", { color: COLOR.muted, commentary: true })
 							: null,
 						item.code
-							? codeBlock(item.code, { accent: Boolean(item.accent), pad: 3 })
+							? codeBlock(item.code, { accent: Boolean(item.accent), pad: 3, exact: composition, minLines: composition ? 1 : 2, maxLines: composition ? 200 : 14 })
 							: null,
 						chips,
 					],
@@ -579,18 +589,19 @@ export function timelineVertical({
 	activeTo = -1,
 	accent = COLOR.red,
 	quiet = COLOR.black2,
-} = {}) {
-	if (!items || items.length < 2) {
-		throw new Error("timelineVertical needs at least two stops.");
+} = {}, context = {}) {
+	if (!items || items.length < (context.composition ? 1 : 2)) {
+		throw new Error("timelineVertical needs ordered stops (at least two for a legacy plate).");
 	}
 
-	const { rows, markers } = transcriptEvents(items, { markerSize, accent, quiet, activeTo });
+	if (context.composition) checkPointFocus(items, activeTo);
+	const { rows, markers } = transcriptEvents(items, { markerSize, accent, quiet, activeTo, composition: Boolean(context.composition) });
 
 	const node = stack({ gap, children: rows });
 
 	node.press = {
 		connect: () => ({
-			rails: [deriveRail(markers, { axis: "y", weight: STROKE.connector, color: quiet })],
+			rails: markers.length > 1 ? [deriveRail(markers, { axis: "y", weight: STROKE.connector, color: quiet })] : [],
 		}),
 	};
 

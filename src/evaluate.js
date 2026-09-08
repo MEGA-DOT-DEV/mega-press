@@ -24,9 +24,9 @@ const fromThrown = (err) => {
 };
 
 /** Solve + validate one spec. Does not escalate. */
-export function evaluateSpec(spec) {
+export function evaluateSpec(spec, { theme } = {}) {
 	try {
-		const plate = buildPlate(compileSpec(spec), { validateNow: false });
+		const plate = buildPlate(compileSpec(spec), { validateNow: false, theme });
 		const errors = (plate.report?.errors ?? []).map(shape);
 		const warnings = (plate.report?.warnings ?? []).map(shape);
 		return {
@@ -57,7 +57,15 @@ export function evaluateSpec(spec) {
  * Every attempt is a full re-validate. No truncation, no off-scale values.
  * A host that needs an exact aspect calls evaluateSpec directly.
  */
-export function proveArtifact(spec) {
+export function proveArtifact(spec, opts = {}) {
+	// Composition output profiles are explicit: a slide keeps its chosen
+	// proportion and a reading figure derives its height. No hidden escalation.
+	if (spec.schemaVersion !== undefined) {
+		const result = evaluateSpec(spec, opts);
+		return result.ok
+			? { ok: true, spec, warnings: result.warnings, plate: result.plate }
+			: { ok: false, spec, errors: result.errors, warnings: result.warnings };
+	}
 	const asked = FRAME_LADDER.includes(spec.frame) ? spec.frame : "landscape";
 	let last = null;
 	for (let i = 0; i < FRAME_LADDER.length; i++) {
@@ -66,7 +74,7 @@ export function proveArtifact(spec) {
 			frame === asked
 				? { ...spec, frame }
 				: { ...spec, frame, steppedFrom: spec.steppedFrom ?? asked };
-		const result = evaluateSpec(candidate);
+		const result = evaluateSpec(candidate, opts);
 		last = result;
 		if (result.ok) {
 			return {

@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="dark" /><title>Technical frames — Mega Press</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23f00' d='M0 0h16v16H0z'/%3E%3C/svg%3E" />
+</head><body>
+<a class="skip" href="#frame-host">Skip to the frame</a>
+<header class="site-head wrap"><a href="./technical.html" class="brand">mega.press</a><span>TECHNICAL COMPOSITION / WORKING STUDIES</span><a href="./showcase.html">Earlier examples ↗</a></header>
+<main class="wrap">
+<div class="intro"><h1>Technical frames.</h1><p>Structured contents, connected fields, shared legends and real interactions. Select an example, then try its highlighted elements.</p></div>
+<nav id="frame-nav" aria-label="Choose a technical frame"></nav>
+<div class="toolbar"><label><input id="show-title" type="checkbox" checked /> Show title inside frame</label><button id="clear-selection" type="button">Clear selection</button><span id="status" role="status">Preparing…</span></div>
+<p class="mobile-note">On a narrow screen, pan inside the frame. Text and controls remain readable rather than shrinking into a thumbnail.</p>
+<p id="error" role="alert" hidden></p>
+<div id="frame-scroll" class="frame-scroll" tabindex="0" role="region" aria-label="Technical frame, horizontally scrollable on a narrow screen"><div id="frame-host"></div></div>
+<p id="selection" role="status">Nothing selected.</p>
+<section class="inspection"><details><summary>What this frame demonstrates</summary><ul id="proofs"></ul></details><details><summary>Latest semantic event · local only</summary><pre id="event">No interaction event yet.</pre></details><details><summary>Prepared layout and routing report</summary><pre id="report"></pre></details><details><summary>Authored composition · unchanged by selection</summary><pre id="source"></pre></details></section>
+</main>
+<footer class="wrap">Experimental rich-content layout with Press fonts, surfaces, syntax tokens and obstacle-aware routing. New DOM composition, field ports, linked selection and owned SVG regions are lab capabilities—not a released production API. No external services or analytics.</footer>
+<script type="module" src="./technical/app.js"></script>
+</body></html>

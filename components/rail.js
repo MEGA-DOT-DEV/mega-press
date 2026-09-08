@@ -15,7 +15,9 @@
 import { rail as deriveRail } from "../src/connect.js";
 import { marker, row, stack, text } from "../src/solve.js";
 import { resolveChrome } from "../src/theme.js";
-import { COLOR, STROKE, space } from "../src/tokens.js";
+import { COLOR, PressError, STROKE, space } from "../src/tokens.js";
+import { chipsRow } from "./chips.js";
+import { codeBlock } from "./code.js";
 
 /**
  * @param {object[]} items      { name, detail?, index? }
@@ -25,24 +27,33 @@ import { COLOR, STROKE, space } from "../src/tokens.js";
 export function railSteps({
 	items,
 	activeTo = -1,
+	accentAt = -1,
+	accentReach = "approach",
 	markerSize = space(2),
 	gap = 4, // between steps
 	markerGap = 3, // from the dot to its text
 	numbered = resolveChrome().numbered,
 	accent = COLOR.red,
 	quiet = COLOR.black2,
-} = {}) {
+} = {}, context = {}) {
 	if (!items || items.length < 2) {
 		throw new Error("railSteps needs at least two items. One step is not a sequence.");
 	}
-
+	for (const [name, value] of Object.entries({ activeTo, accentAt })) {
+		if (!Number.isInteger(value) || value < -1 || value >= items.length) throw new PressError("RAIL_ACCENT_INDEX", `${name} must be -1 or an existing zero-based step index.`);
+	}
+	if (activeTo >= 0 && accentAt >= 0) throw new PressError("RAIL_ACCENT_CONFLICT", "Use activeTo for progress or accentAt for focus, not both.");
+	if (!["none", "approach", "full"].includes(accentReach)) throw new PressError("RAIL_ACCENT_REACH", "accentReach must be none, approach or full.");
+	const end = accentAt >= 0 ? accentAt : activeTo;
+	const start = accentAt < 0 || accentReach === "full" ? 0 : accentReach === "approach" ? Math.max(0, end - 1) : end;
+	const lit = index => end >= 0 && index >= start && index <= end;
 	const markers = [];
 
 	const rows = items.map((item, i) => {
 		const dot = marker({
 			size: markerSize,
-			fill: i <= activeTo ? accent : quiet,
-			ring: i > activeTo,
+			fill: lit(i) ? accent : quiet,
+			ring: !lit(i),
 			alignTo: "list",
 		});
 		markers.push(dot);
@@ -53,25 +64,19 @@ export function railSteps({
 			unit: true,
 			children: [
 				dot,
-				stack({
-					gap: 1,
-					grow: true,
+				row({
+					gap: 2, align: "baseline", grow: true,
 					children: [
-						row({
-							gap: 2,
-							align: "baseline",
+						numbered ? text(String(item.index ?? i + 1).padStart(2, "0"), "utility", { color: lit(i) ? accent : COLOR.quiet }) : null,
+						stack({
+							gap: item.code || item.chips ? 2 : 1, grow: true,
 							children: [
-								numbered
-									? text(String(item.index ?? i + 1).padStart(2, "0"), "utility", {
-											color: i <= activeTo ? accent : COLOR.quiet,
-										})
-									: null,
-								text(item.name, "list", { color: COLOR.text, grow: true }),
+								text(item.name, "list", { color: COLOR.text }),
+								item.detail ? text(item.detail, "body", { color: COLOR.muted, commentary: true }) : null,
+								item.code !== undefined ? codeBlock(item.code, { accent: i === end, pad: 3, exact: Boolean(context.composition), minLines: context.composition ? 1 : 2, maxLines: context.composition ? 200 : 14 }) : null,
+								chipsRow(item.chips, `railSteps step "${item.name}"`, { exact: Boolean(context.composition) }),
 							],
 						}),
-						item.detail
-							? text(item.detail, "body", { color: COLOR.muted, commentary: true })
-							: null,
 					],
 				}),
 			],
@@ -95,6 +100,7 @@ export function railSteps({
 					color: quiet,
 					extend: 0,
 				}),
+				...(end > start ? [deriveRail(markers.slice(start, end + 1), { axis: "y", weight: STROKE.connector, color: accent, extend: 0 })] : []),
 			],
 		}),
 	};

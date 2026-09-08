@@ -1,0 +1,89 @@
+{
+  "schemaVersion": "press-composition/1",
+  "id": "library-learning-path",
+  "frame": "reading",
+  "gap": 4,
+  "kicker": "LEARNING / UNDERSTAND → USE",
+  "title": "Let an idea change hands.",
+  "lead": "An illustrative learning path for any new idea. The stages represent a sequence of activities, not equal amounts of time.",
+  "body": {
+    "type": "grid",
+    "cols": 2,
+    "gap": 4,
+    "align": "start",
+    "children": [
+      {
+        "type": "timelineVertical",
+        "id": "learning-progression",
+        "gap": 5,
+        "items": [
+          {
+            "date": "LOOK",
+            "title": "Notice the pattern.",
+            "detail": "Find the idea in one familiar example."
+          },
+          {
+            "date": "TRY",
+            "title": "Make a small version.",
+            "detail": "Use the idea while the example is close by."
+          },
+          {
+            "date": "EXPLAIN",
+            "title": "Tell it in your words.",
+            "detail": "Name the reason behind each choice.",
+            "accent": true
+          },
+          {
+            "date": "TRANSFER",
+            "title": "Change the setting.",
+            "detail": "Use the same idea on a different problem."
+          }
+        ]
+      },
+      {
+        "type": "stack",
+        "gap": 4,
+        "children": [
+          {
+            "type": "hero",
+            "id": "learning-focal",
+            "value": "1",
+            "caption": "IDEA / FOUR WAYS TO USE IT"
+          },
+          {
+            "type": "panel",
+            "title": "Make something from memory.",
+            "children": [
+              {
+                "type": "text",
+                "role": "body",
+                "content": "Choose a small artifact: a sketch, a paragraph, a worked example, or a conversation."
+              },
+              {
+                "type": "text",
+                "role": "body",
+                "content": "Afterward, compare it with the source. The difference gives you a concrete place to practice next."
+              }
+            ],
+            "id": "practice-project",
+            "label": "YOUR NEXT MOVE"
+          },
+          {
+            "type": "note",
+            "content": "Use the sequence as a prompt for practice. It is an example plan, not a claim about how quickly learning happens."
+          }
+        ]
+      }
+    ]
+  },
+  "background": {
+    "type": "field",
+    "baseDensity": 0.28,
+    "gradient": 0.7,
+    "gradientAngle": 0.85,
+    "waveStrength": 1.3,
+    "contrast": 1.1,
+    "spacing": 2,
+    "halo": 96
+  }
+}

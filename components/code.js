@@ -26,8 +26,9 @@
  */
 
 import { box, custom, row, stack, text } from "../src/solve.js";
+import { paintAnnotation, resolveAnnotation } from "../src/annotation.js";
 import { detectLang, syntaxColor, tokenizeLine } from "../src/syntax.js";
-import { measure } from "../src/text.js";
+import { measure, sourceBlock } from "../src/text.js";
 import { COLOR, FAMILY, lineHeight, PressError, space, type, typeSize } from "../src/tokens.js";
 
 const MAX_LINES = 14;
@@ -41,6 +42,54 @@ const blank = (h) => custom({ measure: () => ({ w: 0, h }) });
 
 const truncate = (s, n = 40) => (s.length > n ? `${s.slice(0, n)}…` : s);
 
+/** Resolve explicit source selectors once, before wrapping or syntax paint. */
+function resolveCodeAnnotations(source, annotations, categories) {
+	if (!Array.isArray(annotations)) throw new PressError("CODE_ANNOTATIONS_INVALID", "code.annotations must be an array.");
+	if (!annotations.length) return [];
+	const boundaries = new Set([source.length]);
+	for (const segment of new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(source)) boundaries.add(segment.index);
+	const ids = new Set();
+	const resolved = annotations.map((annotation, index) => {
+		const where = `code.annotations[${index}]`;
+		if (!annotation || typeof annotation !== "object" || Array.isArray(annotation) || Object.getPrototypeOf(annotation) !== Object.prototype) {
+			throw new PressError("CODE_ANNOTATION_INVALID", `${where} must be a plain object.`);
+		}
+		for (const field of Reflect.ownKeys(annotation)) if (!["text", "occurrence", "category", "id"].includes(field)) {
+			throw new PressError("CODE_ANNOTATION_UNKNOWN_FIELD", `${where} does not accept "${String(field)}".`);
+		}
+		if (typeof annotation.text !== "string" || !annotation.text.length || !annotation.text.replace(/\n/g, "").length) {
+			throw new PressError("CODE_ANNOTATION_TEXT", `${where}.text needs an exact nonempty substring with content on a source line.`);
+		}
+		if (annotation.occurrence !== undefined && (!Number.isInteger(annotation.occurrence) || annotation.occurrence < 1)) {
+			throw new PressError("CODE_ANNOTATION_OCCURRENCE", `${where}.occurrence must be a positive 1-based integer.`);
+		}
+		if (typeof annotation.category !== "string" || !categories?.has(annotation.category)) {
+			throw new PressError("CODE_ANNOTATION_CATEGORY", `${where}.category must name a declared category.`);
+		}
+		if (annotation.id !== undefined) {
+			if (typeof annotation.id !== "string" || !/^[a-zA-Z][a-zA-Z0-9_-]*$/.test(annotation.id) || ids.has(annotation.id)) {
+				throw new PressError("CODE_ANNOTATION_ID", `${where}.id must be a unique stable slug.`);
+			}
+			ids.add(annotation.id);
+		}
+		const matches = [];
+		for (let at = source.indexOf(annotation.text); at !== -1; at = source.indexOf(annotation.text, at + 1)) matches.push(at);
+		if (!matches.length) throw new PressError("CODE_ANNOTATION_MISSING", `${where}.text does not occur in the exact code source.`);
+		if (annotation.occurrence === undefined && matches.length > 1) {
+			throw new PressError("CODE_ANNOTATION_AMBIGUOUS", `${where}.text occurs ${matches.length} times; choose an explicit occurrence.`);
+		}
+		const start = matches[(annotation.occurrence ?? 1) - 1];
+		if (start === undefined) throw new PressError("CODE_ANNOTATION_OCCURRENCE", `${where}.occurrence exceeds the ${matches.length} matches in the source.`);
+		const end = start + annotation.text.length;
+		if (!boundaries.has(start) || !boundaries.has(end)) throw new PressError("CODE_ANNOTATION_BOUNDARY", `${where} splits a Unicode grapheme. Select the complete character sequence.`);
+		return { ...annotation, start, end, style: resolveAnnotation(categories.get(annotation.category)) };
+	}).sort((a, b) => a.start - b.start || a.end - b.end);
+	for (let index = 1; index < resolved.length; index++) {
+		if (resolved[index].start < resolved[index - 1].end) throw new PressError("CODE_ANNOTATION_OVERLAP", "Code annotation ranges overlap. Choose distinct source spans.");
+	}
+	return resolved;
+}
+
 /**
  * One verbatim line. Painted, not typeset: the wrap pipeline would strip the
  * indentation and re-break the run, and both are rewrites of the code.
@@ -51,12 +100,19 @@ const truncate = (s, n = 40) => (s.length > n ? `${s.slice(0, n)}…` : s);
  * occupy identical pixels. An accented line stays a single red run: the accent
  * marks the line the claim turns on, and it outranks the grammar.
  */
-const codeLine = (line, accent, index, lang) => {
-	const tracking = type(ROLE).tracking * typeSize(ROLE);
-	const h = lineHeight(ROLE);
+const codeLine = (line, accent, index, lang, wrap = false, role = ROLE, annotations = []) => {
+	const tracking = type(role).tracking * typeSize(role);
+	const h = lineHeight(role);
+	let fragments = [{ text: line, start: 0, end: line.length }];
 	return custom({
+		sourceText: line,
+		sourceAnnotations: annotations,
 		measure: (w) => {
-			const needed = measure(line, ROLE);
+			if (wrap) {
+				fragments = line.length ? sourceBlock(line, w, role).fragments : [{ text: line, start: 0, end: 0 }];
+				return { w, h: Math.max(1, fragments.length) * h };
+			}
+			const needed = measure(line, role);
 			if (needed > w) {
 				throw new PressError(
 					"CODE_LINE_TOO_WIDE",
@@ -68,21 +124,49 @@ const codeLine = (line, accent, index, lang) => {
 			return { w, h };
 		},
 		paint: (ctx, rect, C) => {
-			ctx.font = `400 ${typeSize(ROLE)}px ${FAMILY.mono}`;
+			ctx.font = `400 ${typeSize(role)}px ${FAMILY.mono}`;
 			ctx.textAlign = "left";
 			ctx.textBaseline = "middle";
 			if ("letterSpacing" in ctx) ctx.letterSpacing = `${tracking}px`;
-			if (accent) {
-				ctx.fillStyle = C.red;
-				ctx.fillText(line, rect.x, rect.cy);
-			} else {
-				let consumed = "";
-				for (const run of tokenizeLine(line, lang)) {
-					ctx.fillStyle = syntaxColor(run.cls, C);
-					ctx.fillText(run.text, rect.x + measure(consumed, ROLE), rect.cy);
-					consumed += run.text;
+			const tokens = tokenizeLine(line, lang);
+			fragments.forEach((fragment, visualLine) => {
+				const y = rect.y + (visualLine + .5) * h;
+				for (const annotation of annotations) {
+					const start = Math.max(annotation.start, fragment.start), end = Math.min(annotation.end, fragment.end);
+					if (end > start) paintAnnotation(ctx, {
+						x: rect.x + measure(line.slice(fragment.start, start), role),
+						y: rect.y + visualLine * h,
+						w: measure(line.slice(start, end), role), h,
+					}, annotation.style);
 				}
-			}
+				if (accent) {
+					ctx.fillStyle = C.red; ctx.fillText(fragment.text, rect.x, y);
+				} else {
+					const paint = (from, to, color) => {
+						if (to <= from) return;
+						ctx.fillStyle = color;
+						ctx.fillText(line.slice(from, to), rect.x + measure(line.slice(fragment.start, from), role), y);
+					};
+					const paintSyntax = (from, to) => {
+						let offset = 0;
+						for (const run of tokens) {
+							paint(Math.max(offset, from), Math.min(offset + run.text.length, to), syntaxColor(run.cls, C));
+							offset += run.text.length;
+						}
+					};
+					let cursor = fragment.start;
+					for (const annotation of annotations) {
+						if (annotation.end <= cursor || annotation.start >= fragment.end) continue;
+						const start = Math.max(cursor, annotation.start), end = Math.min(fragment.end, annotation.end);
+						paintSyntax(cursor, start);
+						// One styled source fragment may cross syntax-token boundaries.
+						// Paint it together so a lexer cannot split a combining glyph.
+						paint(start, end, annotation.style.color);
+						cursor = end;
+					}
+					paintSyntax(cursor, fragment.end);
+				}
+			});
 			if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
 		},
 	});
@@ -133,7 +217,7 @@ export function verbatimLines(source, { accentLines = [], lang = "auto" } = {}) 
  */
 export function codeBlock(
 	source,
-	{ accentLines = [], accent = false, unit = false, pad = 4, lang = "auto" } = {},
+	{ accentLines = [], accent = false, unit = false, pad = 4, lang = "auto", wrap = false, exact = wrap, minLines = 2, maxLines = MAX_LINES, annotations = [], categories } = {},
 ) {
 	if (typeof source !== "string" || !source.trim()) {
 		throw new PressError(
@@ -142,23 +226,28 @@ export function codeBlock(
 		);
 	}
 
-	const lines = source.replace(/\t/g, "  ").split("\n");
-	while (lines.length && !lines[0].trim()) lines.shift();
-	while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
+	if (exact && /[\t\r]/.test(source)) throw new PressError("CODE_SOURCE_UNSUPPORTED", "Exact canvas code currently requires LF line breaks and spaces. Tabs/CR were refused, not rewritten.");
+	const resolvedAnnotations = resolveCodeAnnotations(source, annotations, categories);
+	if (resolvedAnnotations.length && accentLines.length) throw new PressError("CODE_ANNOTATION_CONFLICT", "Use code annotations or accentLines in one block; their emphasis must not conflict.");
+	if (resolvedAnnotations.length && !exact) throw new PressError("CODE_ANNOTATION_SOURCE", "Code annotations require exact source preservation.");
+	const lines = exact ? source.split("\n") : source.replace(/\t/g, "  ").split("\n");
+	if (!exact) {
+		while (lines.length && !lines[0].trim()) lines.shift();
+		while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
+	}
 
 	const drawn = lines.filter((l) => l.trim().length > 0);
-	if (drawn.length < 2) {
+	if (drawn.length < minLines) {
 		throw new PressError(
 			"CODE_TOO_SHORT",
 			"code needs at least two lines. One line is an expression, and an expression " +
 				"belongs in derivation, where it must say what changed.",
 		);
 	}
-	if (lines.length > MAX_LINES) {
+	if (lines.length > maxLines) {
 		throw new PressError(
 			"CODE_TOO_LONG",
-			`code was given ${lines.length} lines and ${MAX_LINES} is the cap. Past that the ` +
-				`frame is a listing, not a figure: cut the snippet to the lines the claim needs.`,
+			`code was given ${lines.length} logical lines and ${maxLines} is the resource limit. Split at an authored source boundary; nothing was removed.`,
 		);
 	}
 
@@ -166,13 +255,19 @@ export function codeBlock(
 	const resolvedLang =
 		lang === "js" || lang === "json" || lang === "none" ? lang : detectLang(source);
 
-	const body = lines.map((line, i) =>
-		line.trim().length === 0
+	let sourceOffset = 0;
+	const body = lines.map((line, i) => {
+		const lineAnnotations = resolvedAnnotations.filter(annotation => annotation.start < sourceOffset + line.length && annotation.end > sourceOffset)
+			.map(annotation => ({ ...annotation, start: Math.max(0, annotation.start - sourceOffset), end: Math.min(line.length, annotation.end - sourceOffset) }));
+		sourceOffset += line.length + 1;
+		return !exact && line.trim().length === 0
 			? blank(space(3))
-			: codeLine(line, accented.has(i + 1), i, resolvedLang),
-	);
+			: codeLine(line, accented.has(i + 1), i, resolvedLang, wrap, exact ? "code" : ROLE, lineAnnotations);
+	});
 
 	return box({
+		codeSource: source,
+		codeAnnotations: resolvedAnnotations,
 		pad,
 		border: true,
 		borderColor: accent ? COLOR.red : COLOR.black2,
@@ -191,8 +286,9 @@ export function codeBlock(
  * @param {number[]} [spec.accentLines] 1-based line numbers drawn in the accent
  * @param {number} [spec.gap]    scale step between label and block
  */
-export function code({ code: source, label, accentLines = [], gap = 2, lang = "auto" } = {}) {
-	const block = codeBlock(source, { accentLines, unit: true, lang });
+export function code({ code: source, label, accentLines = [], annotations = [], gap = 2, lang = "auto", wrap } = {}, context = {}) {
+	if (wrap !== undefined && typeof wrap !== "boolean") throw new PressError("CODE_WRAP", "wrap must be boolean.");
+	const block = codeBlock(source, { accentLines, annotations, categories: context.categories, unit: true, lang, wrap: wrap ?? Boolean(context.composition), exact: Boolean(context.composition) || wrap === true, minLines: context.composition ? 1 : 2, maxLines: context.composition ? 200 : MAX_LINES });
 
 	if (!label) return block;
 

@@ -306,6 +306,29 @@ export function block(text, maxWidth, role, { weight = 400, maxLines = Infinity 
 	};
 }
 
+/** Exact source ranges for authored runs. UTF-16 offsets come from Pretext's
+ * segment/grapheme cursors, never a search for a displayed phrase. Unsupported
+ * source normalization or discretionary substitutions refuse explicitly.
+ */
+export function sourceBlock(source, maxWidth, role, { weight = 400 } = {}) {
+	const style = type(role), lh = lineHeight(role);
+	const p = prepared(source, style, weight, "pre-wrap");
+	if (p.segments.join("") !== source) throw new PressError("SOURCE_NORMALIZATION_UNSUPPORTED", "This source requires whitespace normalization which the exact-run layout does not permit.");
+	const offsets = [0];
+	for (const segment of p.segments) offsets.push(offsets.at(-1) + segment.length);
+	const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+	const offset = cursor => offsets[cursor.segmentIndex] + [...segmenter.segment(p.segments[cursor.segmentIndex] || "")].slice(0, cursor.graphemeIndex).reduce((n, g) => n + g.segment.length, 0);
+	const fragments = layoutWithLines(p, maxWidth, lh).lines.map(line => {
+		const start = offset(line.start);
+		let end = offset(line.end);
+		while (end > start && source[end - 1] === "\n") end--;
+		if (source.slice(start, end) !== line.text) throw new PressError("SOURCE_SUBSTITUTION_UNSUPPORTED", "The line breaker proposed a character substitution. The source was not rewritten.");
+		return { text: line.text, start, end, width: line.width };
+	});
+	return { role, lines: fragments.map(f => f.text), fragments, weight, overflowing: false,
+		width: Math.min(maxWidth, Math.max(0, ...fragments.map(f => f.width))), height: fragments.length * lh, lineHeight: lh };
+}
+
 /* --------------------------------------------------------------------------
  * Fitting
  *
@@ -362,21 +385,13 @@ const truncate = (s, n = 48) => (String(s).length > n ? `${String(s).slice(0, n)
 /* --------------------------------------------------------------------------
  * House style
  *
- * Em dashes are banned in prose and in visual copy alike, so the check belongs
- * next to the text rather than in a separate review pass that nobody runs.
+ * Source wording is author-owned, including punctuation. Keep this exported
+ * compatibility hook, but do not apply an editorial rewrite or punctuation ban.
  * ------------------------------------------------------------------------ */
 
 export const EM_DASH = /[—–]/;
 
-export function assertHouseStyle(text, where = "text") {
-	if (EM_DASH.test(text)) {
-		throw new PressError(
-			"EM_DASH",
-			`${where} contains an em or en dash: "${truncate(text)}". ` +
-				`Use a full stop, a comma, or a colon instead.`,
-			{ text },
-		);
-	}
+export function assertHouseStyle(text) {
 	return text;
 }
 
@@ -397,7 +412,7 @@ const metricsCache = new Map();
 
 export function fontMetrics(roleOrStyle, weight = 400) {
 	const style = styleOf(roleOrStyle);
-	const key = `${style.family}|${style.size}|${weight}`;
+	const key = fontString(style, weight);
 	if (metricsCache.has(key)) return metricsCache.get(key);
 
 	const c = context();

@@ -1,4 +1,28 @@
-# Making a plate
+# Making article frames
+
+The latest author request also authorizes the opt-in educational studio, project
+skins and lesson runtime. See [spec/framework/studio.md](spec/framework/studio.md).
+The static article workflow below stays usable independently of that work.
+
+For a supplied article, follow [ARTICLE_GUIDE.md](ARTICLE_GUIDE.md). Read the
+source, propose a small frame plan, render
+one real frame early, then check and visually inspect each HTML/PNG export.
+
+**New article frames use `schemaVersion: "press-composition/1"`.** Start with
+`node bin/press.mjs components --json`, and inspect the reviewed standalone source
+at `example/compositions/database.json`. Compose the existing components; do not
+create a renderer or mandatory template for every new arrangement. The database
+example supplies the approved visual language, not a required subject or layout.
+
+Use the actual MEGA palette and preserve the article's facts, code, values, units
+and relationships. Do not return the old lab/gallery as the article's output.
+Report missing capabilities before spending a large generation batch on them.
+
+## Legacy kind authoring
+
+The instructions below apply to the retained `kind` interface, not the new
+composition envelope. Do not fall back to it merely to bypass a composition
+refusal or accidentally restore the old visual design.
 
 You are writing a figure for MEGA. You write JSON, not code, and you never
 write a coordinate, a font size, or a colour.

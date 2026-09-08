@@ -1,0 +1,109 @@
+{
+  "id": "access-boundary-remote-agent",
+  "kind": "accessBoundary",
+  "title": "Autonomy ends at the production boundary.",
+  "dir": "y",
+  "regions": [
+    {
+      "key": "inputs",
+      "label": "Untrusted inputs",
+      "boxes": [
+        {
+          "key": "ticket",
+          "title": "Support ticket",
+          "detail": "Treat the request as evidence, not instructions."
+        },
+        {
+          "key": "logs",
+          "title": "Server logs",
+          "detail": "Preserve the signal while removing identity."
+        }
+      ]
+    },
+    {
+      "key": "workspace",
+      "label": "Isolated workspace",
+      "boxes": [
+        {
+          "key": "agent",
+          "title": "Background agent",
+          "detail": "Runs without production credentials."
+        },
+        {
+          "key": "tools",
+          "title": "Scoped tools",
+          "detail": "Browser on staging; repository on a branch."
+        }
+      ]
+    },
+    {
+      "key": "outcomes",
+      "label": "Controlled outcomes",
+      "boxes": [
+        {
+          "key": "production",
+          "title": "Production",
+          "detail": "Direct access is denied."
+        },
+        {
+          "key": "pull-request",
+          "title": "Pull request",
+          "detail": "The only path out of the branch."
+        },
+        {
+          "key": "raw-data",
+          "title": "Raw customer data",
+          "detail": "Unredacted records stay outside the workspace."
+        }
+      ]
+    },
+    {
+      "key": "review",
+      "label": "Approval gate",
+      "boxes": [
+        {
+          "key": "human-review",
+          "title": "Human review",
+          "detail": "A person controls the irreversible action."
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "ticket",
+      "to": "agent",
+      "kind": "controlled",
+      "gate": "Filter prompt"
+    },
+    {
+      "from": "logs",
+      "to": "agent",
+      "kind": "controlled",
+      "gate": "Redact data"
+    },
+    {
+      "from": "tools",
+      "to": "pull-request",
+      "kind": "flow"
+    },
+    {
+      "from": "agent",
+      "to": "production",
+      "kind": "denied",
+      "gate": "No production access"
+    },
+    {
+      "from": "tools",
+      "to": "raw-data",
+      "kind": "denied",
+      "gate": "No raw data"
+    },
+    {
+      "from": "pull-request",
+      "to": "human-review",
+      "kind": "review",
+      "gate": "Approval required"
+    }
+  ]
+}

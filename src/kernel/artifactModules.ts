@@ -25,6 +25,7 @@ export type ArtifactModuleId =
 	| "timeline"
 	| "timelineVertical"
 	| "railFlow"
+	| "accessBoundary"
 	| "graph"
 	| "derivation"
 	| "code"
@@ -1248,6 +1249,92 @@ const MODULES: readonly ArtifactModuleSchema[] = [
 			"Send link — Deliver the hosted player.",
 		],
 		bans: ["Long step names that break the columns", "Six or more steps (use railSteps)"],
+	},
+	{
+		id: "accessBoundary",
+		title: "Access boundary",
+		use: "Ordered trust regions with enclosed resources and semantic boundary crossings.",
+		pickWhen:
+			"The lesson is where autonomy is admitted, controlled, reviewed, or stopped across trust boundaries. Use graph for topology without trust regions.",
+		units: "2–4 regions × 1–3 boxes; 3–8 boxes overall; 2–8 cross-region edges",
+		slots: {
+			type: "object",
+			required: ["regions", "edges"],
+			properties: {
+				dir: {
+					type: "string",
+					enum: ["x", "y", "auto"],
+					description: "x = ordered columns; y = ordered rows; auto deterministically falls back to x",
+				},
+				regions: {
+					type: "array",
+					minItems: ITEM_BOUNDS.accessBoundary.regions.min,
+					maxItems: ITEM_BOUNDS.accessBoundary.regions.max,
+					items: {
+						type: "object",
+						required: ["key", "label", "boxes"],
+						properties: {
+							key: { type: "string", description: "Unique region key" },
+							label: { type: "string", description: "Visible trust-region label" },
+							boxes: {
+								type: "array",
+								minItems: ITEM_BOUNDS.accessBoundary.regionBoxes.min,
+								maxItems: ITEM_BOUNDS.accessBoundary.regionBoxes.max,
+								items: {
+									type: "object",
+									required: ["key", "title"],
+									properties: {
+										key: { type: "string", description: "Globally unique box key" },
+										title: { type: "string" },
+										detail: { type: "string", maxLength: STRING_CAPS.detail.max },
+									},
+								},
+							},
+						},
+					},
+				},
+				edges: {
+					type: "array",
+					minItems: ITEM_BOUNDS.accessBoundary.edges.min,
+					maxItems: ITEM_BOUNDS.accessBoundary.edges.max,
+					items: {
+						type: "object",
+						required: ["from", "to", "kind"],
+						properties: {
+							from: { type: "string", description: "Source box key" },
+							to: { type: "string", description: "Target box key" },
+							kind: { type: "string", enum: ["flow", "controlled", "review", "denied", "reference"] },
+							gate: { type: "string", maxLength: 24, description: "Short visible relationship label" },
+						},
+					},
+				},
+			},
+		},
+		density: [
+			"2–4 ordered regions; each holds 1–3 boxes; 3–8 boxes overall",
+			"2–8 cross-region edges; every box participates",
+			"at least one controlled, review, or denied edge",
+			"gate labels are short and name the control or review",
+		],
+		outlineHint:
+			"REGION: label, then BOX: key | title | detail; EDGE: from -> kind [gate] -> to. Region order is layout order.",
+		exampleOutline: [
+			"REGION: UNTRUSTED INPUTS",
+			"BOX: ticket | Support ticket | Treat embedded instructions as data.",
+			"REGION: ISOLATED WORKSPACE",
+			"BOX: agent | Background agent | No production credentials.",
+			"REGION: CONTROLLED EXIT",
+			"BOX: pr | Pull request | Draft only until review.",
+			"EDGE: ticket -> controlled [Filter prompt] -> agent",
+			"EDGE: agent -> review [Human review] -> pr",
+		],
+		bans: [
+			"Authored coordinates, ranks, anchors, gaps, colours, styles, or font sizes",
+			"Edges inside one region (use graph when the relationship is not a boundary crossing)",
+			"Dangling, self, duplicate, or parallel edges",
+			"Boxes with no relationship",
+			"More than eight boxes (split the figure)",
+		],
 	},
 	{
 		id: "graph",

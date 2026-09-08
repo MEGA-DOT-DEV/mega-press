@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "press-composition/1",
+  "id": "handoff-timeline-focus",
+  "frame": "reading",
+  "title": "A named refusal is repaired in one turn.",
+  "body": {
+    "type": "timeline",
+    "items": [
+      {
+        "date": "CALL 1",
+        "title": "Tool invoked",
+        "detail": "The agent sends the arguments it inferred from the request."
+      },
+      {
+        "date": "ERROR",
+        "title": "Schema rejected",
+        "detail": "One field is the wrong type and the server refuses the whole call."
+      },
+      {
+        "date": "HINT",
+        "title": "Server names the field",
+        "detail": "The refusal says which key was wrong instead of failing silently.",
+        "accent": true
+      },
+      {
+        "date": "CALL 2",
+        "title": "Retried once",
+        "detail": "The agent repairs that one field and sends the call again."
+      },
+      {
+        "date": "DONE",
+        "title": "Result delivered",
+        "detail": "The answer arrives inside the same turn the reader is waiting on."
+      }
+    ]
+  }
+}

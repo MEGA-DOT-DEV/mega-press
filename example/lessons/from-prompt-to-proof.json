@@ -1,0 +1,43 @@
+{
+  "id": "from-prompt-to-proof",
+  "revision": 1,
+  "title": "From intent to evidence.",
+  "steps": [
+    {
+      "id": "intent",
+      "title": "Start with a criterion",
+      "description": "What observable result would let you say the work is complete? An intention becomes useful when success can be checked.",
+      "targetIds": [
+        "intent"
+      ],
+      "durationMs": 6000
+    },
+    {
+      "id": "act",
+      "title": "Choose one bounded action",
+      "description": "The action has a specific input and an expected outcome. Calling the tool changes what can be observed.",
+      "targetIds": [
+        "act"
+      ],
+      "durationMs": 6000
+    },
+    {
+      "id": "observe",
+      "title": "Bring evidence back",
+      "description": "A successful call is evidence about execution. Compare its returned result with the success criterion before claiming completion.",
+      "targetIds": [
+        "observe"
+      ],
+      "durationMs": 6000
+    },
+    {
+      "id": "decide",
+      "title": "Close the reasoning loop",
+      "description": "Use the result to choose: finish, try another action, or ask for information. Each new action should respond to what was observed.",
+      "targetIds": [
+        "next-decision"
+      ],
+      "durationMs": 6000
+    }
+  ]
+}

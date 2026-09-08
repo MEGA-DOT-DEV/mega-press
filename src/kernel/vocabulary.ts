@@ -30,6 +30,7 @@ export const ALLOWED_COMPONENTS = [
 	"timeline",
 	"timelineVertical",
 	"railFlow",
+	"accessBoundary",
 	"graph",
 	"derivation",
 	"code",
@@ -354,6 +355,22 @@ export const COMPONENT_GUIDE: Record<string, { readonly use: string; readonly ex
 				],
 			},
 		},
+		accessBoundary: {
+			use: "ordered trust regions with semantic crossings: flow, controlled, review, denied, or reference",
+			example: {
+				type: "accessBoundary",
+				dir: "y",
+				regions: [
+					{ key: "input", label: "UNTRUSTED INPUTS", boxes: [{ key: "ticket", title: "Support ticket" }] },
+					{ key: "work", label: "ISOLATED WORKSPACE", boxes: [{ key: "agent", title: "Background agent" }] },
+					{ key: "exit", label: "CONTROLLED EXIT", boxes: [{ key: "pr", title: "Pull request" }] },
+				],
+				edges: [
+					{ from: "ticket", to: "agent", kind: "controlled", gate: "Filter prompt" },
+					{ from: "agent", to: "pr", kind: "review", gate: "Human review" },
+				],
+			},
+		},
 		graph: {
 			use: "a system of labelled boxes with arrows: a pipeline, an architecture, a hub with spokes",
 			example: {
@@ -559,7 +576,7 @@ Compose two nodes with {"type":"stack","gap":3,"children":[...]} when one claim 
 4. No components: ${WITHHELD_COMPONENTS.join(", ")}.
 5. Only these body types: ${ALLOWED_COMPONENTS.join(", ")}.
 6. Never invent types (callout, infobox, alert). Use note with content.
-7. note = {type, content}. compare = before/after {label, title, items[]}. compareFlows = left/right {label, intro?, items[]} (each side a labelled vertical transcript; items shaped like timelineVertical items, 2 to 6 per side). railSteps/railFlow items = {name, detail}. checklist items = {text, ok}. timeline/timelineVertical items = {date, title, detail?, accent?} (date is the short label column: an actor, stage, or date; accent: true marks the one stop the claim is about). A timeline node may add label (small caps mono above the rail naming the run); stack two labelled timelines to contrast two runs. A timelineVertical item may add code (a verbatim block, 2 to 8 lines with \\n breaks) and chips (1 to 6 short mono pills {text, accent?}, 32 chars max, drawn under the detail or code). graph = nodes {key, title, detail?} + edges {from, to}. derivation steps = {expr, note} (note required after the first step). code = {code, label?, accentLines?} (code is one string with \\n line breaks, 2 to 14 lines, drawn verbatim; a line too wide for the frame refuses instead of wrapping). tree = {root: {name, detail?}, branches: [{name, items?, children?}]} (2 to 4 branches, children one level deeper at most, six drawn rows total root included; items are short mono tokens on the node's own line and a row never wraps). codeSteps = {steps: [{label, caption?, code}]} (2 or 3 numbered steps in a meaningful order, each code block 2 to 10 verbatim lines). compareSets = left/right {label, title, intro?, tags[]} (each side a bordered panel: a caps label, a claim in head type, and 1 to 8 short mono tags {text, accent?} in a stretched grid; the tag counts differing is the point, and accentSide picks the red panel, right by default). compareSpecs = left/right {label, title, call?, flow: {from {title, detail?}, edge {text, dir: out|in}, to {title, detail?}}, specs: 2 to 5 {key ≤16 chars, value}} (two specimen cards: the call shape draws in the accent, the flow's arrow points down for out and up for in, and one key column measure spans both sheets). converge = sources: 2 to 4 {name, tag?, lines?, note?} + sink {name, tag?, intro?, columns: 1 to 2 {label, lines: 2 to 5 verbatim}, takeaway? {lead, detail?}} (dashed run cards funnel straight red arrows into one red-bordered durable panel; lines are verbatim with \\n breaks).
+7. note = {type, content}. accessBoundary = ordered regions {key,label,boxes:[{key,title,detail?}]} + cross-region edges {from,to,kind: flow|controlled|review|denied|reference,gate?}; no coordinates, ranks, anchors, gaps, colours, or styles. compare = before/after {label, title, items[]}. compareFlows = left/right {label, intro?, items[]} (each side a labelled vertical transcript; items shaped like timelineVertical items, 2 to 6 per side). railSteps/railFlow items = {name, detail}. checklist items = {text, ok}. timeline/timelineVertical items = {date, title, detail?, accent?} (date is the short label column: an actor, stage, or date; accent: true marks the one stop the claim is about). A timeline node may add label (small caps mono above the rail naming the run); stack two labelled timelines to contrast two runs. A timelineVertical item may add code (a verbatim block, 2 to 8 lines with \\n breaks) and chips (1 to 6 short mono pills {text, accent?}, 32 chars max, drawn under the detail or code). graph = nodes {key, title, detail?} + edges {from, to}. derivation steps = {expr, note} (note required after the first step). code = {code, label?, accentLines?} (code is one string with \\n line breaks, 2 to 14 lines, drawn verbatim; a line too wide for the frame refuses instead of wrapping). tree = {root: {name, detail?}, branches: [{name, items?, children?}]} (2 to 4 branches, children one level deeper at most, six drawn rows total root included; items are short mono tokens on the node's own line and a row never wraps). codeSteps = {steps: [{label, caption?, code}]} (2 or 3 numbered steps in a meaningful order, each code block 2 to 10 verbatim lines). compareSets = left/right {label, title, intro?, tags[]} (each side a bordered panel: a caps label, a claim in head type, and 1 to 8 short mono tags {text, accent?} in a stretched grid; the tag counts differing is the point, and accentSide picks the red panel, right by default). compareSpecs = left/right {label, title, call?, flow: {from {title, detail?}, edge {text, dir: out|in}, to {title, detail?}}, specs: 2 to 5 {key ≤16 chars, value}} (two specimen cards: the call shape draws in the accent, the flow's arrow points down for out and up for in, and one key column measure spans both sheets). converge = sources: 2 to 4 {name, tag?, lines?, note?} + sink {name, tag?, intro?, columns: 1 to 2 {label, lines: 2 to 5 verbatim}, takeaway? {lead, detail?}} (dashed run cards funnel straight red arrows into one red-bordered durable panel; lines are verbatim with \\n breaks).
 
 ## Choose the component by what the content is
   process / method / loop          railSteps
@@ -577,6 +594,7 @@ Compose two nodes with {"type":"stack","gap":3,"children":[...]} when one claim 
   events or calls in order         timeline
   transcript, actor log            timelineVertical
   compact left-to-right flow       railFlow
+  trust regions, gates, denials    accessBoundary
   system, architecture, hub        graph
   code walkthrough, annotated      derivation
   verbatim snippet or JSON         code
@@ -594,6 +612,7 @@ Compose two nodes with {"type":"stack","gap":3,"children":[...]} when one claim 
 - cards: 3–4 cards, each body a full explanatory sentence
 - checklist: 4–6 rules, mix of ok true/false
 - timelineVertical: 3–5 rows, each with a short label, a title, and a detail clause
+- accessBoundary: 2–4 ordered regions, 3–8 boxes total, every box in a cross-region edge, and at least one controlled/review/denied edge
 - graph: 4–6 nodes with at least three edges, every node a real part of the system
 - derivation: 2–4 expressions, every step after the first annotated with what changed
 - code: 4–12 verbatim lines, short enough to fit the frame unwrapped, with a label naming the source

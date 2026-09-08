@@ -22,5 +22,6 @@ export type EvaluateFail = {
 
 export type EvaluateResult = EvaluateOk | EvaluateFail;
 
-export function evaluateSpec(spec: Record<string, unknown>): EvaluateResult;
-export function proveArtifact(spec: Record<string, unknown>): EvaluateResult;
+export type EvaluateOptions = { readonly theme?: import("./theme.js").PressTheme };
+export function evaluateSpec(spec: Record<string, unknown>, opts?: EvaluateOptions): EvaluateResult;
+export function proveArtifact(spec: Record<string, unknown>, opts?: EvaluateOptions): EvaluateResult;

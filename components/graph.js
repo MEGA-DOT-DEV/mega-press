@@ -28,8 +28,10 @@
  */
 
 import { routedLink } from "../src/connect.js";
-import { box, custom, grid, text } from "../src/solve.js";
-import { COLOR, STROKE } from "../src/tokens.js";
+import { box, custom, flatten, grid, measureNode, placeNode, row, stack, text } from "../src/solve.js";
+import { measure } from "../src/text.js";
+import { categoryColor, categoryGround } from "../src/theme.js";
+import { COLOR, PressError, STROKE, space } from "../src/tokens.js";
 
 /** Faces whose length runs down the page, so ports on them are ordered by y. */
 const VERTICAL_FACE = { left: true, right: true };
@@ -60,7 +62,7 @@ export function graph({
 	rankGap = gap,
 	pad = 4,
 	arrow = true,
-} = {}) {
+} = {}, context = {}) {
 	if (!specs || specs.length < 2) {
 		throw new Error("graph needs at least two nodes. A single box is not a system.");
 	}
@@ -70,10 +72,14 @@ export function graph({
 		);
 	}
 
-	const byKey = {};
+	if (specs.length > 64 || edges.length > 128) throw new PressError("GRAPH_RESOURCE_LIMIT", "A graph permits at most 64 nodes and 128 relations.");
+	const rich = Boolean(context.composition || specs.some(n => n.body) || edges.some(e => e.label !== undefined));
+	const byKey = Object.create(null);
 
 	const cells = specs.map((spec) => {
-		const cell = box({
+		if (typeof spec.key !== "string" || !spec.key.trim()) throw new PressError("GRAPH_KEY", "Every graph node needs a nonblank key.");
+		if (spec.body && !spec.body.kind) throw new PressError("GRAPH_BODY", "Graph bodies must be compiled component nodes.");
+		const cell = spec.body && spec.title === undefined ? spec.body : box({
 			pad,
 			border: true,
 			borderColor: spec.accent ? COLOR.red : COLOR.black2,
@@ -83,6 +89,7 @@ export function graph({
 			children: [
 				text(spec.title, "head", { color: COLOR.text }),
 				spec.detail ? text(spec.detail, "body", { color: COLOR.muted, commentary: true }) : null,
+				spec.body || null,
 			],
 		});
 		if (byKey[spec.key]) {
@@ -91,6 +98,21 @@ export function graph({
 			);
 		}
 		cell.key = spec.key;
+		cell.graphCell = true;
+		cell.semanticId ??= spec.key;
+		cell.namedPorts = new Map();
+		for (const entry of flatten(cell)) if (entry.portId) {
+			if (cell.namedPorts.has(entry.portId)) throw new PressError("GRAPH_PORT_AMBIGUOUS", `Node "${spec.key}" contains more than one port "${entry.portId}".`);
+			cell.namedPorts.set(entry.portId, entry);
+			entry.semanticId = `${spec.key}.${entry.portId}`;
+		}
+		if (spec.category !== undefined) {
+			const category = context.categories?.get(spec.category);
+			if (!category) throw new PressError("GRAPH_CATEGORY", `Unknown node category "${spec.category}".`);
+			cell.category = category.id;
+			cell.borderColor = categoryColor(category.tone);
+			if (cell.kind === "box" && cell.fill) cell.fill = categoryGround(category.tone);
+		}
 		byKey[spec.key] = cell;
 		return cell;
 	});
@@ -135,7 +157,7 @@ export function graph({
 			);
 		}
 	}
-	if (rankCount < 2) {
+	if (rankCount < 2 && !rich) {
 		throw new Error("graph needs at least two ranks. One rank is a list, and cards() draws that.");
 	}
 
@@ -179,10 +201,32 @@ export function graph({
 	// `gap` separates the ranks, because that is the channel every connector has
 	// to turn in. `rankGap` separates the members of one rank, where nothing has
 	// to fit, so a fan-in can be tight down the page and open across it.
-	const node =
-		dir === "x"
-			? grid({ cols, gap, rowGap: rankGap, children: slots })
-			: grid({ cols, gap: rankGap, rowGap: gap, children: slots });
+	let node = dir === "x"
+		? grid({ cols, gap, rowGap: rankGap, children: slots })
+		: grid({ cols, gap: rankGap, rowGap: gap, children: slots });
+	let routePad = 0;
+	let inner = node;
+	if (rich) {
+		const labelWidth = Math.min(160, Math.max(0, ...edges.filter(e => typeof e.label === "string").map(e => measure(e.label, "body") + 26)));
+		const backwards = edges.some(e => rankOf[specs.findIndex(n => n.key === e.to)] <= rankOf[specs.findIndex(n => n.key === e.from)]);
+		const sidePorts = edges.some(e => [e.fromAnchor, e.toAnchor].some(a => a === "left" || a === "right"));
+		const acrossGap = sidePorts ? labelWidth + 2 * space(3) : space(rankGap);
+		const alongGap = edges.some(e => e.label !== undefined) ? 2 * space(5) + space(2) : space(gap);
+		routePad = sidePorts || backwards ? Math.ceil(labelWidth / 2) + space(3) : space(2);
+		inner = dir === "y"
+			? stack({ _gap: alongGap, children: ranks.map(members => grid({ cols: members.length, align: "start", _gap: acrossGap, children: members.map(m => m.cell) })) })
+			: row({ _gap: Math.max(alongGap, labelWidth + space(3)), children: ranks.map(members => stack({ grow: true, _gap: acrossGap, children: members.map(m => m.cell) })) });
+		// Only the graph derives this gutter, from its label measures and routes.
+		// It remains an ordinary custom node using the canonical measure/place pass.
+		node = custom({ routingRegion: true, children: [inner],
+			measure: w => {
+				if (w <= 2 * routePad) throw new PressError("GRAPH_TOO_NARROW", "No space remains after measured route gutters.");
+				const size = measureNode(inner, w - 2 * routePad);
+				return { w, h: size.h + 2 * routePad };
+			},
+			place: (rect, ctx) => placeNode(inner, rect.inset(routePad), ctx),
+		});
+	}
 
 	/* ---- edges -----------------------------------------------------------
      Default anchors follow the layout direction, so an edge in a row leaves
@@ -199,9 +243,17 @@ export function graph({
 		if (!from) throw new Error(`graph edge references unknown node "${e.from}".`);
 		if (!to) throw new Error(`graph edge references unknown node "${e.to}".`);
 		if (from === to) throw new Error(`graph edge "${e.from}" connects a node to itself.`);
+		const port = (owner, name) => {
+			if (name === undefined) return null;
+			const target = owner.namedPorts.get(name);
+			if (!target) throw new PressError("GRAPH_PORT_UNKNOWN", `Node "${owner.key}" has no port "${name}".`);
+			return { node: target };
+		};
 		return {
 			i,
 			spec: e,
+			fromNamed: port(from, e.fromPort),
+			toNamed: port(to, e.toPort),
 			from,
 			to,
 			fromAnchor: e.fromAnchor || defaults.fromAnchor,
@@ -229,8 +281,8 @@ export function graph({
 		const fromPort = [],
 			toPort = [];
 		for (const e of resolved) {
-			seat(e.spec.from, e.fromAnchor, { edge: e, end: "from", other: e.to });
-			seat(e.spec.to, e.toAnchor, { edge: e, end: "to", other: e.from });
+			if (!e.fromNamed) seat(e.spec.from, e.fromAnchor, { edge: e, end: "from", other: e.to });
+			if (!e.toNamed) seat(e.spec.to, e.toAnchor, { edge: e, end: "to", other: e.from });
 		}
 
 		for (const { face, members } of faces.values()) {
@@ -249,24 +301,32 @@ export function graph({
 	}
 
 	node.press = {
-		connect: () => {
+		connect: ({ categoryColors = new Map() } = {}) => {
 			const { fromPort, toPort } = assignPorts();
 			return {
-				links: resolved.map((e) =>
-					routedLink(e.from, e.to, {
+				links: resolved.map((e) => {
+					if (e.spec.category !== undefined && !categoryColors.has(e.spec.category)) throw new PressError("GRAPH_CATEGORY", `Unknown relation category "${e.spec.category}".`);
+					const link = routedLink(e.from, e.to, {
 						fromAnchor: e.fromAnchor,
 						toAnchor: e.toAnchor,
-						fromPort: fromPort[e.i],
-						toPort: toPort[e.i],
+						fromPort: e.fromNamed || fromPort[e.i],
+						toPort: e.toNamed || toPort[e.i],
 						// Every other box in the graph. An edge may cross none of them.
 						avoid: cells.filter((c) => c !== e.from && c !== e.to),
-						color: e.spec.color || COLOR.red,
+						color: categoryColors.get(e.spec.category) || e.spec.color || COLOR.red,
 						weight: STROKE.connector,
 						arrow: e.spec.arrow ?? arrow,
 						label: e.spec.label,
 						names: { from: e.spec.from, to: e.spec.to },
-					}),
-				),
+					});
+					link.semanticId = e.spec.id || `${e.spec.from}:${e.spec.fromPort || e.fromAnchor}->${e.spec.to}:${e.spec.toPort || e.toAnchor}`;
+					link.category = e.spec.category;
+					if (rich) {
+						link.labelBounds = inner.rect.inset(-routePad);
+						link.labelObstacles = cells.map(c => c.rect);
+					}
+					return link;
+				}),
 			};
 		},
 	};

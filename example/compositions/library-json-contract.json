@@ -1,0 +1,134 @@
+{
+  "schemaVersion": "press-composition/1",
+  "id": "library-json-contract",
+  "frame": "reading",
+  "gap": 4,
+  "kicker": "ANNOTATIONS / JSON CONTRACT",
+  "title": "A record names its meaning.",
+  "lead": "An illustrative lesson record. Its identity, declared state, and evidence reference answer different questions.",
+  "categories": [
+    {
+      "id": "identity",
+      "label": "Stable identity",
+      "tone": "neutral",
+      "treatment": "outline",
+      "description": "The ID names which step this record describes."
+    },
+    {
+      "id": "state",
+      "label": "Declared state",
+      "tone": "red",
+      "treatment": "ink",
+      "description": "The record says complete; the word alone does not establish completion."
+    },
+    {
+      "id": "evidence",
+      "label": "Evidence reference",
+      "tone": "blue",
+      "treatment": "highlight",
+      "description": "The path names a file to inspect. It does not contain the file or prove its contents."
+    }
+  ],
+  "body": {
+    "type": "stack",
+    "gap": 4,
+    "children": [
+      {
+        "type": "grid",
+        "cols": 2,
+        "gap": 4,
+        "align": "start",
+        "children": [
+          {
+            "type": "code",
+            "id": "lesson-record",
+            "label": "JSON / ONE AUTHORED INSTANCE",
+            "lang": "none",
+            "wrap": false,
+            "code": "{\n  \"id\": \"step-02\",\n  \"state\": \"complete\",\n  \"evidence\": {\n    \"type\": \"file\",\n    \"path\": \"notes.md\"\n  }\n}",
+            "annotations": [
+              {
+                "id": "record-id",
+                "text": "\"id\": \"step-02\"",
+                "category": "identity"
+              },
+              {
+                "id": "record-state",
+                "text": "\"complete\"",
+                "category": "state"
+              },
+              {
+                "id": "record-reference",
+                "text": "\"path\": \"notes.md\"",
+                "category": "evidence"
+              }
+            ]
+          },
+          {
+            "type": "stack",
+            "gap": 2,
+            "children": [
+              {
+                "type": "text",
+                "role": "utility",
+                "content": "THREE SEPARATE CLAIMS"
+              },
+              {
+                "type": "legend",
+                "layout": "stack"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "grid",
+        "cols": 2,
+        "gap": 4,
+        "align": "start",
+        "children": [
+          {
+            "type": "schema",
+            "id": "lesson-field-kinds",
+            "title": "Expected field kinds",
+            "subtitle": "The top-level fields shown in this example.",
+            "fields": [
+              {
+                "id": "identity-field",
+                "name": "id",
+                "type": "string"
+              },
+              {
+                "id": "state-field",
+                "name": "state",
+                "type": "string"
+              },
+              {
+                "id": "evidence-field",
+                "name": "evidence",
+                "type": "object"
+              }
+            ]
+          },
+          {
+            "type": "panel",
+            "title": "A sample is not a schema.",
+            "children": [
+              {
+                "type": "text",
+                "role": "body",
+                "content": "This instance shows one allowed-looking shape. A real contract must define required fields, permitted states, and the evidence variants it accepts."
+              }
+            ],
+            "label": "THE VALIDATION BOUNDARY"
+          }
+        ]
+      }
+    ]
+  },
+  "background": {
+    "type": "band",
+    "fill": "raised",
+    "pad": 3
+  }
+}

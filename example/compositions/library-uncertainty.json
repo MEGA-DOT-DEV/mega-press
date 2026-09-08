@@ -1,0 +1,104 @@
+{
+  "schemaVersion": "press-composition/1",
+  "id": "library-uncertainty",
+  "frame": "reading",
+  "gap": 4,
+  "kicker": "EVIDENCE / ESTIMATES & INTERVALS",
+  "title": "The same estimate can tell different stories.",
+  "lead": "Three invented planning ranges, each centered on 20 minutes. The widths describe different assumptions; these are not measured confidence intervals.",
+  "body": {
+    "type": "stack",
+    "gap": 4,
+    "children": [
+      {
+        "type": "panel",
+        "title": "Look beyond the point.",
+        "children": [
+          {
+            "type": "distribution",
+            "id": "planning-ranges",
+            "unit": "minutes · illustrative range",
+            "from": 0,
+            "to": 40,
+            "items": [
+              {
+                "label": "Broad range",
+                "lo": 10,
+                "mid": 20,
+                "hi": 30
+              },
+              {
+                "label": "Narrow range",
+                "lo": 17,
+                "mid": 20,
+                "hi": 23
+              },
+              {
+                "label": "Tight range",
+                "lo": 19,
+                "mid": 20,
+                "hi": 21,
+                "accent": true
+              }
+            ]
+          }
+        ],
+        "label": "01 / ONE SHARED AXIS"
+      },
+      {
+        "type": "grid",
+        "cols": 2,
+        "gap": 4,
+        "align": "start",
+        "children": [
+          {
+            "type": "stack",
+            "gap": 4,
+            "children": [
+              {
+                "type": "text",
+                "role": "utility",
+                "content": "02 / THE ESTIMATE"
+              },
+              {
+                "type": "text",
+                "role": "head",
+                "content": "20 is only the center."
+              },
+              {
+                "type": "text",
+                "role": "body",
+                "content": "A point identifies a location. The two ends preserve the range of possibilities around it."
+              }
+            ]
+          },
+          {
+            "type": "metrics",
+            "id": "range-widths",
+            "items": [
+              {
+                "label": "Broad width",
+                "value": "20",
+                "unit": "minutes"
+              },
+              {
+                "label": "Tight width",
+                "value": "2",
+                "unit": "minutes"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "note",
+        "content": "Read the square as the estimate and the end caps as the limits. A narrower authored range alone does not establish a more reliable prediction."
+      }
+    ]
+  },
+  "background": {
+    "type": "band",
+    "fill": "raised",
+    "pad": 3
+  }
+}

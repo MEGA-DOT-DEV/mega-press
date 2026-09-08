@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "press-composition/1",
+  "id": "library-decision-map",
+  "frame": "reading",
+  "kicker": "DECISIONS / TWO INDEPENDENT AXES",
+  "title": "Choose how much to delegate.",
+  "lead": "An illustrative decision aid: combine the impact of a mistake with how easily an action can be reversed.",
+  "body": {
+    "type": "stack",
+    "gap": 3,
+    "children": [
+      {
+        "type": "quadrant",
+        "id": "decision-matrix",
+        "x": "IMPACT OF A MISTAKE: LOW → HIGH",
+        "y": "REVERSIBILITY: TOP = EASY · BOTTOM = HARD",
+        "cells": [
+          {
+            "title": "Let it run",
+            "body": "Low impact · easy to undo. Draft a label or reorder a local list."
+          },
+          {
+            "title": "Preview, then approve",
+            "body": "High impact · easy to undo. Inspect a proposed access change.",
+            "accent": true
+          },
+          {
+            "title": "Keep a checkpoint",
+            "body": "Low impact · hard to undo. Save the source before a cleanup."
+          },
+          {
+            "title": "Keep a human decision",
+            "body": "High impact · hard to undo. Review a consequential publication."
+          }
+        ]
+      },
+      {
+        "type": "note",
+        "content": "Classify the action in its actual context. The same tool can belong in different cells."
+      }
+    ]
+  }
+}

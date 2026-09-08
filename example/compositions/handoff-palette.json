@@ -1,0 +1,221 @@
+{
+  "schemaVersion": "press-composition/1",
+  "id": "handoff-palette",
+  "frame": "reading",
+  "title": "Colour identifies. Emphasis points.",
+  "lead": "Six compatible category tones from the supplied handoff. Categories name different things; a focus accent identifies the point of a figure.",
+  "categories": [
+    {
+      "id": "red",
+      "label": "Red",
+      "tone": "red"
+    },
+    {
+      "id": "cyan",
+      "label": "Cyan",
+      "tone": "cyan"
+    },
+    {
+      "id": "yellow",
+      "label": "Yellow",
+      "tone": "yellow"
+    },
+    {
+      "id": "magenta",
+      "label": "Magenta",
+      "tone": "magenta"
+    },
+    {
+      "id": "green",
+      "label": "Green",
+      "tone": "green"
+    },
+    {
+      "id": "blue",
+      "label": "Blue",
+      "tone": "blue"
+    }
+  ],
+  "body": {
+    "type": "stack",
+    "gap": 4,
+    "children": [
+      {
+        "type": "legend"
+      },
+      {
+        "type": "grid",
+        "cols": 3,
+        "align": "start",
+        "children": [
+          {
+            "type": "panel",
+            "category": "red",
+            "title": "Red",
+            "body": {
+              "type": "stack",
+              "gap": 2,
+              "children": [
+                {
+                  "type": "text",
+                  "role": "body",
+                  "category": "red",
+                  "content": "Readable category ink"
+                },
+                {
+                  "type": "text",
+                  "role": "body",
+                  "content": "On black: 5.25:1"
+                },
+                {
+                  "type": "text",
+                  "role": "body",
+                  "content": "Paired with its dark ground."
+                }
+              ]
+            }
+          },
+          {
+            "type": "panel",
+            "category": "cyan",
+            "title": "Cyan",
+            "body": {
+              "type": "stack",
+              "gap": 2,
+              "children": [
+                {
+                  "type": "text",
+                  "role": "body",
+                  "category": "cyan",
+                  "content": "Readable category ink"
+                },
+                {
+                  "type": "text",
+                  "role": "body",
+                  "content": "On black: 13.53:1"
+                },
+                {
+                  "type": "text",
+                  "role": "body",
+                  "content": "Paired with its dark ground."
+                }
+              ]
+            }
+          },
+          {
+            "type": "panel",
+            "category": "yellow",
+            "title": "Yellow",
+            "body": {
+              "type": "stack",
+              "gap": 2,
+              "children": [
+                {
+                  "type": "text",
+                  "role": "body",
+                  "category": "yellow",
+                  "content": "Readable category ink"
+                },
+                {
+                  "type": "text",
+                  "role": "body",
+                  "content": "On black: 13.90:1"
+                },
+                {
+                  "type": "text",
+                  "role": "body",
+                  "content": "Paired with its dark ground."
+                }
+              ]
+            }
+          },
+          {
+            "type": "panel",
+            "category": "magenta",
+            "title": "Magenta",
+            "body": {
+              "type": "stack",
+              "gap": 2,
+              "children": [
+                {
+                  "type": "text",
+                  "role": "body",
+                  "category": "magenta",
+                  "content": "Readable category ink"
+                },
+                {
+                  "type": "text",
+                  "role": "body",
+                  "content": "On black: 5.72:1"
+                },
+                {
+                  "type": "text",
+                  "role": "body",
+                  "content": "Paired with its dark ground."
+                }
+              ]
+            }
+          },
+          {
+            "type": "panel",
+            "category": "green",
+            "title": "Green",
+            "body": {
+              "type": "stack",
+              "gap": 2,
+              "children": [
+                {
+                  "type": "text",
+                  "role": "body",
+                  "category": "green",
+                  "content": "Readable category ink"
+                },
+                {
+                  "type": "text",
+                  "role": "body",
+                  "content": "On black: 14.27:1"
+                },
+                {
+                  "type": "text",
+                  "role": "body",
+                  "content": "Paired with its dark ground."
+                }
+              ]
+            }
+          },
+          {
+            "type": "panel",
+            "category": "blue",
+            "title": "Blue",
+            "body": {
+              "type": "stack",
+              "gap": 2,
+              "children": [
+                {
+                  "type": "text",
+                  "role": "body",
+                  "category": "blue",
+                  "content": "Readable category ink"
+                },
+                {
+                  "type": "text",
+                  "role": "body",
+                  "content": "On black: 6.06:1"
+                },
+                {
+                  "type": "text",
+                  "role": "body",
+                  "content": "Paired with its dark ground."
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "type": "note",
+        "content": "Orange replaces red; violet replaces blue. Those pairs cannot share a composition. Blue uses a readable ink around its darker fill; negative states reuse their category ground rather than inventing another hue."
+      }
+    ]
+  }
+}

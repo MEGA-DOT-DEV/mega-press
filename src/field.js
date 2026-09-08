@@ -23,7 +23,14 @@
  */
 
 import { clamp, sdCapsule, sdRoundBox, smoothstep } from "./geometry.js";
+import { hexToRgb } from "./screen.js";
 import { COLOR } from "./tokens.js";
+
+// Preserve the house field's subdued accent, derived from the active skin.
+const accentInk = (color) => {
+	const page = hexToRgb(color.page), accent = hexToRgb(color.red);
+	return `#${page.map((channel, i) => Math.round(channel + (accent[i] - channel) * (58 / 255)).toString(16).padStart(2, "0")).join("")}`;
+};
 
 export const FIELD_DEFAULTS = {
 	on: false,
@@ -38,8 +45,8 @@ export const FIELD_DEFAULTS = {
 	waveStrength: 1,
 	connectorGlow: 0,
 	time: 8,
-	ink: COLOR.black2,
-	accent: "#3a0000",
+	get ink() { return COLOR.black2; },
+	get accent() { return accentInk(COLOR); },
 };
 
 /**
@@ -126,7 +133,10 @@ export function plateGround(plate, params = {}) {
  * be baked once rather than solved per cell per frame.
  */
 export function plateField(plate, params = {}) {
-	const p = { ...FIELD_DEFAULTS, ...params };
+	// Capture the prepared plate's palette when making the factory. Delayed
+	// evaluation and another mounted skin must not change this field's ink.
+	const color = plate.theme?.color || COLOR;
+	const p = { ...FIELD_DEFAULTS, ink: color.black2, accent: accentInk(color), ...params };
 
 	return (cols, rows, frame) => {
 		/* ---- mass -----------------------------------------------------------
@@ -210,6 +220,9 @@ export function plateField(plate, params = {}) {
 			spacing: p.spacing,
 			density: (uvx, uvy, x, y) => {
 				const i = y * cols + x;
+				// A dense ramp can exceed one before mass subtraction. The interior
+				// of a printed rectangle is always empty, even at that extreme.
+				if (mass[i] >= 1) return 0;
 				const fy = 1 - uvy; // the field reads bottom up
 
 				const cross = (sinColC[x] * cosRowC[y] + cosColC[x] * sinRowC[y]) * 0.022;

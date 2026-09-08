@@ -11,7 +11,9 @@
  * asking for a connector throws rather than silently reading `undefined`.
  */
 
-import { polylineLength, railThrough, route, routeAround, straight } from "./geometry.js";
+import { Rect, polylineBlocked, polylineLength, railThrough, route, routeAround, straight } from "./geometry.js";
+import { box, measureNode, placeNode, text } from "./solve.js";
+import { measure } from "./text.js";
 import { COLOR, MIN_SEMANTIC_STROKE, PressError, STROKE, UNIT } from "./tokens.js";
 
 /** A connector shorter than this is a smudge, not a relationship. */
@@ -188,12 +190,21 @@ export function routedLink(
 
 	const fromName = names.from || from.key || from.id;
 	const toName = names.to || to.key || to.id;
-	refuseLabel(label, `routedLink("${fromName}", "${toName}")`);
-
-	const a = fromPort
-		? from.rect.port(fromAnchor, fromPort.index, fromPort.count)
-		: from.rect.anchor(fromAnchor);
-	const b = toPort ? to.rect.port(toAnchor, toPort.index, toPort.count) : to.rect.anchor(toAnchor);
+	if (label !== undefined && (typeof label !== "string" || !label.trim())) {
+		throw new PressError("CONNECTOR_LABEL", "A declared connector label must be nonblank text.");
+	}
+	const portAnchor = (owner, face, port) => {
+		if (!port) return owner.rect.anchor(face);
+		if (!port.node) return owner.rect.port(face, port.index, port.count);
+		const row = placed(port.node, "named port").rect;
+		if (!owner.rect.contains(row)) throw new PressError("PORT_OUTSIDE_NODE", "A named port must belong to its node.");
+		const anchor = owner.rect.anchor(face);
+		if (face === "left" || face === "right") anchor.y = row.cy;
+		else anchor.x = row.cx;
+		return anchor;
+	};
+	const a = portAnchor(from, fromAnchor, fromPort);
+	const b = portAnchor(to, toAnchor, toPort);
 
 	const obstacles = avoid.map((n, i) => ({
 		rect: placed(n, `avoid[${i}]`).rect,
@@ -231,14 +242,69 @@ export function routedLink(
 		to: to.id,
 		fromKey: fromName,
 		toKey: toName,
-		fromPort: a.name,
-		toPort: b.name,
+		fromPort: fromPort?.node?.portId ?? a.name,
+		toPort: toPort?.node?.portId ?? b.name,
+		...(label !== undefined ? { label } : {}),
 		points,
 		weight,
 		color,
 		arrow,
 		length,
 	};
+}
+
+/** Place exact relation labels in measured, clear portions of their routes.
+ * These are ordinary solve nodes: the canonical renderer and validator see
+ * the same label boxes, not an unmeasured DOM overlay or canvas-only caption.
+ */
+export function prepareLinkLabels(links, { bounds, obstacles = [], frameWidth = 1600 } = {}) {
+	const labels = [];
+	const overlaps = (a, b, gap = 6) =>
+		a.left < b.right + gap && a.right > b.left - gap &&
+		a.top < b.bottom + gap && a.bottom > b.top - gap;
+	for (const link of links) {
+		if (link.label === undefined) continue;
+		const boundary = link.labelBounds || bounds;
+		const blocked = [...obstacles, ...(link.labelObstacles || []), ...labels.map(n => n.rect)];
+		const labelText = text(link.label, "body", { color: link.color, semanticId: link.semanticId });
+		const label = box({ pad: 1, gap: 1, fill: COLOR.page, border: true, borderColor: COLOR.line, children: [labelText] });
+		const natural = Math.ceil(measure(link.label, "body") + 26);
+		let placedLabel = false;
+		for (const width of [...new Set([Math.min(natural, 360), Math.min(natural, 260), Math.min(natural, 180), Math.min(natural, 160), Math.min(natural, 140), Math.min(natural, 120), Math.min(natural, 100)])]) {
+			if (width > boundary.w) continue;
+			const size = measureNode(label, width);
+			const candidates = [];
+			for (let i = 1; i < link.points.length; i++) {
+				const a = link.points[i - 1], b = link.points[i];
+				const horizontal = Math.abs(a.y - b.y) < .01;
+				const lo = Math.min(horizontal ? a.x : a.y, horizontal ? b.x : b.y);
+				const hi = Math.max(horizontal ? a.x : a.y, horizontal ? b.x : b.y);
+				const half = horizontal ? size.w / 2 : size.h / 2;
+				const stops = [(lo + hi) / 2, ...Array.from({ length: 19 }, (_, j) => lo + (hi - lo) * (j + 1) / 20), ...blocked.flatMap(r => horizontal
+					? [r.left - half - 7, r.right + half + 7]
+					: [r.top - half - 7, r.bottom + half + 7])];
+				for (const at of stops) if (at >= lo && at <= hi) candidates.push({
+					rect: new Rect((horizontal ? at : a.x) - size.w / 2, (horizontal ? a.y : at) - size.h / 2, size.w, size.h),
+					length: hi - lo,
+				});
+			}
+			const found = candidates.sort((a, b) => b.length - a.length).find(({ rect }) =>
+				boundary.contains(rect) && !blocked.some(other => overlaps(rect, other)) &&
+				!links.some(other => other !== link && polylineBlocked(other.points, [rect], 3)));
+			if (!found) continue;
+			placeNode(label, found.rect, { frameWidth });
+			label.connectorLabel = true;
+			label.semanticId = link.semanticId;
+			link.labelRect = found.rect;
+			labels.push(label);
+			placedLabel = true;
+			break;
+		}
+		if (!placedLabel) throw new PressError("CONNECTOR_LABEL_NO_ROOM",
+			`No clear, measured position for relation "${link.label}". Change the composition; the label was not dropped.`,
+			{ from: link.fromKey, to: link.toKey, label: link.label });
+	}
+	return labels;
 }
 
 /* --------------------------------------------------------------------------

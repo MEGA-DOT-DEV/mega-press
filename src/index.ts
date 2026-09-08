@@ -3,6 +3,11 @@
  * parseArtifact → buildArtifact → mountArtifact.
  */
 export type {
+	AccessBoundaryBoxPlan,
+	AccessBoundaryDirection,
+	AccessBoundaryEdgeKind,
+	AccessBoundaryEdgePlan,
+	AccessBoundaryRegionPlan,
 	ArtifactKind,
 	ArtifactPlan,
 	LineChartAxisPlan,
@@ -12,6 +17,8 @@ export type {
 	PlatePlanKind,
 } from "./kernel/platePlan.js";
 export {
+	ACCESS_BOUNDARY_DIRECTIONS,
+	ACCESS_BOUNDARY_EDGE_KINDS,
 	ARTIFACT_JSON_SCHEMA,
 	ARTIFACT_KINDS,
 	compileAndLockPlatePlan,
@@ -27,7 +34,7 @@ export { parseArtifact } from "./parse.js";
 export type { BuildResult } from "./build.js";
 export { buildArtifact } from "./build.js";
 
-export type { EvaluateResult } from "./evaluate.js";
+export type { EvaluateOptions, EvaluateResult } from "./evaluate.js";
 export { evaluateSpec, proveArtifact } from "./evaluate.js";
 
 export type { MountArtifactOpts, MountedArtifact } from "./mount.js";
@@ -78,13 +85,24 @@ export type {
 	PressSyntaxTheme,
 	PressTheme,
 	ResolvedChrome,
+	ResolvedPressTheme,
 } from "./theme.js";
 export { DEFAULT_SYNTAX, SYNTAX_CLASSES } from "./syntax.js";
 export {
 	CHROME_PRESETS,
+	PRESS_THEMES,
+	SUPPORTED_PRESS_FONTS,
 	configurePress,
 	getPressTheme,
 	resetPressTheme,
 	resolveChrome,
+	resolvePressTheme,
 	withPressTheme,
 } from "./theme.js";
+
+export { createLessonController, sampleLesson } from "./lesson.js";
+export type {
+	Lesson, LessonStep, LessonState, LessonEventSource, LessonEvent,
+	LessonObserver, LessonControllerOptions, LessonActionResult,
+	LessonController, LessonSample,
+} from "./lesson.js";

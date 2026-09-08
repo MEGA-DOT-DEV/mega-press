@@ -1,0 +1,34 @@
+{
+  "id": "relationships-have-addresses",
+  "revision": 1,
+  "title": "A relationship has an exact address.",
+  "steps": [
+    {
+      "id": "reference",
+      "title": "Find the referencing field",
+      "description": "The task stores agent_id. This field carries the relationship; the entire tasks table is not the address.",
+      "targetIds": [
+        "tasks.task-owner"
+      ],
+      "durationMs": 6000
+    },
+    {
+      "id": "identity",
+      "title": "Follow it to an identity",
+      "description": "The arrow points to the id field of agents. Multiple tasks can reference that same primary key.",
+      "targetIds": [
+        "agents.agent-id"
+      ],
+      "durationMs": 6000
+    },
+    {
+      "id": "meaning",
+      "title": "Read the line as a constraint",
+      "description": "This line represents a reference between fields. A data-flow arrow would make a different claim. The annotation preserves that distinction.",
+      "targetIds": [
+        "integrity"
+      ],
+      "durationMs": 6000
+    }
+  ]
+}

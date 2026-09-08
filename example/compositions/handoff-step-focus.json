@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "press-composition/1",
+  "id": "handoff-step-focus",
+  "frame": "reading",
+  "title": "One shared call shape, step by step.",
+  "body": {
+    "type": "railSteps",
+    "items": [
+      {
+        "name": "Ask",
+        "detail": "The user asks in plain language."
+      },
+      {
+        "name": "Search",
+        "detail": "Find the one capability that matches the ask."
+      },
+      {
+        "name": "Execute",
+        "detail": "Run it with schema-checked arguments.",
+        "code": "{\n  \"capability\": \"email_message_search\",\n  \"arguments\": { \"query\": \"campaign\" }\n}",
+        "chips": [
+          {
+            "text": "schema-checked",
+            "accent": true
+          },
+          {
+            "text": "one call"
+          }
+        ]
+      },
+      {
+        "name": "Answer",
+        "detail": "Return checked numbers, not guesses."
+      }
+    ],
+    "accentAt": 2,
+    "accentReach": "approach"
+  }
+}

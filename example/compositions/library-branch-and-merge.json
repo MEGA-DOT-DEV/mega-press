@@ -1,0 +1,136 @@
+{
+  "schemaVersion": "press-composition/1",
+  "id": "library-branch-and-merge",
+  "frame": "reading",
+  "kicker": "SYSTEMS / BROADCAST + CONVERGENCE",
+  "title": "One question. Three independent lenses.",
+  "lead": "An illustrative research workflow. All three branches run; their results meet at one synthesis.",
+  "background": {
+    "type": "field"
+  },
+  "body": {
+    "type": "stack",
+    "gap": 4,
+    "children": [
+      {
+        "type": "graph",
+        "id": "research-fanout",
+        "dir": "y",
+        "nodes": [
+          {
+            "key": "question",
+            "rank": 0,
+            "body": {
+              "type": "panel",
+              "id": "question",
+              "title": "Frame the question",
+              "body": {
+                "type": "text",
+                "role": "body",
+                "content": "What would make this explanation useful?"
+              }
+            }
+          },
+          {
+            "key": "evidence",
+            "rank": 1,
+            "order": 0,
+            "body": {
+              "type": "panel",
+              "id": "evidence",
+              "title": "Evidence",
+              "body": {
+                "type": "text",
+                "role": "body",
+                "content": "Find support for the central claim."
+              }
+            }
+          },
+          {
+            "key": "challenge",
+            "rank": 1,
+            "order": 1,
+            "body": {
+              "type": "panel",
+              "id": "challenge",
+              "title": "Counterexample",
+              "body": {
+                "type": "text",
+                "role": "body",
+                "content": "Find a case that could break the claim."
+              }
+            }
+          },
+          {
+            "key": "analogy",
+            "rank": 1,
+            "order": 2,
+            "body": {
+              "type": "panel",
+              "id": "analogy",
+              "title": "Analogy",
+              "body": {
+                "type": "text",
+                "role": "body",
+                "content": "Find a familiar model to explain it."
+              }
+            }
+          },
+          {
+            "key": "synthesis",
+            "rank": 2,
+            "body": {
+              "type": "panel",
+              "id": "synthesis",
+              "title": "Synthesize the lesson",
+              "body": {
+                "type": "text",
+                "role": "body",
+                "content": "Keep supported claims. State the limits. Use the analogy where it holds."
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "ask-evidence",
+            "from": "question",
+            "to": "evidence",
+            "label": "support"
+          },
+          {
+            "id": "ask-challenge",
+            "from": "question",
+            "to": "challenge",
+            "label": "challenge"
+          },
+          {
+            "id": "ask-analogy",
+            "from": "question",
+            "to": "analogy",
+            "label": "explain"
+          },
+          {
+            "id": "merge-evidence",
+            "from": "evidence",
+            "to": "synthesis"
+          },
+          {
+            "id": "merge-challenge",
+            "from": "challenge",
+            "to": "synthesis"
+          },
+          {
+            "id": "merge-analogy",
+            "from": "analogy",
+            "to": "synthesis"
+          }
+        ]
+      },
+      {
+        "type": "note",
+        "content": "A fork is a broadcast here. The final step waits for all three contributions; no branch is a substitute for another."
+      }
+    ]
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "press-composition/1",
+  "id": "contract-comparison",
+  "frame": "portrait",
+  "kicker": "BEFORE / AFTER / CONTRACT COMPARISON",
+  "title": "Make the event kind explicit.",
+  "lead": "Two illustrative payload shapes. A message can carry prose; an event envelope names the kind of payload it contains.",
+  "categories": [
+    {"id": "message", "label": "Message shape", "tone": "red"},
+    {"id": "event", "label": "Event envelope", "tone": "blue"}
+  ],
+  "body": {
+    "type": "stack", "gap": 4,
+    "children": [
+      {"type": "grid", "cols": 2, "align": "start", "children": [
+        {"type": "panel", "id": "message-shape", "category": "message", "label": "BEFORE / MESSAGE CONTENT", "title": "A specialized message", "children": [
+          {"type": "code", "lang": "json", "code": "{\n  \"role\": \"assistant\",\n  \"content\": \"Ready.\"\n}"},
+          {"type": "text", "role": "body", "content": "Useful when the record is a message. Other event types need their own representation."}
+        ]},
+        {"type": "panel", "id": "event-shape", "category": "event", "label": "AFTER / EXPLICIT EVENT TYPE", "title": "An event envelope", "children": [
+          {"type": "code", "lang": "json", "code": "{\n  \"type\": \"message\",\n  \"payload\": {\n    \"role\": \"assistant\",\n    \"content\": \"Ready.\"\n  }\n}"},
+          {"type": "text", "role": "body", "content": "The discriminator identifies the variant. Its payload can then be checked against that variant's schema."}
+        ]}
+      ]},
+      {"type": "panel", "title": "Naming the variant is only the first step", "body": {
+        "type": "railSteps", "items": [
+          {"name": "Read type", "detail": "Identify the declared variant."},
+          {"name": "Check payload", "detail": "Validate its required fields."},
+          {"name": "Handle event", "detail": "Use the matching handler."}
+        ]
+      }},
+      {"type": "note", "content": "These are example documents, not schemas. Adding a type field does not itself validate a payload, execute a function, or prove compatibility."}
+    ]
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "schemaVersion": "press-composition/1",
+  "id": "library-parallel-work",
+  "frame": "reading",
+  "kicker": "TIME / THREE TRACKS, ONE CLOCK",
+  "title": "Work can overlap. Readiness must meet.",
+  "lead": "A fictional lesson-production schedule. Every bar shares the same UTC date scale.",
+  "background": {
+    "type": "field"
+  },
+  "body": {
+    "type": "stack",
+    "gap": 4,
+    "children": [
+      {
+        "type": "panel",
+        "id": "shared-clock",
+        "title": "Three workstreams, one release",
+        "body": {
+          "type": "swimlanes",
+          "id": "production-clock",
+          "tracks": [
+            {
+              "name": "Script",
+              "spans": [
+                {
+                  "from": "2026-10-05",
+                  "to": "2026-10-08",
+                  "label": "Draft"
+                },
+                {
+                  "from": "2026-10-10",
+                  "to": "2026-10-12",
+                  "label": "Revise"
+                }
+              ]
+            },
+            {
+              "name": "Visuals",
+              "spans": [
+                {
+                  "from": "2026-10-06",
+                  "to": "2026-10-10",
+                  "label": "Build"
+                }
+              ]
+            },
+            {
+              "name": "Review",
+              "spans": [
+                {
+                  "from": "2026-10-10",
+                  "to": "2026-10-12",
+                  "label": "Check",
+                  "accent": true
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "type": "grid",
+        "cols": 2,
+        "gap": 4,
+        "children": [
+          {
+            "type": "panel",
+            "id": "review-gate",
+            "title": "10 OCT / Review opens",
+            "body": {
+              "type": "text",
+              "role": "body",
+              "content": "The draft and visual pass are ready. Review can begin while the script is revised."
+            }
+          },
+          {
+            "type": "panel",
+            "id": "release-gate",
+            "title": "12 OCT / Release ready",
+            "body": {
+              "type": "text",
+              "role": "body",
+              "content": "Revision and review finish together. Their overlapping durations are not added."
+            }
+          }
+        ]
+      },
+      {
+        "type": "note",
+        "content": "UTC midnight boundaries; starts included, ends excluded. Empty space means no work is scheduled on that track."
+      }
+    ]
+  }
+}

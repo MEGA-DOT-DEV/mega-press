@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "press-composition/1",
+  "id": "cost-comparison",
+  "frame": "landscape",
+  "gap": 3,
+  "kicker": "NUMERICAL COMPARISON / SHARED ZERO BASELINE",
+  "title": "Compare the cost before replacing it.",
+  "lead": "The earlier repair example, rebuilt with the current composition engine. Values are illustrative—not market prices.",
+  "categories": [
+    {"id": "repair", "label": "Repair option", "tone": "blue"},
+    {"id": "replace", "label": "Replacement", "tone": "red"}
+  ],
+  "body": {
+    "type": "stack", "gap": 2,
+    "children": [
+      {"type": "legend"},
+      {"type": "stack", "gap": 2, "children": [
+        {"type": "text", "role": "body", "content": "Four options on the same scale"},
+        {"type": "bars", "unit": "EUR", "max": 140,
+        "items": [
+          {"id": "patch", "label": "Patch", "value": 18, "category": "repair"},
+          {"id": "seam", "label": "Seam repair", "value": 26, "category": "repair"},
+          {"id": "zip", "label": "Zip replacement", "value": 40, "category": "repair"},
+          {"id": "replace-item", "label": "Replace the item", "value": 140, "category": "replace"}
+        ]
+      }]},
+      {"type": "text", "role": "body", "content": "Every bar begins at zero; every value is printed. Price alone does not establish whether an item is repairable or which option is appropriate."}
+    ]
+  }
+}

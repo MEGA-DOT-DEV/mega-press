@@ -13,8 +13,8 @@
  *
  * Two sanctioned layouts, one painter:
  *
- *   chipsRow   hug-width pills in one row under a transcript event, where the
- *              pills are badges and their widths carry no meaning.
+ *   chipsRow   hug-width pills, wrapping whole badges under a transcript event;
+ *              their widths carry no quantitative meaning.
  *   chipGrid   pills stretched to a shared column measure, for compareSets
  *              panels where the pills are a roster and the reader counts rows.
  *              Stretching is deliberate there: equal widths make 2 against 6
@@ -27,7 +27,7 @@
  * that was chosen, the one badge the claim is about. The rest stay quiet.
  */
 
-import { custom, row } from "../src/solve.js";
+import { custom } from "../src/solve.js";
 import { measure } from "../src/text.js";
 import {
 	FAMILY,
@@ -81,7 +81,7 @@ export function chip({ text: label, accent = false }) {
  * none. Refusals are by name, because a chip silently dropped or silently
  * truncated is the accepted-and-not-drawn defect this file keeps refusing.
  */
-export function chipsRow(chips, where) {
+export function chipsRow(chips, where, { exact = false } = {}) {
 	if (chips === undefined || chips === null) return null;
 	if (!Array.isArray(chips)) {
 		throw new PressError(
@@ -99,8 +99,9 @@ export function chipsRow(chips, where) {
 	}
 	const cleaned = chips.map((c, i) => {
 		const item = typeof c === "string" ? { text: c } : c;
-		const label = String(item?.text ?? "").trim();
-		if (!label) {
+		if (exact && typeof item?.text !== "string") throw new PressError("CHIP_TEXT_MISSING", `${where}: chip text must be a literal string.`);
+		const label = exact ? item.text : String(item?.text ?? "").trim();
+		if (!label.trim()) {
 			throw new PressError(
 				"CHIP_TEXT_MISSING",
 				`${where}: chip ${i + 1} has no text. A bordered pill with nothing in it prints ` +
@@ -117,7 +118,23 @@ export function chipsRow(chips, where) {
 		}
 		return { text: label, accent: Boolean(item.accent) };
 	});
-	return row({ gap: 2, align: "start", children: cleaned.map(chip) });
+	const widths = cleaned.map(c => chipIntrinsicWidth(c.text));
+	const h = chipHeight(), gap = space(2), rowGap = space(1);
+	const layout = width => {
+		let x = 0, y = 0;
+		const placed = widths.map((w, index) => {
+			if (w > width) throw new PressError("CHIP_TOO_WIDE", `${where}: chip "${cleaned[index].text}" needs ${w}px; the column has ${Math.floor(width)}px. It was not split or truncated.`);
+			if (x && x + w > width) { x = 0; y += h + rowGap; }
+			const rect = { x, y, w, h }; x += w + gap; return rect;
+		});
+		return { placed, h: y + h };
+	};
+	return custom({
+		chips: cleaned,
+		measure: width => ({ w: width, h: layout(width).h }),
+		paint: (ctx, rect, C) => layout(rect.w).placed.forEach((slot, i) =>
+			paintChip(ctx, { ...slot, x: rect.x + slot.x, y: rect.y + slot.y }, C, cleaned[i])),
+	});
 }
 
 /**

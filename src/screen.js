@@ -26,7 +26,9 @@ export const luminance = (r, g, b) =>
 export const pack = (r, g, b, a = 255) => ((a << 24) | (b << 16) | (g << 8) | r) >>> 0;
 
 export const hexToRgb = (hex) => {
-	const h = hex.replace("#", "");
+	const match = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(hex).trim());
+	if (!match) throw new Error(`Screen ink must be a #rgb or #rrggbb colour, got ${JSON.stringify(hex)}.`);
+	const h = match[1].length === 3 ? [...match[1]].map(channel => channel + channel).join("") : match[1];
 	return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
 };
 

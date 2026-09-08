@@ -1,0 +1,114 @@
+{
+  "schemaVersion": "press-composition/1",
+  "id": "relationships-have-addresses",
+  "frame": "reading",
+  "kicker": "03 / DATA STRUCTURES",
+  "title": "A relationship has an exact address.",
+  "lead": "An illustrative ownership model. Follow the foreign key to the field it references.",
+  "categories": [
+    {
+      "id": "primary",
+      "label": "Primary key",
+      "tone": "red"
+    },
+    {
+      "id": "foreign",
+      "label": "Foreign key",
+      "tone": "blue"
+    }
+  ],
+  "body": {
+    "type": "stack",
+    "gap": 4,
+    "children": [
+      {
+        "type": "legend"
+      },
+      {
+        "type": "graph",
+        "id": "ownership",
+        "dir": "x",
+        "nodes": [
+          {
+            "key": "tasks",
+            "rank": 0,
+            "body": {
+              "type": "schema",
+              "id": "tasks",
+              "title": "tasks",
+              "subtitle": "Many tasks can belong to one agent.",
+              "fields": [
+                {
+                  "id": "task-id",
+                  "name": "id",
+                  "type": "uuid",
+                  "key": "primary",
+                  "category": "primary"
+                },
+                {
+                  "id": "task-owner",
+                  "name": "agent_id",
+                  "type": "uuid",
+                  "key": "foreign",
+                  "category": "foreign"
+                },
+                {
+                  "id": "task-title",
+                  "name": "title",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          {
+            "key": "agents",
+            "rank": 1,
+            "body": {
+              "type": "schema",
+              "id": "agents",
+              "title": "agents",
+              "subtitle": "Each agent has a stable identity.",
+              "fields": [
+                {
+                  "id": "agent-id",
+                  "name": "id",
+                  "type": "uuid",
+                  "key": "primary",
+                  "category": "primary"
+                },
+                {
+                  "id": "agent-role",
+                  "name": "role",
+                  "type": "text"
+                },
+                {
+                  "id": "agent-model",
+                  "name": "model",
+                  "type": "text"
+                }
+              ]
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "owner-reference",
+            "from": "tasks",
+            "to": "agents",
+            "fromPort": "task-owner",
+            "toPort": "agent-id",
+            "fromAnchor": "right",
+            "toAnchor": "left",
+            "label": "N tasks : 1 agent",
+            "category": "foreign"
+          }
+        ]
+      },
+      {
+        "type": "note",
+        "id": "integrity",
+        "content": "tasks.agent_id references agents.id. The arrowhead identifies the referenced key; it does not indicate that data is moving."
+      }
+    ]
+  }
+}

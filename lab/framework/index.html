@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23f00' d='M0 0h16v16H0z'/%3E%3C/svg%3E" />
+    <meta name="color-scheme" content="dark" />
+    <title>Mega-Press / Framework lab</title>
+  </head>
+  <body>
+    <a class="skip" href="#working-study">Skip to the working study</a>
+    <header class="masthead wrap">
+      <a class="brand" href="#">mega.press</a>
+      <span class="eyebrow">Framework lab / 01</span>
+      <a class="tag" href="./showcase.html">Seven rendered examples ↗</a>
+    </header>
+    <main class="wrap">
+      <section class="intro" aria-labelledby="intro-title">
+        <p class="eyebrow">An authoring system, not a drawing tool</p>
+        <h1 id="intro-title">One idea.<br />Several ways to see it.</h1>
+        <p class="intro-copy">Keep meaning fixed. Let the presentation adapt. This study explores a visual language that authors and agents can extend without inventing a new style each time.</p>
+        <div class="principles"><span>01 / Preserve the source</span><span>02 / Compose within rules</span><span>03 / Observe meaningful actions</span></div>
+      </section>
+
+      <section class="section" aria-labelledby="approaches-title">
+        <div class="section-heading"><p class="eyebrow">The architecture choice</p><h2 id="approaches-title">Three approaches. Different costs.</h2></div>
+        <div class="approach-grid">
+          <article class="approach"><p class="eyebrow">A / Consolidated catalogue</p><h3>More reliable templates.</h3><p>One definition per kind. Keep today’s fixed artboards. Lowest migration cost, but each new composition still asks for another kind.</p><span class="verdict">Useful first step</span></article>
+          <article class="approach recommended"><p class="eyebrow">B / Bounded recipes</p><h3>More room for the idea.</h3><p>Semantic content, approved compositions, and output profiles. Keep the existing solver where it fits; prove new layouts before shipping them.</p><span class="verdict">Working hypothesis / tested below</span></article>
+          <article class="approach"><p class="eyebrow">C / General scene model</p><h3>A bigger language to own.</h3><p>Maximum expressive range, but more author decisions and a much larger validation surface. Not justified by the current evidence.</p><span class="verdict">Paper alternative / not implemented</span></article>
+        </div>
+      </section>
+
+      <section class="section" id="working-study" aria-labelledby="study-title">
+        <div class="section-heading"><p class="eyebrow">Experiment 01 / one semantic recipe</p><h2 id="study-title">Change the subject. Keep the language.</h2><p>All content stays visible. Selection changes emphasis, not facts. The reading layout below is an HTML prototype, not certified by the production geometry solver.</p></div>
+        <div class="toolbar">
+          <label class="field"><span>Subject</span><select id="subject"></select></label>
+          <label class="field"><span>Reading width</span><select id="reading-width"><option value="wide">Available width</option><option value="phone">390px study</option></select></label>
+          <label class="field"><span>Background</span><select id="ground"></select></label>
+          <label class="field"><span>Frame treatment</span><select id="treatment"></select></label>
+        </div>
+        <p class="fine">Background and frame treatment are author/model choices stored in the document. Changing one starts a new revision and clears this instance’s event view. Reading width is a host constraint.</p>
+        <div class="workspace">
+          <div class="study-column">
+            <div class="preview-rail"><span>B / Reading recipe</span><span id="width-report"></span></div>
+            <div id="preview-shell" class="preview-shell">
+              <figure id="artifact" class="artifact" data-ground="quiet">
+                <canvas id="ground-canvas" class="ground-art" aria-hidden="true"></canvas>
+                <div class="artifact-content">
+                  <div class="artifact-chase"><span>Sequence / 01</span><span id="artifact-revision"></span></div>
+                  <h3 id="artifact-title"></h3>
+                  <ol id="steps" class="steps"></ol>
+                  <figcaption><span>mega.dev</span><span>One recipe / original illustrative content</span></figcaption>
+                </div>
+              </figure>
+            </div>
+            <div class="interaction-controls"><button id="next-step" type="button">Next step <span aria-hidden="true">↗</span></button><button id="clear-focus" class="secondary" type="button">Clear emphasis</button><span id="selection-status" role="status" aria-live="polite"></span></div>
+            <div class="playback">
+              <div class="playback-heading"><h3>Motion is a view of state.</h3><label class="check"><input type="checkbox" id="reduce-motion" /> Reduce motion</label></div>
+              <p>Choose a step, then replay or seek the same emphasis transition. Seeking does not emit an artifact interaction event.</p>
+              <div class="scrubber"><button id="replay" class="secondary" type="button">Replay</button><label for="progress" class="sr-only">Transition progress</label><input id="progress" type="range" min="0" max="100" value="100" /><output id="pose-report" for="progress" aria-live="off">Settled / 100%</output></div>
+              <p class="fine">Emphasis only. No geometry interpolation, recording, or video export is implemented here.</p>
+            </div>
+          </div>
+          <aside class="observatory" aria-labelledby="observatory-title">
+            <p class="eyebrow">Host boundary / local memory only</p><h3 id="observatory-title">An action, not a pixel.</h3>
+            <p>Press reports semantic targets and state. The host owns identity, consent, storage, and analytics.</p>
+            <dl class="receipts"><div><dt>Document</dt><dd id="document-status">Checking</dd></div><div><dt>Source text</dt><dd id="integrity-status">Checking</dd></div><div><dt>Transport</dt><dd>None / no event uploads</dd></div></dl>
+            <div class="log-heading"><h4>Events</h4><button id="clear-log" class="text-button" type="button">Clear view</button></div>
+            <p id="event-count" class="fine">No events. Mounting is not an interaction.</p>
+            <ol id="event-log" class="event-log" aria-label="Recent artifact interaction events"></ol>
+            <details><summary>Inspect the authoring document</summary><pre id="document-json"></pre></details>
+            <details><summary>Inspect the recipe schema</summary><pre id="schema-json"></pre></details>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="baseline-title">
+        <div class="section-heading"><p class="eyebrow">Control / the existing engine</p><h2 id="baseline-title">Scaling is not a reading layout.</h2><p>The same source passes through today’s <code>parse → build → mount</code> pipeline below, inside a phone-width host. This is the actual Press renderer, not a CSS imitation.</p></div>
+        <div class="baseline-grid">
+          <div><div class="preview-rail"><span>A / Current fixed artboard</span><span>Up to 390px host</span></div><div id="legacy-frame" class="legacy-frame"></div><p id="legacy-status" class="fine" role="status">Preparing the baseline.</p></div>
+          <div class="comparison-notes"><h3>What this comparison can tell us.</h3><ul><li>The reading recipe keeps body copy at a proposed 16px floor. The fixed artboard preserves its geometry by scaling.</li><li>The recipe preserves source strings verbatim. Today’s compiler can normalize punctuation; the integrity fixture makes this visible.</li><li>Neither a green schema check nor a screenshot proves that an explanation is factually correct.</li><li>Both formats need release gates. A responsive prototype does not replace the production solver’s guarantees.</li></ul><p class="fine">The choices in this lab are research inputs, not new public package APIs.</p></div>
+        </div>
+      </section>
+
+      <section class="section closing" aria-labelledby="next-title"><p class="eyebrow">The next gate is evidence</p><h2 id="next-title">Extend the language.<br />Do not weaken the promise.</h2><p>Next: repair content-changing transforms and test existing compositions through one consistent authoring contract. Reuse the current components and interaction transition point before adding another layer. Read the decisions, contracts, and rollout gates in <code>spec/framework/</code>.</p><p class="fine">Design references: Mega-Dev’s field/static labs and token contract, plus Mega-Content’s split, portrait, square, and graph specimens. The field reuses Press’s existing Bayer screen and content clearing; no new shader or texture engine. The earlier Figma exports remain unavailable.</p></section>
+    </main>
+    <footer class="wrap footer"><span>mega.press / framework research</span><span>Static foundation. Explicit state. Deliberate releases.</span></footer>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

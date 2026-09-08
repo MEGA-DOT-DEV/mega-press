@@ -1,0 +1,115 @@
+{
+  "schemaVersion": "press-composition/1",
+  "id": "from-prompt-to-proof",
+  "frame": "landscape",
+  "gap": 2,
+  "kicker": "01 / SYSTEMS THINKING",
+  "title": "From intent to evidence.",
+  "lead": "A simplified tool loop. The result informs the next decision.",
+  "categories": [
+    {
+      "id": "action",
+      "label": "Action",
+      "tone": "red"
+    },
+    {
+      "id": "evidence",
+      "label": "Evidence",
+      "tone": "blue"
+    }
+  ],
+  "body": {
+    "type": "stack",
+    "gap": 4,
+    "children": [
+      {
+        "type": "graph",
+        "id": "decision-loop",
+        "dir": "x",
+        "nodes": [
+          {
+            "key": "intent",
+            "rank": 0,
+            "body": {
+              "type": "panel",
+              "id": "intent",
+              "title": "Intent",
+              "label": "01 / CRITERION",
+              "children": [
+                {
+                  "type": "text",
+                  "role": "body",
+                  "content": "Define what success would look like."
+                }
+              ]
+            }
+          },
+          {
+            "key": "act",
+            "rank": 1,
+            "body": {
+              "type": "panel",
+              "id": "act",
+              "title": "Action",
+              "label": "02 / TOOL CALL",
+              "children": [
+                {
+                  "type": "text",
+                  "role": "body",
+                  "content": "Act with bounded, explicit inputs."
+                }
+              ],
+              "category": "action"
+            }
+          },
+          {
+            "key": "observe",
+            "rank": 2,
+            "body": {
+              "type": "panel",
+              "id": "observe",
+              "title": "Evidence",
+              "label": "03 / RESULT",
+              "children": [
+                {
+                  "type": "text",
+                  "role": "body",
+                  "content": "Check what actually happened."
+                }
+              ],
+              "category": "evidence"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "choose",
+            "from": "intent",
+            "to": "act",
+            "label": "choose"
+          },
+          {
+            "id": "return",
+            "from": "act",
+            "to": "observe",
+            "label": "observe",
+            "category": "evidence"
+          }
+        ]
+      },
+      {
+        "type": "panel",
+        "id": "next-decision",
+        "title": "The result becomes the next input.",
+        "label": "04 / FEEDBACK",
+        "children": [
+          {
+            "type": "text",
+            "role": "body",
+            "content": "Finish when the evidence meets the criterion. Otherwise revise the next action."
+          }
+        ]
+      }
+    ]
+  }
+}

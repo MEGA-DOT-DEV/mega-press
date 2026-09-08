@@ -24,9 +24,9 @@ import { measure } from "../src/text.js";
 import { COLOR, STROKE, snap, space } from "../src/tokens.js";
 
 const TYPES = {
-	text: { role: "list", align: "left", color: COLOR.text, family: undefined },
-	number: { role: "datum", align: "right", color: COLOR.text, family: undefined },
-	tag: { role: "utility", align: "left", color: COLOR.muted, family: undefined },
+	text: { role: "list", align: "left", color: "text", family: undefined },
+	number: { role: "datum", align: "right", color: "text", family: undefined },
+	tag: { role: "utility", align: "left", color: "muted", family: undefined },
 };
 
 /**
@@ -61,7 +61,7 @@ export function table({ columns, rows: data, gap = 3, headerRule = true, rowRule
 	const cell = (value, col, i, isHeader) => {
 		const t = TYPES[col.type];
 		return text(isHeader ? col.label : String(value ?? ""), isHeader ? "utility" : t.role, {
-			color: isHeader ? COLOR.quiet : t.color,
+			color: isHeader ? COLOR.quiet : COLOR[t.color],
 			align: t.align,
 			grow: col.grow || undefined,
 			width: col.grow ? undefined : widths[i],

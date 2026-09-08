@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Press / Composition</title>
+  <link rel="stylesheet" href="./frames.css" />
+</head>
+<body>
+  <main>
+    <header>
+      <a class="back" href="./library.html">← The visual library</a>
+      <p class="eyebrow">MEGA PRESS / COMPOSITION</p>
+      <h1>Give the idea a shape.</h1>
+      <p class="intro">Explore a composition, try a different surface, and make it your own.</p>
+    </header>
+    <nav id="frames" aria-label="Frame examples"></nav>
+    <section class="toolbar" aria-label="Selected frame">
+      <div><h2 id="name"></h2><p id="detail"></p></div>
+      <div class="downloads"><a id="json" download>Source JSON ↓</a><button id="png" disabled>PNG ↓</button></div>
+    </section>
+    <div class="presentation"><label>Project skin <select id="theme"><option value="mega">MEGA</option><option value="paper">Paper</option></select></label><label>Ground <select id="background"><option value="authored">Template ground</option></select></label></div>
+    <p id="status" role="status">Preparing…</p>
+    <p id="error" role="alert" hidden></p>
+    <div class="frame-scroll" tabindex="0" role="region" aria-label="Current frame; scroll horizontally on a narrow screen"><div id="plate"></div></div>
+    <p class="caption" id="caption"></p>
+    <p class="caption">Pan within the frame on a narrow screen. PNG captures the selected skin and ground. Source JSON includes the ground; the skin belongs to your project.</p>
+    <details><summary>Preparation report</summary><pre id="report"></pre></details>
+    <details><summary>Editable composition source</summary><pre id="source"></pre></details>
+  </main>
+  <script type="module" src="./frames.js"></script>
+</body>
+</html>

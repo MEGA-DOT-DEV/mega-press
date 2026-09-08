@@ -13,10 +13,11 @@ const INVALID = join(ROOT, "example/fixtures/invalid.json");
 const OVERFLOW = join(ROOT, "example/fixtures/overflow-title.json");
 const TOO_LONG = join(ROOT, "example/fixtures/too-long-title.json");
 
-const run = (args: string[]) =>
+const run = (args: string[], timeout?: number) =>
 	spawnSync(process.execPath, [BIN, ...args], {
 		encoding: "utf8",
 		cwd: ROOT,
+		timeout,
 	});
 
 // Always rebuild: the CLI runs against dist/, and a dist built before the
@@ -143,6 +144,7 @@ describe("press cli", () => {
 		expect(body.kinds).toBe(KIND_MODULES.filter((k) => k.id !== "note").length);
 		const html = readFileSync(dest, "utf8");
 		expect(html).toContain("__PRESS_GALLERY__");
+		expect(html).toContain("accessBoundary");
 		expect(html).toContain("compareFlows");
 		expect(html).toContain("compareSets");
 		expect(html).toContain("compareSpecs");
@@ -161,7 +163,12 @@ describe("press cli", () => {
 		].find((p) => p && existsSync(p));
 		const dir = mkdtempSync(join(tmpdir(), "mega-press-cli-"));
 		const dest = join(dir, "rail.png");
-		const r = run(["render", RAIL, "--format", "png", "--out", dest, "--json"]);
+		// A successful screenshot must not keep the process alive until its unused
+		// timeout budget expires.
+		const r = run(
+			["render", RAIL, "--format", "png", "--out", dest, "--timeout", "60000", "--json"],
+			15_000,
+		);
 		if (!chrome) {
 			expect(r.status).toBe(2);
 			expect(existsSync(dest)).toBe(false);

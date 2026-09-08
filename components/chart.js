@@ -30,9 +30,12 @@ import {
 } from "chart.js";
 import { box, custom, grid, row, stack, text } from "../src/solve.js";
 import { measure } from "../src/text.js";
+import { categoryColor } from "../src/theme.js";
 import {
 	CATEGORICAL,
 	COLOR,
+	CONTRAST,
+	contrast,
 	FAMILY,
 	GROUND,
 	lineHeight,
@@ -331,7 +334,7 @@ const swatch = (cell) =>
  * @param {string}   unit   what the numbers count, printed once
  * @param {number}   [max]  override the scale; defaults to the largest value
  */
-export function bars({ items, unit, max, barHeight = 28 } = {}) {
+export function bars({ items, unit, max, barHeight = 28 } = {}, context = {}) {
 	if (!items || items.length < 2) {
 		throw new Error("bars needs at least two items. One bar is a number, not a comparison.");
 	}
@@ -339,6 +342,7 @@ export function bars({ items, unit, max, barHeight = 28 } = {}) {
 		throw new Error("bars needs a unit. A bar chart without a unit says how much but not of what.");
 	}
 
+	if (context.composition && items.some(i => !Number.isFinite(i.value))) throw new Error("bars values must be finite numbers.");
 	const negative = items.find((i) => Number(i.value) < 0);
 	if (negative) {
 		throw new Error(
@@ -348,7 +352,8 @@ export function bars({ items, unit, max, barHeight = 28 } = {}) {
 	}
 
 	const scale = max ?? Math.max(...items.map((i) => Number(i.value)));
-	if (!(scale > 0)) throw new Error("bars needs at least one value above zero.");
+	if (!(scale > 0) || !Number.isFinite(scale)) throw new Error("bars needs a positive finite scale.");
+	if (items.some(i => Number(i.value) > scale)) throw new Error("A bar value exceeds the declared scale; it was not clipped.");
 
 	// The value column is as wide as the widest numeral, so every bar starts and
 	// ends on the same two verticals. Derived, not guessed.
@@ -362,9 +367,13 @@ export function bars({ items, unit, max, barHeight = 28 } = {}) {
 
 	const rows = items.map((item) => {
 		const fraction = Number(item.value) / scale;
-		const fill = item.accent ? COLOR.red : COLOR.ink;
+		const category = item.category === undefined ? null : context.categories?.get(item.category);
+		if (item.category !== undefined && !category) throw new Error(`Unknown bar category "${item.category}".`);
+		const fill = category ? categoryColor(category.tone) : item.accent ? COLOR.red : COLOR.ink;
 
 		return row({
+			semanticId: item.id,
+			category: item.category,
 			gap: 3,
 			align: "baseline",
 			unit: true,
@@ -876,7 +885,7 @@ export function lineChart({
 							},
 							border: { color: C.black2, width: STROKE.divider },
 							title: {
-								display: false,
+								display: true,
 								text: xAxisValue.label,
 								color: C.quiet,
 								font: font(utility),
@@ -905,7 +914,7 @@ export function lineChart({
 							},
 							border: { color: C.black2, width: STROKE.divider },
 							title: {
-								display: false,
+								display: true,
 								text: yAxisValue.label,
 								color: C.quiet,
 								font: font(utility),
@@ -965,13 +974,17 @@ export function quadrant({ cells, x, y, gap = 3 } = {}) {
 	if (!x || !y) {
 		throw new Error("quadrant needs both axis labels. An unlabelled matrix is a decorative grid.");
 	}
+	// Preserve the reviewed dark accent wash where its text remains readable.
+	// A light project theme keeps its own panel ground and the accent border.
+	const accentFill = [COLOR.text, COLOR.muted].every(ink => contrast(ink, GROUND.accent) >= CONTRAST.text)
+		? GROUND.accent : COLOR.panel;
 
 	const cellNodes = cells.map((c) =>
 		box({
 			pad: 4,
 			border: true,
 			borderColor: c.accent ? COLOR.red : COLOR.black2,
-			fill: c.accent ? GROUND.accent : COLOR.panel,
+			fill: c.accent ? accentFill : COLOR.panel,
 			gap: 2,
 			unit: true,
 			children: [

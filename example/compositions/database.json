@@ -1,0 +1,304 @@
+{
+  "schemaVersion": "press-composition/1",
+  "id": "database",
+  "frame": "reading",
+  "title": "The relationship belongs to a field.",
+  "kicker": "STRUCTURE / NAMED FIELD CONNECTIONS",
+  "lead": "An illustrative agent-workspace schema. Foreign-key arrows point from the referencing field to its key, not from one anonymous box to another.",
+  "categories": [
+    {
+      "id": "primary",
+      "label": "Primary key",
+      "tone": "red"
+    },
+    {
+      "id": "foreign",
+      "label": "Foreign-key reference",
+      "tone": "blue"
+    },
+    {
+      "id": "optional",
+      "label": "Nullable field",
+      "tone": "neutral"
+    }
+  ],
+  "body": {
+    "type": "stack",
+    "gap": 4,
+    "children": [
+      {
+        "type": "legend"
+      },
+      {
+        "type": "stack",
+        "gap": 4,
+        "children": [
+          {
+            "type": "graph",
+            "dir": "y",
+            "id": "workspace-schema",
+            "nodes": [
+              {
+                "key": "agents",
+                "rank": 0,
+                "body": {
+                  "type": "schema",
+                  "id": "agents",
+                  "title": "agents",
+                  "subtitle": "Who performs the work",
+                  "fields": [
+                    {
+                      "id": "agents-id",
+                      "name": "id",
+                      "type": "uuid",
+                      "key": "primary",
+                      "category": "primary"
+                    },
+                    {
+                      "id": "agents-role",
+                      "name": "role",
+                      "type": "text"
+                    },
+                    {
+                      "id": "agents-model",
+                      "name": "model",
+                      "type": "text"
+                    },
+                    {
+                      "id": "agents-created",
+                      "name": "created_at",
+                      "type": "timestamp"
+                    }
+                  ],
+                  "footer": "One agent can own many tasks and emit many items."
+                }
+              },
+              {
+                "key": "tasks",
+                "rank": 0,
+                "body": {
+                  "type": "schema",
+                  "id": "tasks",
+                  "title": "tasks",
+                  "subtitle": "What must be completed",
+                  "fields": [
+                    {
+                      "id": "tasks-id",
+                      "name": "id",
+                      "type": "uuid",
+                      "key": "primary",
+                      "category": "primary"
+                    },
+                    {
+                      "id": "tasks-agent",
+                      "name": "agent_id",
+                      "type": "uuid",
+                      "key": "foreign",
+                      "category": "foreign"
+                    },
+                    {
+                      "id": "tasks-title",
+                      "name": "title",
+                      "type": "text"
+                    },
+                    {
+                      "id": "tasks-status",
+                      "name": "status",
+                      "type": "task_state"
+                    },
+                    {
+                      "id": "tasks-priority",
+                      "name": "priority",
+                      "type": "integer"
+                    }
+                  ],
+                  "footer": "The state is data: todo, waiting, in_progress, done or blocked."
+                }
+              },
+              {
+                "key": "items",
+                "rank": 1,
+                "body": {
+                  "type": "schema",
+                  "id": "items",
+                  "title": "items",
+                  "subtitle": "The ordered record of an execution",
+                  "fields": [
+                    {
+                      "id": "items-id",
+                      "name": "id",
+                      "type": "uuid",
+                      "key": "primary",
+                      "category": "primary"
+                    },
+                    {
+                      "id": "items-agent",
+                      "name": "agent_id",
+                      "type": "uuid",
+                      "key": "foreign",
+                      "category": "foreign"
+                    },
+                    {
+                      "id": "items-task",
+                      "name": "task_id",
+                      "type": "uuid",
+                      "key": "foreign",
+                      "nullable": true,
+                      "category": "foreign"
+                    },
+                    {
+                      "id": "items-sequence",
+                      "name": "sequence",
+                      "type": "integer"
+                    },
+                    {
+                      "id": "items-type",
+                      "name": "type",
+                      "type": "item_kind"
+                    },
+                    {
+                      "id": "items-payload",
+                      "name": "payload",
+                      "type": "jsonb"
+                    }
+                  ],
+                  "footer": "A message or tool result can exist without a task association."
+                }
+              },
+              {
+                "key": "artifacts",
+                "rank": 1,
+                "body": {
+                  "type": "schema",
+                  "id": "artifacts",
+                  "title": "artifacts",
+                  "subtitle": "The durable outputs",
+                  "fields": [
+                    {
+                      "id": "artifacts-id",
+                      "name": "id",
+                      "type": "uuid",
+                      "key": "primary",
+                      "category": "primary"
+                    },
+                    {
+                      "id": "artifacts-task",
+                      "name": "task_id",
+                      "type": "uuid",
+                      "key": "foreign",
+                      "category": "foreign"
+                    },
+                    {
+                      "id": "artifacts-path",
+                      "name": "path",
+                      "type": "text"
+                    },
+                    {
+                      "id": "artifacts-bytes",
+                      "name": "bytes",
+                      "type": "bigint"
+                    }
+                  ],
+                  "footer": "The database records a file reference, not a fabricated file body."
+                }
+              }
+            ],
+            "edges": [
+              {
+                "id": "task-owner",
+                "from": "tasks",
+                "to": "agents",
+                "label": "N tasks : 1 agent",
+                "fromPort": "tasks-agent",
+                "toPort": "agents-id",
+                "fromAnchor": "left",
+                "toAnchor": "right",
+                "category": "foreign"
+              },
+              {
+                "id": "item-emitter",
+                "from": "items",
+                "to": "agents",
+                "label": "N items : 1 agent",
+                "fromPort": "items-agent",
+                "toPort": "agents-id",
+                "fromAnchor": "left",
+                "toAnchor": "left",
+                "category": "foreign"
+              },
+              {
+                "id": "item-task",
+                "from": "items",
+                "to": "tasks",
+                "label": "0..1 task per item",
+                "fromPort": "items-task",
+                "toPort": "tasks-id",
+                "fromAnchor": "right",
+                "toAnchor": "left",
+                "category": "optional"
+              },
+              {
+                "id": "artifact-task",
+                "from": "artifacts",
+                "to": "tasks",
+                "label": "N outputs : 1 task",
+                "fromPort": "artifacts-task",
+                "toPort": "tasks-id",
+                "fromAnchor": "right",
+                "toAnchor": "right",
+                "category": "foreign"
+              }
+            ]
+          },
+          {
+            "type": "grid",
+            "cols": 2,
+            "align": "start",
+            "children": [
+              {
+                "type": "panel",
+                "title": "A specialized message",
+                "id": "closed-envelope",
+                "label": "BEFORE / ONE CONTENT SHAPE",
+                "children": [
+                  {
+                    "type": "code",
+                    "code": "{\n  \"role\": \"assistant\",\n  \"content\": \"The research is ready.\"\n}",
+                    "lang": "json"
+                  },
+                  {
+                    "type": "text",
+                    "role": "body",
+                    "content": "Useful when every record is a message. Tool calls and reasoning need another place to live."
+                  }
+                ]
+              },
+              {
+                "type": "panel",
+                "title": "An event envelope",
+                "id": "open-envelope",
+                "label": "AFTER / EXPLICIT VARIANTS",
+                "children": [
+                  {
+                    "type": "code",
+                    "code": "{\n  \"type\": \"function_call\",\n  \"payload\": { \"name\": \"write_artifact\" }\n}",
+                    "lang": "json"
+                  },
+                  {
+                    "type": "text",
+                    "role": "body",
+                    "content": "A discriminant makes the variant explicit. Each payload still needs its own validation; JSON alone is not a schema."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "note",
+            "content": "Reading the arrows: the arrowhead identifies the referenced key. The labels state multiplicity. Nullability belongs to the field and remains visible independently of colour."
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -26,7 +26,10 @@
 		"vendor",
 		"NOTICE.md",
 		"README.md",
-		"AGENTS.md"
+		"AGENTS.md",
+		"ARTICLE_GUIDE.md",
+		"example/compositions",
+		"example/lessons"
 	],
 	"scripts": {
 		"typecheck": "tsc --noEmit -p tsconfig.json",
@@ -34,7 +37,12 @@
 		"build": "tsc -p tsconfig.build.json",
 		"metrics": "node scripts/bake-metrics.mjs",
 		"press": "node bin/press.mjs",
-		"example": "vite --config example/vite.config.ts"
+		"example": "vite --config example/vite.config.ts",
+		"framework:lab": "vite --config lab/framework/vite.config.ts",
+		"studio": "vite --config lab/framework/vite.config.ts --port 4282 --open /studio.html",
+		"library:previews": "node lab/framework/render-library-previews.mjs",
+		"framework:test": "node --test lab/framework/*.test.mjs",
+		"framework:build": "vite build --config lab/framework/vite.config.ts"
 	},
 	"devDependencies": {
 		"@napi-rs/canvas": "^1.0.3",

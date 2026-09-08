@@ -54,7 +54,7 @@
  * aspect never has to be reconciled with a number an author typed.
  */
 
-import { ruleAcross } from "./connect.js";
+import { prepareLinkLabels, ruleAcross } from "./connect.js";
 import { Rect } from "./geometry.js";
 import { flatten, measureNode, row, solve, spacer, stack, text } from "./solve.js";
 import { measure } from "./text.js";
@@ -73,7 +73,7 @@ import {
 	space,
 	UNIT,
 } from "./tokens.js";
-import { resolveChrome } from "./theme.js";
+import { categoryColor, getPressTheme, resolveChrome, resolvePressTheme, withPressTheme } from "./theme.js";
 import { validate } from "./validate.js";
 
 /* --------------------------------------------------------------------------
@@ -122,9 +122,15 @@ export function definePlate(spec) {
 	return { ...spec, __press: true };
 }
 
-export function buildPlate(spec, { validateNow = true, chrome: chromeOpt } = {}) {
+export function buildPlate(spec, { validateNow = true, chrome: chromeOpt, theme, themed = false } = {}) {
+	const composition = spec.schemaVersion === "press-composition/1";
+	if (!themed && (composition || theme)) return withPressTheme(resolvePressTheme(theme, { composition }), () => buildPlate(spec, { validateNow, chrome: chromeOpt, themed: true }));
 	const chrome = resolveChrome(chromeOpt);
-	const frame = FRAME[spec.frame || "landscape"];
+	if (composition && spec.title === undefined) chrome.title = false;
+	const reading = spec.frame === "reading";
+	if (reading && !composition) throw new PressError("READING_COMPOSITION_ONLY", "The reading frame requires press-composition/1.");
+	const selectedFrame = FRAME[reading ? "landscape" : spec.frame || "landscape"];
+	const frame = selectedFrame ? { ...selectedFrame } : null;
 	if (!frame) {
 		throw new PressError(
 			"UNKNOWN_FRAME",
@@ -141,6 +147,7 @@ export function buildPlate(spec, { validateNow = true, chrome: chromeOpt } = {})
 		);
 	}
 
+	if (reading && (layout !== "stacked" || spec.readout)) throw new PressError("READING_LAYOUT", "Reading compositions use stacked content; fixed-frame readouts are not supported.");
 	const safe = new Rect(SAFE, SAFE, frame.w - SAFE * 2, frame.h - SAFE * 2);
 	const page = new Rect(0, 0, frame.w, frame.h);
 
@@ -308,6 +315,7 @@ export function buildPlate(spec, { validateNow = true, chrome: chromeOpt } = {})
 	};
 
 	const body = spec.build(toolkit);
+	if (flatten(body).length > 1500) throw new PressError("COMPOSITION_RESOURCE_LIMIT", "The body exceeds the 1500-node preparation limit.");
 
 	let aside = null;
 	if (spec.aside) {
@@ -359,6 +367,20 @@ export function buildPlate(spec, { validateNow = true, chrome: chromeOpt } = {})
 		};
 	}
 
+	// A reading frame earns its height from the same measure pass as a slide.
+	// Width, safe area and type remain cabinet-owned. No independent DOM layout.
+	if (reading) {
+		const bodyWidth = aside ? safe.w - track - space(GUTTER) : safe.w;
+		const bandHeight = Math.max(measureNode(body, bodyWidth).h, aside ? measureNode(aside, track).h : 0);
+		const pieces = [header, body, footerBlock].filter(Boolean).length;
+		const height = 2 * SAFE + bandHeight + (header ? measureNode(header, safe.w).h : 0) +
+			(footerBlock ? measureNode(footerBlock, safe.w).h : 0) + space(gap) * (pieces - 1) + space(3);
+		if (!Number.isFinite(height) || height > 16000) throw new PressError("READING_HEIGHT_LIMIT", "This composition exceeds the 16000-unit reading resource limit. Split it at an authored section boundary.");
+		frame.h = Math.ceil(height / UNIT) * UNIT;
+		safe.h = frame.h - 2 * SAFE;
+		page.h = frame.h;
+	}
+
 	const composed = COMPOSE[layout]({
 		header,
 		footer: footerBlock,
@@ -372,7 +394,8 @@ export function buildPlate(spec, { validateNow = true, chrome: chromeOpt } = {})
 		align: columnAlign(spec.align),
 		side: asideSide(spec.asideSide),
 	});
-	const { root, bodySlot, asideSlot } = composed;
+	let { root } = composed;
+	const { bodySlot, asideSlot } = composed;
 
 	// Pin the footer to the bottom of the safe area. The body is elastic; the
 	// brand is not. Doing this after the solve keeps the measure pass honest.
@@ -395,7 +418,7 @@ export function buildPlate(spec, { validateNow = true, chrome: chromeOpt } = {})
 	   layout distributes — centred already centres, full-bleed owns the whole
 	   frame, and split anchors both columns to the title line. */
 	let fill = null;
-	if (layout === "stacked" && bodySlot) {
+	if (!reading && layout === "stacked" && bodySlot) {
 		const parts = [bodySlot, asideSlot].filter(Boolean);
 		const drawn = parts
 			.flatMap((p) => flatten(p))
@@ -435,12 +458,13 @@ export function buildPlate(spec, { validateNow = true, chrome: chromeOpt } = {})
      is the property that makes a missing rail or a missing arrow impossible
      rather than merely discouraged: the author never draws one, so the author
      can never forget one. */
+	const categoryColors = new Map((spec.categories || []).map(c => [c.id, categoryColor(c.tone)]));
 	for (const n of flatten(root)) {
 		if (!n.press || typeof n.press.connect !== "function") continue;
-		const out = n.press.connect() || {};
+		const out = n.press.connect({ categoryColors }) || {};
 		if (out.links) links.push(...out.links);
 		if (out.rails) rails.push(...out.rails);
-		if (out.rules) rules.push(...out.rules);
+		if (out.rules) rules.push(...out.rules.map(rule => ({ ...rule, scope: rule.scope ?? n.id })));
 	}
 
 	/* Then any cross-component connectors the plate itself declares. */
@@ -449,6 +473,16 @@ export function buildPlate(spec, { validateNow = true, chrome: chromeOpt } = {})
 		if (out.links) links.push(...out.links);
 		if (out.rails) rails.push(...out.rails);
 		if (out.rules) rules.push(...out.rules);
+	}
+
+	const labelNodes = prepareLinkLabels(links, {
+		bounds: safe, frameWidth: frame.w,
+		obstacles: flatten(root).filter(n => n.rect && !n.routingRegion && ["text", "marker", "image", "custom"].includes(n.kind)).map(n => n.rect),
+	});
+	if (labelNodes.length) {
+		const contentRoot = root;
+		root = stack({ children: [contentRoot, ...labelNodes] });
+		root.rect = safe;
 	}
 
 	const regions = {
@@ -460,6 +494,9 @@ export function buildPlate(spec, { validateNow = true, chrome: chromeOpt } = {})
 
 	const plate = {
 		id: spec.id,
+		composition,
+		reading,
+		...(composition || themed ? { theme: getPressTheme() } : {}),
 		frame,
 		safe,
 		page,

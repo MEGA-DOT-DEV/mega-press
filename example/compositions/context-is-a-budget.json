@@ -1,0 +1,92 @@
+{
+  "schemaVersion": "press-composition/1",
+  "id": "context-is-a-budget",
+  "frame": "reading",
+  "gap": 3,
+  "kicker": "02 / QUANTITATIVE REASONING",
+  "title": "More context still occupies a finite space.",
+  "lead": "A toy 100-unit budget. These are invented allocations, not model limits or performance measurements.",
+  "categories": [
+    {
+      "id": "context",
+      "label": "Input context",
+      "tone": "blue"
+    },
+    {
+      "id": "output",
+      "label": "Reserved output",
+      "tone": "red"
+    }
+  ],
+  "body": {
+    "type": "stack",
+    "gap": 3,
+    "children": [
+      {
+        "type": "bars",
+        "id": "allocation",
+        "unit": "budget units",
+        "max": 100,
+        "items": [
+          {
+            "id": "instructions",
+            "label": "Instructions",
+            "value": 15,
+            "category": "context"
+          },
+          {
+            "id": "evidence",
+            "label": "Relevant evidence",
+            "value": 45,
+            "category": "context"
+          },
+          {
+            "id": "history",
+            "label": "Conversation history",
+            "value": 25,
+            "category": "context"
+          },
+          {
+            "id": "output",
+            "label": "Reserved output",
+            "value": 15,
+            "category": "output"
+          }
+        ]
+      },
+      {
+        "type": "grid",
+        "cols": 2,
+        "align": "start",
+        "children": [
+          {
+            "type": "panel",
+            "id": "total",
+            "title": "100 units allocated",
+            "label": "15 + 45 + 25 + 15",
+            "children": [
+              {
+                "type": "text",
+                "role": "body",
+                "content": "The shared scale makes the four allocations comparable."
+              }
+            ]
+          },
+          {
+            "type": "panel",
+            "id": "tradeoff",
+            "title": "Room is a tradeoff",
+            "label": "A FIXED ILLUSTRATIVE BUDGET",
+            "children": [
+              {
+                "type": "text",
+                "role": "body",
+                "content": "Adding 10 units of history means removing 10 units elsewhere."
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

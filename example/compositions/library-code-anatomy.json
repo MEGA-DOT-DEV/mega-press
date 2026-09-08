@@ -1,0 +1,127 @@
+{
+  "schemaVersion": "press-composition/1",
+  "id": "library-code-anatomy",
+  "frame": "reading",
+  "gap": 4,
+  "kicker": "ANNOTATIONS / CODE ANATOMY",
+  "title": "Follow a value through the code.",
+  "lead": "A small JavaScript example keeps the positive prices, then adds them. The marks explain the roles of the selected expressions.",
+  "categories": [
+    {
+      "id": "input",
+      "label": "Input values",
+      "tone": "red",
+      "treatment": "highlight",
+      "description": "The example starts with three prices: 8, 12, and −3."
+    },
+    {
+      "id": "condition",
+      "label": "Selection condition",
+      "tone": "blue",
+      "treatment": "underline",
+      "description": "Only a price greater than zero passes the filter."
+    },
+    {
+      "id": "combination",
+      "label": "Combination rule",
+      "tone": "neutral",
+      "treatment": "outline",
+      "description": "Add the next retained price to the running sum."
+    }
+  ],
+  "body": {
+    "type": "stack",
+    "gap": 4,
+    "children": [
+      {
+        "type": "grid",
+        "cols": 2,
+        "gap": 4,
+        "align": "start",
+        "children": [
+          {
+            "type": "code",
+            "id": "price-pipeline",
+            "label": "JAVASCRIPT / THE COMPLETE EXAMPLE",
+            "lang": "none",
+            "wrap": false,
+            "code": "const prices = [8, 12, -3];\nconst positive = prices.filter(\n  price => price > 0\n);\nconst total = positive.reduce(\n  (sum, price) => sum + price,\n  0\n);",
+            "annotations": [
+              {
+                "id": "input-values",
+                "text": "[8, 12, -3]",
+                "category": "input"
+              },
+              {
+                "id": "keep-positive",
+                "text": "price > 0",
+                "category": "condition"
+              },
+              {
+                "id": "sum-values",
+                "text": "sum + price",
+                "category": "combination"
+              }
+            ]
+          },
+          {
+            "type": "stack",
+            "gap": 2,
+            "children": [
+              {
+                "type": "text",
+                "role": "utility",
+                "content": "READ THE MARKS"
+              },
+              {
+                "type": "legend",
+                "layout": "stack"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "grid",
+        "cols": 2,
+        "gap": 4,
+        "align": "start",
+        "children": [
+          {
+            "type": "metrics",
+            "id": "price-results",
+            "items": [
+              {
+                "label": "Source",
+                "value": "3",
+                "unit": "prices"
+              },
+              {
+                "label": "Retained",
+                "value": "2",
+                "unit": "prices"
+              },
+              {
+                "label": "Total",
+                "value": "20",
+                "unit": "price units"
+              }
+            ]
+          },
+          {
+            "type": "panel",
+            "title": "One expression, one job.",
+            "children": [
+              {
+                "type": "text",
+                "role": "body",
+                "content": "The filter tests each value. The reduction combines the retained values. Following these two operations explains why −3 does not enter the total."
+              }
+            ],
+            "label": "8 + 12 = 20"
+          }
+        ]
+      }
+    ]
+  }
+}

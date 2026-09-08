@@ -1,0 +1,133 @@
+{
+  "schemaVersion": "press-composition/1",
+  "id": "library-state-transitions",
+  "frame": "reading",
+  "kicker": "DECISIONS / STATES + GUARDS",
+  "title": "A review result chooses the next state.",
+  "lead": "A submitted draft enters review. In this fictional workflow, each arrow names a permitted transition.",
+  "body": {
+    "type": "stack",
+    "gap": 3,
+    "children": [
+      {
+        "type": "graph",
+        "id": "editorial-states",
+        "dir": "y",
+        "nodes": [
+          {
+            "key": "review",
+            "rank": 0,
+            "body": {
+              "type": "panel",
+              "id": "review",
+              "title": "In review",
+              "body": {
+                "type": "text",
+                "role": "body",
+                "content": "Check the claim and its sources."
+              }
+            },
+            "order": 0
+          },
+          {
+            "key": "revise",
+            "rank": 1,
+            "order": 0,
+            "body": {
+              "type": "panel",
+              "id": "revise",
+              "title": "Needs revision",
+              "body": {
+                "type": "text",
+                "role": "body",
+                "content": "Address the named issues."
+              }
+            },
+            "category": "rework"
+          },
+          {
+            "key": "ready",
+            "rank": 1,
+            "order": 1,
+            "body": {
+              "type": "panel",
+              "id": "ready",
+              "title": "Ready",
+              "body": {
+                "type": "text",
+                "role": "body",
+                "content": "All required checks pass."
+              }
+            },
+            "category": "advance"
+          },
+          {
+            "key": "published",
+            "rank": 2,
+            "body": {
+              "type": "panel",
+              "id": "published",
+              "title": "Published",
+              "body": {
+                "type": "text",
+                "role": "body",
+                "content": "The editor releases this version."
+              }
+            },
+            "order": 0,
+            "category": "advance"
+          }
+        ],
+        "edges": [
+          {
+            "id": "request-revision",
+            "from": "review",
+            "to": "revise",
+            "label": "issues found",
+            "category": "rework"
+          },
+          {
+            "id": "approve",
+            "from": "review",
+            "to": "ready",
+            "label": "checks pass",
+            "category": "advance"
+          },
+          {
+            "id": "resubmit",
+            "from": "revise",
+            "to": "review",
+            "label": "resubmit",
+            "fromAnchor": "left",
+            "toAnchor": "left",
+            "category": "rework"
+          },
+          {
+            "id": "publish",
+            "from": "ready",
+            "to": "published",
+            "label": "publish",
+            "category": "advance"
+          }
+        ]
+      },
+      {
+        "type": "note",
+        "content": "Approval is not publication. A revision returns to review; it does not bypass the checks."
+      }
+    ]
+  },
+  "gap": 3,
+  "categories": [
+    {
+      "id": "rework",
+      "label": "Revision required",
+      "tone": "red"
+    },
+    {
+      "id": "advance",
+      "label": "Ready to advance",
+      "tone": "blue"
+    }
+  ]
+}

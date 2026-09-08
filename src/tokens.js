@@ -140,6 +140,9 @@ export function containedPadding(innerGap) {
 
 const TYPE_SCALE = {
 	utility: { size: 26, leading: 1.3, family: "mono", tracking: 0.08, role: "label" },
+	// Identifiers and code are not uppercase micro-labels. Tracking changes
+	// both readability and the space a literal identifier needs.
+	code: { size: 26, leading: 1.3, family: "mono", tracking: 0, role: "content" },
 	brand: { size: 26, leading: 1.3, family: "pixel", tracking: 0.08, role: "label" },
 	body: { size: 26, leading: 1.5, family: "sans", tracking: 0, role: "commentary" },
 	list: { size: 32, leading: 1.35, family: "sans", tracking: 0, role: "content" },
@@ -218,6 +221,25 @@ export const MIN_SEMANTIC_STROKE = 2;
  * Read from the live mega.dev stylesheet. Note the shipped red is pure #f00.
  * ------------------------------------------------------------------------ */
 
+// Author-supplied megapresshandoff/TOKENS.md. Named inks, fills and dark
+// grounds share one definition; authored JSON only references semantic tones.
+export const CATEGORY_PALETTE = Object.freeze(Object.fromEntries(Object.entries({
+	red:     { ink: "#ff0000", fill: "#ff0000", ground: "#150000" },
+	cyan:    { ink: "#00e5f5", fill: "#00e5f5", ground: "#001415" },
+	yellow:  { ink: "#f5d000", fill: "#f5d000", ground: "#151200" },
+	magenta: { ink: "#f500c8", fill: "#f500c8", ground: "#150011" },
+	green:   { ink: "#00f56a", fill: "#00f56a", ground: "#001509" },
+	blue:    { ink: "#7a7aff", fill: "#0000f5", ground: "#000015" },
+	orange:  { ink: "#fa6600", fill: "#fa6600", ground: "#150900" },
+	violet:  { ink: "#b06bff", fill: "#b06bff", ground: "#0a0015" },
+}).map(([name, swatch]) => [name, Object.freeze(swatch)])));
+export const CATEGORY_EXCLUSIONS = Object.freeze([
+	Object.freeze(["red", "orange"]), Object.freeze(["blue", "violet"]),
+]);
+// An automatic series palette must not assign the excluded red/orange pair.
+// Orange and violet remain explicit alternatives, not extra automatic hues.
+export const CATEGORY_SERIES = Object.freeze(["red", "cyan", "yellow", "magenta", "green", "blue"]);
+
 export const COLOR = {
 	/* surfaces */
 	page: "#000000",
@@ -259,9 +281,15 @@ export const COLOR = {
 	/* accents. Red has no text variant: there is one red. Pure blue is a fill,
      a selection and a focus ring, never a mark a reader has to see, because it
      is 2.44:1 on black. `blueText` is the readable carrier of that category. */
-	red: "#ff0000",
-	blue: "#0000ff",
-	blueText: "#7a7aff",
+	red: CATEGORY_PALETTE.red.ink,
+	blue: CATEGORY_PALETTE.blue.fill,
+	blueText: CATEGORY_PALETTE.blue.ink,
+	cyan: CATEGORY_PALETTE.cyan.ink,
+	yellow: CATEGORY_PALETTE.yellow.ink,
+	magenta: CATEGORY_PALETTE.magenta.ink,
+	green: CATEGORY_PALETTE.green.ink,
+	orange: CATEGORY_PALETTE.orange.ink,
+	violet: CATEGORY_PALETTE.violet.ink,
 };
 
 /**
@@ -311,7 +339,7 @@ export const GROUND = {
      which is how a fourth and fifth variant of it eventually get typed. It is
      a ground like the others and it belongs in the cabinet with them: every
      content ink still clears the text floor on it, red included at 5.09:1. */
-	accent: "#150000",
+	accent: CATEGORY_PALETTE.red.ground,
 };
 
 export function ground(name) {
@@ -415,14 +443,12 @@ export const QUIET_FLOOR_NEUTRAL = "#74747d";
  * the non-text threshold, so a blue slice was a slice a reader could not see.
  * #7a7aff carries the same category at 6.06:1.
  *
- * Five is still the cap. A sixth series is a table.
+ * Palette capacity is not an editorial density allowance. The automatic
+ * assignment excludes orange/violet alternatives so incompatible pairs cannot
+ * appear by accident; composition categories may choose those explicitly.
  * ------------------------------------------------------------------------ */
 
-export const CATEGORICAL = [
-	COLOR.red, // #ff0000  5.25:1
-	COLOR.ink, // #d9d9d9  14.88:1
-	COLOR.blueText, // #7a7aff  6.06:1
-];
+export const CATEGORICAL = CATEGORY_SERIES.map(tone => COLOR[tone === "blue" ? "blueText" : tone]);
 
 export const FAMILY = {
 	heading: '"Argent Pixel", Georgia, "Times New Roman", serif',

@@ -1,0 +1,193 @@
+{
+  "schemaVersion": "press-composition/1",
+  "id": "library-code-change",
+  "frame": "reading",
+  "gap": 4,
+  "kicker": "ANNOTATIONS / BEFORE & AFTER",
+  "title": "Make the empty case explicit.",
+  "lead": "Two JavaScript versions of the same function. The second adds a deliberate result for an empty array; ordinary numeric examples keep their result.",
+  "categories": [
+    {
+      "id": "input",
+      "label": "Function input",
+      "tone": "neutral",
+      "treatment": "outline",
+      "description": "Both versions receive the array through values."
+    },
+    {
+      "id": "computation",
+      "label": "Existing computation",
+      "tone": "blue",
+      "treatment": "underline",
+      "description": "Both add each value to a running sum."
+    },
+    {
+      "id": "guard",
+      "label": "Empty-array guard",
+      "tone": "red",
+      "treatment": "highlight",
+      "description": "The new branch detects zero input values before division."
+    },
+    {
+      "id": "empty-result",
+      "label": "Explicit result",
+      "tone": "blue",
+      "treatment": "ink",
+      "description": "Return null for an empty array instead of producing NaN."
+    }
+  ],
+  "body": {
+    "type": "stack",
+    "gap": 4,
+    "children": [
+      {
+        "type": "grid",
+        "cols": 2,
+        "gap": 4,
+        "align": "start",
+        "children": [
+          {
+            "type": "code",
+            "id": "mean-before",
+            "label": "BEFORE / IMPLICIT EMPTY RESULT",
+            "lang": "none",
+            "wrap": false,
+            "code": "function mean(values) {\n  return values.reduce(\n    (sum, value) => sum + value, 0\n  ) / values.length;\n}",
+            "annotations": [
+              {
+                "text": "values",
+                "occurrence": 1,
+                "category": "input"
+              },
+              {
+                "text": "sum + value",
+                "category": "computation"
+              }
+            ]
+          },
+          {
+            "type": "code",
+            "id": "mean-after",
+            "label": "AFTER / EXPLICIT EMPTY RESULT",
+            "lang": "none",
+            "wrap": false,
+            "code": "function mean(values) {\n  if (values.length === 0) {\n    return null;\n  }\n  return values.reduce(\n    (sum, value) => sum + value, 0\n  ) / values.length;\n}",
+            "annotations": [
+              {
+                "text": "values",
+                "occurrence": 1,
+                "category": "input"
+              },
+              {
+                "text": "sum + value",
+                "category": "computation"
+              },
+              {
+                "text": "values.length === 0",
+                "category": "guard"
+              },
+              {
+                "text": "return null;",
+                "category": "empty-result"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "grid",
+        "cols": 2,
+        "gap": 4,
+        "align": "start",
+        "children": [
+          {
+            "type": "stack",
+            "gap": 2,
+            "children": [
+              {
+                "type": "text",
+                "role": "utility",
+                "content": "UNCHANGED MEANING"
+              },
+              {
+                "type": "legend",
+                "layout": "stack",
+                "ids": [
+                  "input",
+                  "computation"
+                ]
+              }
+            ]
+          },
+          {
+            "type": "stack",
+            "gap": 2,
+            "children": [
+              {
+                "type": "text",
+                "role": "utility",
+                "content": "THE ADDED BEHAVIOR"
+              },
+              {
+                "type": "legend",
+                "layout": "stack",
+                "ids": [
+                  "guard",
+                  "empty-result"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "table",
+        "id": "mean-examples",
+        "columns": [
+          {
+            "key": "input",
+            "label": "Input array",
+            "type": "tag",
+            "grow": true
+          },
+          {
+            "key": "before",
+            "label": "Before",
+            "type": "tag"
+          },
+          {
+            "key": "after",
+            "label": "After",
+            "type": "tag"
+          }
+        ],
+        "rows": [
+          {
+            "input": "[]",
+            "before": "NaN",
+            "after": "null"
+          },
+          {
+            "input": "[8, 12]",
+            "before": "10",
+            "after": "10"
+          },
+          {
+            "input": "[0]",
+            "before": "0",
+            "after": "0"
+          }
+        ]
+      }
+    ]
+  },
+  "background": {
+    "type": "field",
+    "baseDensity": 0.48,
+    "gradient": 0,
+    "waveStrength": 0,
+    "contrast": 1,
+    "spacing": 3,
+    "halo": 96
+  }
+}

@@ -27,6 +27,7 @@ export const PLATE_PLAN_KINDS = [
 	"compareSpecs",
 	"converge",
 	"railFlow",
+	"accessBoundary",
 	"graph",
 	"derivation",
 	"code",
@@ -55,6 +56,33 @@ export type LineChartSeriesPlan = {
 	readonly label?: string;
 	readonly accent?: boolean;
 	readonly points: readonly LineChartPointPlan[];
+};
+
+export const ACCESS_BOUNDARY_DIRECTIONS = ["x", "y", "auto"] as const;
+export type AccessBoundaryDirection = (typeof ACCESS_BOUNDARY_DIRECTIONS)[number];
+export const ACCESS_BOUNDARY_EDGE_KINDS = [
+	"flow",
+	"controlled",
+	"review",
+	"denied",
+	"reference",
+] as const;
+export type AccessBoundaryEdgeKind = (typeof ACCESS_BOUNDARY_EDGE_KINDS)[number];
+export type AccessBoundaryBoxPlan = {
+	readonly key: string;
+	readonly title: string;
+	readonly detail?: string;
+};
+export type AccessBoundaryRegionPlan = {
+	readonly key: string;
+	readonly label: string;
+	readonly boxes: readonly AccessBoundaryBoxPlan[];
+};
+export type AccessBoundaryEdgePlan = {
+	readonly from: string;
+	readonly to: string;
+	readonly kind: AccessBoundaryEdgeKind;
+	readonly gate?: string;
 };
 
 /** Public names. */
@@ -225,8 +253,10 @@ export type PlatePlan = {
 		}[];
 		readonly takeaway?: { readonly lead: string; readonly detail?: string };
 	};
-	/** graph */
-	readonly dir?: "x" | "y";
+	/** graph / accessBoundary; auto is accessBoundary-only and deterministically resolves to x */
+	readonly dir?: AccessBoundaryDirection;
+	/** accessBoundary */
+	readonly regions?: readonly AccessBoundaryRegionPlan[];
 	readonly nodes?: readonly {
 		readonly key: string;
 		readonly title: string;
@@ -235,7 +265,7 @@ export type PlatePlan = {
 		readonly column?: number;
 		readonly row?: number;
 	}[];
-	readonly edges?: readonly { readonly from: string; readonly to: string }[];
+	readonly edges?: readonly ({ readonly from: string; readonly to: string } | AccessBoundaryEdgePlan)[];
 	/** derivation — expression chain */
 	readonly exprs?: readonly {
 		readonly expr: string;
@@ -802,7 +832,36 @@ export const PLATE_PLAN_JSON_SCHEMA: Record<string, unknown> = {
 				},
 			},
 		},
-		dir: { type: "string", enum: ["x", "y"] },
+		dir: { type: "string", enum: ["x", "y", "auto"] },
+		regions: {
+			type: "array",
+			minItems: 2,
+			maxItems: 4,
+			items: {
+				type: "object",
+				additionalProperties: false,
+				required: ["key", "label", "boxes"],
+				properties: {
+					key: { type: "string" },
+					label: { type: "string" },
+					boxes: {
+						type: "array",
+						minItems: 1,
+						maxItems: 3,
+						items: {
+							type: "object",
+							additionalProperties: false,
+							required: ["key", "title"],
+							properties: {
+								key: { type: "string" },
+								title: { type: "string" },
+								detail: { type: "string", maxLength: 250 },
+							},
+						},
+					},
+				},
+			},
+		},
 		nodes: {
 			type: "array",
 			minItems: 3,
@@ -832,6 +891,8 @@ export const PLATE_PLAN_JSON_SCHEMA: Record<string, unknown> = {
 				properties: {
 					from: { type: "string" },
 					to: { type: "string" },
+					kind: { type: "string", enum: ["flow", "controlled", "review", "denied", "reference"] },
+					gate: { type: "string", maxLength: 24 },
 				},
 			},
 		},

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark light"><title>Press Studio · Ideas, made visible</title><link rel="stylesheet" href="./studio.css"></head>
+<body>
+  <a class="skip" href="#workspace">Skip to the visualization</a>
+  <header class="masthead">
+    <a class="wordmark" href="./studio.html" aria-label="Press Studio home"><span class="brand-mark" aria-hidden="true">p<span>:</span></span><span>press<span class="wordmark-sub"> / studio</span></span></a>
+    <span class="edition">AN EDUCATIONAL INSTRUMENT <span class="edition-number">VOL. 001</span></span>
+    <a class="catalog-link" href="./library.html">Frame library <span aria-hidden="true">↗</span></a>
+  </header>
+  <main>
+    <section class="intro">
+      <div><p class="eyebrow"><span class="signal"></span> IDEAS, MADE VISIBLE</p><h1>Make the explanation<br><em>something to explore.</em></h1></div>
+      <p class="intro-copy">A figure for the page.<br>A sequence for the lesson.<br>A system the learner can touch.</p>
+    </section>
+    <nav class="studies" id="studies" aria-label="Visual studies"></nav>
+    <section class="workspace" id="workspace" aria-label="Visualization studio">
+      <div class="workspace-toolbar">
+        <div class="modes" role="group" aria-label="Presentation"><button id="flat" aria-pressed="true">Explore</button><button id="spatial" aria-pressed="false">Drawing layers <span class="tiny">3D</span></button></div>
+        <div class="surface-controls"><div class="theme-control"><label for="background">GROUND</label><select id="background" aria-label="Background treatment"></select></div><div class="theme-control"><label for="theme">PROJECT SKIN</label><select id="theme"><option value="mega">MEGA / dark</option><option value="paper">Paper / editorial</option></select></div></div>
+      </div>
+      <div class="workbench">
+        <div class="figure-column">
+          <div class="figure-meta"><span id="figure-label">COMPOSITION / 01</span><span id="geometry-status" role="status">Preparing figure…</span></div>
+          <div class="viewport" id="viewport" tabindex="0" aria-label="Figure canvas. Scroll horizontally on small screens."><div id="plate" class="plate-frame"></div></div>
+          <p class="pan-hint">Scroll sideways to explore the full figure. Selecting a step brings its region into view.</p>
+          <p id="error" role="alert" hidden></p>
+          <div id="spatial-note" class="spatial-note" hidden><span class="eyebrow">THE SAME FIGURE, SEPARATED</span><p>Geometry draws the connections. Selectable type carries the language. Both share the same measured positions.</p><label for="depth">Layer separation</label><input id="depth" type="range" min="40" max="200" step="10" value="120"></div>
+          <div class="transport"><button id="play" class="play" aria-label="Play lesson">▶</button><div class="scrubber"><label for="seek">LESSON TIMELINE</label><input id="seek" type="range" min="0" max="24000" step="100" value="0" aria-label="Seek lesson timeline"></div><output id="time" for="seek" aria-live="off">00:00 / 00:24</output><button id="reset" class="icon-button" aria-label="Restart lesson">↺</button></div>
+        </div>
+        <aside class="lesson-panel" aria-label="Guided explanation">
+          <div class="lesson-heading"><span class="eyebrow">FOLLOW THE IDEA</span><span id="step-count">01 / 04</span></div>
+          <div id="steps" class="steps"></div>
+          <div class="narration" aria-live="polite" aria-atomic="true"><span class="eyebrow" id="cue-label">THE QUESTION TO ASK</span><h2 id="cue-title"></h2><p id="cue-description"></p></div>
+          <div class="step-nav"><button id="previous">← Previous</button><button id="next">Next step →</button></div>
+          <p class="lesson-footnote">Choose a step or a region in the figure.<br>Every selection has a meaningful address.</p>
+        </aside>
+      </div>
+      <div class="workspace-footer"><span><span class="signal"></span> ONE SOURCE · MULTIPLE WAYS IN</span><div><button id="download-frame">Frame JSON ↓</button><button id="download-lesson">Lesson JSON ↓</button><button id="export-png">Export PNG ↓</button></div></div>
+    </section>
+    <section class="understory">
+      <div class="design-note"><span class="eyebrow">CONTENT IS THE CONSTANT</span><h2>Change the skin.<br>Keep the meaning.</h2><p>Color and type belong to the project. Content, relationships, and learning steps remain the same. The figure is measured and checked again for each skin.</p><details><summary>Read this lesson as text</summary><ol id="transcript"></ol></details></div>
+      <div class="activity"><div class="activity-heading"><span class="eyebrow">INTERACTION OBSERVATORY</span><span class="local-badge">LOCAL ONLY</span></div><div class="event-empty" id="event-empty">An interaction leaves a trace.<br><span>Choose a step to see what the learner explored.</span></div><ol id="events" class="event-list" aria-label="Recent interactions"></ol><div class="activity-footer"><span id="event-count">0 events in this session</span><button id="download-events">Download events ↓</button></div></div>
+    </section>
+    <footer class="page-footer"><span>PRESS / A FRAMEWORK FOR EXPLANATION</span><span>Illustrative lessons · Local development preview</span></footer>
+  </main>
+  <script type="module" src="./studio.js"></script>
+</body>
+</html>

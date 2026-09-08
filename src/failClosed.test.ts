@@ -31,6 +31,7 @@ describe("fail-closed kinds", () => {
 		["timeline", "STOPS_TOO_FEW"],
 		["timelineVertical", "EVENTS_TOO_FEW"],
 		["railFlow", "STEPS_MISSING"],
+		["accessBoundary", "ACCESS_REGIONS_TOO_FEW"],
 		["graph", "GRAPH_NODES_TOO_FEW"],
 		["derivation", "EXPRS_TOO_FEW"],
 		["code", "CODE_MISSING"],

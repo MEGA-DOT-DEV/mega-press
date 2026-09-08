@@ -10,7 +10,7 @@ Status marks are prose only: 🟠 ACTIVE · 🔴 PLANNED · 🟢 PROVEN · ⚪ D
 
 ## NOW
 
-- (nothing active)
+- `F009-framework-foundation` — static article-to-frame production through the canonical composition engine. Corrected database styling is author-approved; article intake, source mapping, JSON/HTML/PNG output and per-frame visual checks are the priority. Interaction is on hold. Awaiting the first article; no consumer migration. → `spec/features/active/F009-framework-foundation/`
 
 ## NEXT
 

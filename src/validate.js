@@ -14,7 +14,6 @@
  * that prints and one that does not.
  */
 
-import { EM_DASH } from "./text.js";
 import {
 	COLOR,
 	COMMENTARY_ROLE,
@@ -89,6 +88,8 @@ export function validate(plate) {
 		layout = "stacked",
 		background = null,
 	} = plate;
+
+	if (nodes.length > 1600) return r.error("COMPOSITION_RESOURCE_LIMIT", "A solved document may contain at most 1600 nodes.", { nodes: nodes.length });
 
 	const page = plate.page || {
 		left: 0,
@@ -283,6 +284,27 @@ export function validate(plate) {
 		}
 	}
 
+	// An annotation may change the glyph ink or supply its own highlight ground.
+	// Check individual runs and legend swatches against the solved backing surface;
+	// checking only the parent text color would miss low-contrast colored words.
+	for (const n of nodes) {
+		const annotations = n.annotation ? [n.annotation] :
+			(n.runs ?? []).flatMap((run) => run.annotation ? [run.annotation] : []);
+		for (const annotation of annotations) {
+			const fg = annotation.color;
+			const bg = annotation.treatment === "highlight" ? annotation.background : groundOf(n);
+			const ratio = contrast(fg, bg);
+			if (ratio + 1e-9 < CONTRAST.text) {
+				r.error(
+					"CONTRAST_BELOW_FLOOR",
+					`${describe(n)} has an annotation in ${fg} on ${bg}, which is ${ratio.toFixed(2)}:1. ` +
+						`Annotated text and legend samples must meet the ${CONTRAST.text}:1 text floor.`,
+					{ node: n.id, treatment: annotation.treatment, fg, bg, ratio },
+				);
+			}
+		}
+	}
+
 	/* 3. One title, one focal numeral.
         A long title is allowed to step from 'display' down to 'head', so its
         identity travels on a flag rather than on the size it ended up at.
@@ -345,22 +367,24 @@ export function validate(plate) {
 		}
 	}
 
-	/* 5. House style. */
-	for (const n of texts) {
-		if (EM_DASH.test(n.text)) {
-			r.error(
-				"EM_DASH",
-				`${describe(n)} contains an em or en dash. Use a full stop, a comma, or a colon.`,
-				{ node: n.id },
-			);
-		}
-	}
+	// Punctuation is authored content, not a geometric failure.
 
 	/* 6. Rule discipline.
         Within one frame, horizontal rules either span the same measure or
         there is only one of them. Two near-parallel lines at slightly
         different widths read as a rendering fault. */
 	const horizontal = rules.filter((x) => Math.abs(x.points[0].y - x.points[1].y) < 0.5);
+	// A composition may contain several tables at different widths. Each
+	// component's own rules still have to agree; scope is assigned at connect.
+	const ruleGroups = plate.composition
+		? [...horizontal.reduce((groups, rule) => {
+			const key = rule.scope ?? "plate";
+			if (!groups.has(key)) groups.set(key, []);
+			groups.get(key).push(rule);
+			return groups;
+		}, new Map()).values()]
+		: [horizontal];
+	for (const horizontal of ruleGroups) {
 	if (horizontal.length > 1) {
 		const measures = [...new Set(horizontal.map((x) => Math.round(x.measure)))];
 		if (measures.length > 1) {
@@ -385,6 +409,8 @@ export function validate(plate) {
 				);
 			}
 		}
+	}
+
 	}
 
 	/* 7. Connectors survive reduction.
@@ -469,7 +495,7 @@ export function validate(plate) {
 	const units = nodes.filter((n) => n.unit).length;
 	const ruled = nodes.filter((n) => n.unit && n.ruledRow).length;
 	const budget = ruled === units && units > 0 ? UNIT_BUDGET_RULED : UNIT_BUDGET;
-	if (units > budget) {
+	if (units > budget && !plate.composition) {
 		r.error(
 			"OVER_BUDGET",
 			`The plate carries ${units} information units and the budget is ${budget}. ` +
@@ -477,6 +503,9 @@ export function validate(plate) {
 			{ units, budget },
 		);
 	}
+
+	if (plate.composition && !plate.reading && units > budget) r.warn("COMPOSITION_DENSITY",
+		`This fixed composition contains ${units} nested information units. Review it at the delivery size; nothing was removed to fit.`, { units });
 
 	/* 11. Grid rules never break at a gap.
          Never draw a rule with a cell border inside a gapped grid: it breaks

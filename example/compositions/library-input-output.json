@@ -1,0 +1,94 @@
+{
+  "schemaVersion": "press-composition/1",
+  "id": "library-input-output",
+  "frame": "reading",
+  "gap": 4,
+  "kicker": "LEARNING / INPUT → OUTPUT",
+  "title": "Change the shape. Preserve the meaning.",
+  "lead": "An illustrative conversion from a small CSV file to typed records. The names and durations survive the transformation.",
+  "body": {
+    "type": "stack",
+    "gap": 4,
+    "children": [
+      {
+        "type": "grid",
+        "cols": 2,
+        "gap": 4,
+        "align": "start",
+        "children": [
+          {
+            "type": "panel",
+            "title": "A compact source.",
+            "children": [
+              {
+                "type": "code",
+                "id": "csv-source",
+                "label": "INPUT / CSV",
+                "lang": "none",
+                "wrap": false,
+                "code": "name,minutes\nMina,12\nNoor,8"
+              },
+              {
+                "type": "text",
+                "role": "body",
+                "content": "The header names the fields. Durations arrive as text."
+              }
+            ],
+            "label": "01 / BEFORE"
+          },
+          {
+            "type": "panel",
+            "title": "An explicit result.",
+            "children": [
+              {
+                "type": "code",
+                "id": "json-result",
+                "label": "OUTPUT / JSON",
+                "lang": "json",
+                "wrap": false,
+                "code": "[\n  {\"name\":\"Mina\", \"minutes\":12},\n  {\"name\":\"Noor\", \"minutes\":8}\n]"
+              },
+              {
+                "type": "text",
+                "role": "body",
+                "content": "Each record has a named field and a numeric duration."
+              }
+            ],
+            "label": "02 / AFTER"
+          }
+        ]
+      },
+      {
+        "type": "railFlow",
+        "id": "conversion-stages",
+        "items": [
+          {
+            "name": "Parse",
+            "detail": "Read the header and two rows."
+          },
+          {
+            "name": "Convert",
+            "detail": "Turn each duration into a number."
+          },
+          {
+            "name": "Verify",
+            "detail": "Keep 2 records and 20 minutes."
+          }
+        ]
+      },
+      {
+        "type": "note",
+        "content": "A valid JSON document can still contain the wrong data. Verify the names, count, and total as well as the syntax."
+      }
+    ]
+  },
+  "background": {
+    "type": "field",
+    "baseDensity": 0.48,
+    "gradient": 0,
+    "waveStrength": 0,
+    "contrast": 1,
+    "spacing": 3,
+    "halo": 96
+  }
+}

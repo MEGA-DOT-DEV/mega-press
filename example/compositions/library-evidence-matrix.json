@@ -1,0 +1,88 @@
+{
+  "schemaVersion": "press-composition/1",
+  "id": "library-evidence-matrix",
+  "frame": "reading",
+  "gap": 4,
+  "kicker": "EVIDENCE / CLAIMS & LIMITS",
+  "title": "Evidence answers a particular question.",
+  "lead": "A teaching matrix for reviewing an assistant’s work. Each observation supports a bounded claim and leaves another question open.",
+  "body": {
+    "type": "stack",
+    "gap": 4,
+    "children": [
+      {
+        "type": "text",
+        "role": "utility",
+        "content": "01 / READ ACROSS EACH ROW"
+      },
+      {
+        "type": "table",
+        "id": "evidence-matrix",
+        "gap": 4,
+        "columns": [
+          {
+            "key": "evidence",
+            "label": "Observation",
+            "type": "text"
+          },
+          {
+            "key": "supports",
+            "label": "What it supports",
+            "type": "text",
+            "grow": true
+          },
+          {
+            "key": "open",
+            "label": "Still to establish",
+            "type": "text",
+            "grow": true
+          }
+        ],
+        "rows": [
+          {
+            "evidence": "Saved file",
+            "supports": "An output exists.",
+            "open": "Does it contain the right work?"
+          },
+          {
+            "evidence": "Passing tests",
+            "supports": "The tested cases pass.",
+            "open": "Do the cases cover the requirement?"
+          },
+          {
+            "evidence": "Cited source",
+            "supports": "The source can be inspected.",
+            "open": "Does it support this exact claim?"
+          },
+          {
+            "evidence": "Successful run",
+            "supports": "This execution completed.",
+            "open": "Will it behave reliably next time?"
+          }
+        ]
+      },
+      {
+        "type": "panel",
+        "title": "Match the claim to the check.",
+        "children": [
+          {
+            "type": "text",
+            "role": "body",
+            "content": "Start with the result you need to establish. Choose evidence that can test it, then state what the check actually showed."
+          }
+        ],
+        "id": "evidence-conclusion",
+        "label": "02 / A REVIEW HABIT"
+      },
+      {
+        "type": "note",
+        "content": "Several weak signals do not automatically combine into proof. Keep the requirement, the observation, and the remaining uncertainty visible."
+      }
+    ]
+  },
+  "background": {
+    "type": "band",
+    "fill": "raised",
+    "pad": 3
+  }
+}

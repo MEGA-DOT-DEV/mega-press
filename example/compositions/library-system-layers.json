@@ -1,0 +1,92 @@
+{
+  "schemaVersion": "press-composition/1",
+  "id": "library-system-layers",
+  "frame": "reading",
+  "kicker": "SYSTEMS / BOUNDARIES WITHIN BOUNDARIES",
+  "title": "A lesson has more than one layer.",
+  "lead": "An illustrative interactive lesson. Nested surfaces show containment; labels describe who owns each responsibility.",
+  "background": {
+    "type": "band",
+    "fill": "raised",
+    "pad": 3
+  },
+  "body": {
+    "type": "stack",
+    "gap": 4,
+    "children": [
+      {
+        "type": "panel",
+        "id": "host-boundary",
+        "title": "01 / The publishing host",
+        "body": {
+          "type": "stack",
+          "gap": 3,
+          "children": [
+            {
+              "type": "text",
+              "role": "body",
+              "content": "Owns the article, reader session and placement of the lesson."
+            },
+            {
+              "type": "panel",
+              "id": "lesson-boundary",
+              "title": "02 / The lesson",
+              "body": {
+                "type": "stack",
+                "gap": 3,
+                "children": [
+                  {
+                    "type": "text",
+                    "role": "body",
+                    "content": "Owns the learning goal, current step and meaningful reader actions."
+                  },
+                  {
+                    "type": "grid",
+                    "cols": 2,
+                    "gap": 3,
+                    "children": [
+                      {
+                        "type": "panel",
+                        "id": "meaning-layer",
+                        "title": "03 / Meaning",
+                        "body": {
+                          "type": "text",
+                          "role": "body",
+                          "content": "Claims, values and relationships live in an editable composition."
+                        }
+                      },
+                      {
+                        "type": "panel",
+                        "id": "presentation-layer",
+                        "title": "04 / Presentation",
+                        "body": {
+                          "type": "text",
+                          "role": "body",
+                          "content": "A project theme supplies fonts, colors and surfaces."
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "panel",
+                    "id": "rendered-layer",
+                    "title": "05 / The rendered frame",
+                    "body": {
+                      "type": "text",
+                      "role": "body",
+                      "content": "The framework combines meaning and presentation, then measures and draws the result."
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "note",
+        "content": "Containment describes ownership. Meaning and presentation are peers; both contribute to the rendered frame."
+      }
+    ]
+  }
+}

@@ -283,6 +283,36 @@ export const ITEM_BOUNDS = {
 			label: "named steps",
 		},
 	},
+	accessBoundary: {
+		regions: {
+			min: 2,
+			max: 4,
+			tooFew: "ACCESS_REGIONS_TOO_FEW",
+			tooMany: "ACCESS_REGIONS_TOO_MANY",
+			label: "ordered regions",
+		},
+		boxes: {
+			min: 3,
+			max: 8,
+			tooFew: "ACCESS_BOXES_TOO_FEW",
+			tooMany: "ACCESS_BOXES_TOO_MANY",
+			label: "boxes overall",
+		},
+		regionBoxes: {
+			min: 1,
+			max: 3,
+			tooFew: "ACCESS_REGION_BOXES_TOO_FEW",
+			tooMany: "ACCESS_REGION_BOXES_TOO_MANY",
+			label: "boxes per region",
+		},
+		edges: {
+			min: 2,
+			max: 8,
+			tooFew: "ACCESS_EDGES_TOO_FEW",
+			tooMany: "ACCESS_EDGES_TOO_MANY",
+			label: "boundary edges",
+		},
+	},
 	graph: {
 		nodes: {
 			min: 3,
